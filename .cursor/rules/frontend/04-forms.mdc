@@ -1,0 +1,320 @@
+---
+description: Form handling with Zod validation, React Hook Form, shadcn Form, and FastAPI submission.
+alwaysApply: false
+globs: apps/web/src/**/*form*,apps/web/src/features/**/*
+---
+
+# Form Standards
+
+## Purpose
+
+This rule defines how forms are built, validated, and submitted in the Next.js frontend against FastAPI REST endpoints.
+
+Forms must validate on the client for UX and rely on the backend for authoritative validation. Never trust client input.
+
+---
+
+# Scope
+
+Applies to:
+
+- Customer registration and login
+- Checkout and address forms
+- Admin CRUD forms
+- Search and filter forms (simple cases may skip RHF)
+
+Covers Zod schemas, React Hook Form integration, shadcn Form components, and Server Actions.
+
+---
+
+# Technology Stack
+
+| Concern | Tool |
+|---------|------|
+| Schema validation | Zod |
+| Form state | React Hook Form |
+| UI binding | shadcn Form (`@/components/ui/form`) |
+| Resolver | `@hookform/resolvers/zod` |
+| Server submission | Server Actions or typed API client |
+
+Install pattern:
+
+```bash
+npm install zod react-hook-form @hookform/resolvers
+```
+
+---
+
+# Schema-First Design
+
+Define Zod schemas before building UI.
+
+Colocate schemas in:
+
+- `features/<capability>/schemas/` for feature-specific forms
+- `lib/schemas/` for shared schemas (address, email, phone)
+
+Example:
+
+```typescript
+import { z } from "zod";
+
+export const checkoutAddressSchema = z.object({
+  fullName: z.string().min(2, "Name is required"),
+  line1: z.string().min(1, "Address is required"),
+  line2: z.string().optional(),
+  city: z.string().min(1, "City is required"),
+  postalCode: z.string().regex(/^\d{5}(-\d{4})?$/, "Invalid postal code"),
+  country: z.string().length(2, "Use ISO country code"),
+});
+
+export type CheckoutAddressInput = z.infer<typeof checkoutAddressSchema>;
+```
+
+Reuse schemas on the backend (FastAPI Pydantic models) where possible — keep field names aligned with OpenAPI.
+
+---
+
+# React Hook Form Setup
+
+Standard Client Component form pattern with shadcn:
+
+```tsx
+"use client";
+
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { checkoutAddressSchema, type CheckoutAddressInput } from "../schemas/checkout";
+
+interface CheckoutAddressFormProps {
+  defaultValues?: Partial<CheckoutAddressInput>;
+  onSubmit: (data: CheckoutAddressInput) => Promise<void>;
+}
+
+export function CheckoutAddressForm({ defaultValues, onSubmit }: CheckoutAddressFormProps) {
+  const form = useForm<CheckoutAddressInput>({
+    resolver: zodResolver(checkoutAddressSchema),
+    defaultValues: {
+      fullName: "",
+      line1: "",
+      city: "",
+      postalCode: "",
+      country: "US",
+      ...defaultValues,
+    },
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="fullName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Full name</FormLabel>
+              <FormControl>
+                <Input {...field} autoComplete="name" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? "Saving..." : "Continue"}
+        </Button>
+      </form>
+    </Form>
+  );
+}
+```
+
+---
+
+# When to Use React Hook Form
+
+Use RHF when:
+
+- Multiple fields with validation rules
+- Complex validation or cross-field rules
+- Dirty/touched state matters
+- Multi-step wizards
+
+Skip RHF for:
+
+- Single search input (controlled input or native form GET)
+- Toggle switches with immediate Server Action (no form aggregate)
+
+---
+
+# Server Actions Integration
+
+Preferred for mutations that should not expose API keys:
+
+```tsx
+"use server";
+
+import { checkoutAddressSchema } from "@/features/checkout/schemas/checkout";
+import { saveCheckoutAddress } from "@/lib/api/checkout";
+import { revalidatePath } from "next/cache";
+
+export async function saveAddressAction(raw: unknown) {
+  const parsed = checkoutAddressSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false as const, errors: parsed.error.flatten().fieldErrors };
+  }
+  try {
+    await saveCheckoutAddress(parsed.data);
+    revalidatePath("/checkout");
+    return { success: true as const };
+  } catch {
+    return { success: false as const, errors: { _form: ["Unable to save address"] } };
+  }
+}
+```
+
+Always parse with Zod inside the Server Action even if the client validated — defense in depth.
+
+---
+
+# API Error Mapping
+
+FastAPI returns validation errors as `422` with structured body.
+
+Map to form field errors in the submit handler:
+
+```typescript
+if (response.status === 422) {
+  const body = await response.json();
+  // Map FastAPI detail[] to RHF setError calls
+  body.detail?.forEach((err: { loc: string[]; msg: string }) => {
+    const field = err.loc[err.loc.length - 1];
+    form.setError(field as keyof CheckoutAddressInput, { message: err.msg });
+  });
+}
+```
+
+Show non-field errors via `FormMessage` on a root alert or `_form` key pattern.
+
+---
+
+# Default Values and Reset
+
+- Load defaults from server props (Server Component passes serializable defaults)
+- Call `form.reset(newDefaults)` when async defaults arrive
+- Do not initialize defaults from Zustand global store unless guest cart scenario
+
+---
+
+# Multi-Step Forms
+
+Checkout wizards:
+
+- One Zod schema per step or one schema with step-specific `pick`
+- Persist step data in URL, sessionStorage, or server draft — not only component state if user can refresh
+- Validate current step only on "Next"
+- Validate full schema on final submit
+
+---
+
+# Accessibility
+
+Forms must:
+
+- Associate every input with `<FormLabel>`
+- Use `aria-describedby` via FormMessage for errors (shadcn handles this)
+- Mark required fields visually and with `aria-required`
+- Support Enter to submit single-section forms
+- Manage focus on first error after failed submit
+
+---
+
+# Security
+
+- Never include CVV or full card number fields — use Stripe Elements
+- Sanitize display of user input; validation is not sanitization
+- Use CSRF protection provided by Next.js Server Actions
+- Rate-limit sensitive forms on the backend (login, password reset)
+
+---
+
+# Simple Filter Forms
+
+Catalog filters may use GET forms for URL-driven state:
+
+```tsx
+<form method="GET" action="/products">
+  <input name="q" defaultValue={searchParams.q} />
+  <button type="submit">Search</button>
+</form>
+```
+
+Server Component reads `searchParams` — no RHF required.
+
+---
+
+# Anti-Patterns
+
+Never:
+
+- Submit forms without Zod validation on server boundary
+- Duplicate divergent schemas between frontend and OpenAPI spec
+- Store unvalidated FormData directly to API
+- Use uncontrolled native forms for checkout payment data
+- Disable submit button without indicating loading state
+- Show raw FastAPI tracebacks in FormMessage
+
+---
+
+# Validation Checklist
+
+- Zod schema defined and typed with `z.infer`
+- RHF + zodResolver wired
+- shadcn Form components used for fields
+- Server Action or API path re-validates with same schema
+- API 422 errors mapped to fields
+- Loading and error states on submit
+- Accessible labels and error announcements
+
+---
+
+# Related Rules
+
+- frontend/00-frontend
+- frontend/01-components
+- frontend/02-state
+- api/01-rest
+- api/03-openapi
+
+---
+
+# Related Skills
+
+- zod-validation-expert
+- shadcn
+- implement-checkout-flow
+
+---
+
+# Related Agents
+
+- Frontend Engineer
+- Checkout Specialist
+
+---
+
+# Summary
+
+Define Zod schemas first, bind with React Hook Form and shadcn Form, and always re-validate on the server before calling FastAPI.
+
+Map API validation errors back to fields for a cohesive user experience.

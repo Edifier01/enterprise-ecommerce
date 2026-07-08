@@ -1,0 +1,217 @@
+---
+description: Structured logging, correlation IDs, audit trails, and observability.
+globs: apps/api/**/core/logging/**/*.py,apps/api/**/*.py
+alwaysApply: false
+---
+
+# Logging
+
+## Purpose
+
+This rule defines structured logging, correlation identifiers, audit trails, and observability standards for the FastAPI backend.
+
+Consistent logging enables debugging, security auditing, and production monitoring without polluting domain logic.
+
+---
+
+## Scope
+
+Applies to:
+
+- Logging configuration in `apps/api/core/logging/`
+- Request middleware for correlation/request ids
+- Application workflow logging in use cases
+- Infrastructure adapter logging (DB, HTTP clients, cache)
+- Audit log events for security-sensitive operations
+- Log levels and field conventions
+
+Does not apply to:
+
+- Frontend browser console logging
+- Domain business rule implementation
+- Metrics/tracing vendor setup (Datadog, OpenTelemetry) beyond log correlation hooks
+- Log aggregation infrastructure provisioning
+
+---
+
+## Core Principles
+
+Always:
+
+- Use structured logging (JSON in production, readable text in local)
+- Include `correlation_id`, `request_id`, `user_id` (when authenticated), `feature`, `use_case` where applicable
+- Log at boundaries: HTTP request start/end, external calls, job lifecycle, exceptions
+- Use standard library `logging` or structlog with consistent configuration
+- Log exceptions with `exc_info=True` at handler boundary
+- Keep domain layer free of logging calls except optional domain audit ports
+- Redact secrets, tokens, passwords, and PAN from all log output
+
+Never:
+
+- Log inside tight loops at INFO level
+- Log full request bodies containing credentials or payment data
+- Use `print()` for operational diagnostics in production code
+- Create logger per module without hierarchy (`apps.api.features.checkout`)
+- Swallow exceptions without error log at appropriate layer
+- Log business success/failure as sole audit trail for regulated actions without audit table
+
+---
+
+## Layer Responsibilities
+
+### Presentation (FastAPI Middleware)
+
+- Assign or propagate `X-Request-ID` / `X-Correlation-ID`
+- Log HTTP method, path, status, duration_ms, client_ip (GDPR-aware)
+- Do not log full authorization headers
+
+### Application
+
+- Log use case start/completion at DEBUG or INFO with business ids (order_id)
+- Log orchestration failures before mapping to HTTP
+
+### Infrastructure
+
+- Log external API latency, status code, retry attempts (not response bodies with PII)
+- Log database connection errors at ERROR
+
+### Domain
+
+- No logging by default
+- Optional `AuditLogger` port for compliance events implemented in infrastructure
+
+---
+
+## Correlation ID Flow
+
+1. Middleware reads incoming `X-Correlation-ID` or generates UUID
+2. Store in contextvar for access in services and workers
+3. Propagate to outbound HTTP clients and enqueued jobs in payload/metadata
+4. Return id in response header for client support tickets
+
+```python
+correlation_id_var: ContextVar[str] = ContextVar("correlation_id", default="")
+```
+
+Workers must accept correlation id from enqueue metadata and bind to log context.
+
+---
+
+## Log Levels
+
+| Level | Usage |
+|-------|--------|
+| DEBUG | Detailed dev diagnostics, query traces (non-prod or sampled) |
+| INFO | Request completion, job success, startup config summary |
+| WARNING | Degraded behavior, retries, business edge cases |
+| ERROR | Handled failures, external dependency errors |
+| CRITICAL | Data corruption risk, security breach indicators |
+
+Production default: INFO. DEBUG only with explicit temporary enablement.
+
+---
+
+## Audit Logging
+
+Security-sensitive actions require audit records:
+
+- Login success/failure
+- Password change
+- Role/permission change
+- Payment refund initiation
+- PII export or deletion
+
+Audit records: append-only store or dedicated table with actor, action, resource, timestamp, correlation_id — not only application logs.
+
+---
+
+## Decision Rules
+
+IF logging HTTP request
+THEN middleware once; not per router duplicate.
+
+IF logging external API failure
+THEN ERROR with status, latency, correlation_id; redact auth headers and body.
+
+IF domain rule fails
+THEN log at WARNING/INFO in application layer when mapping exception; domain stays silent.
+
+IF performance troubleshooting
+THEN use DEBUG with sampling; never permanent verbose SQL in production.
+
+IF worker processes job
+THEN log job name, idempotency key, attempt number, outcome.
+
+---
+
+## Anti-Patterns
+
+Never create:
+
+- Logging every repository SELECT at INFO
+- String-interpolated logs without structured fields (`f"User {user} failed"`) when JSON expected
+- Multiple logging configurations initialized per import
+- Logging credit card or CVV fields "for debugging"
+- Catching exception without logging at boundary
+- Using logs as only source for financial reconciliation
+
+---
+
+## Validation Checklist
+
+Before completing logging work verify:
+
+✓ Structured fields used in production format.
+
+✓ Correlation id propagated request → services → jobs.
+
+✓ Secrets and PII redacted.
+
+✓ Domain layer has no ad hoc logging.
+
+✓ Exception handlers log with stack traces server-side.
+
+✓ Log levels appropriate and not noisy.
+
+✓ Audit events persisted for sensitive operations.
+
+✓ Logger names follow module hierarchy.
+
+✓ Startup logs confirm environment without printing secrets.
+
+---
+
+## Related Rules
+
+- backend/00-backend
+- backend/04-error-handling
+- backend/09-background-jobs
+- backend/12-security-backend
+
+---
+
+## Related Skills
+
+- python-fastapi-development
+- security-auditor
+- cc-skill-security-review
+
+---
+
+## Related Agents
+
+- Backend Engineer
+- Security Auditor
+- DevOps Engineer
+
+---
+
+## Related MCP
+
+- Filesystem
+
+---
+
+## Summary
+
+Log at architectural boundaries with structured fields and correlation ids. Keep domain pure, redact secrets, audit security-sensitive actions, and propagate trace context into background workers.

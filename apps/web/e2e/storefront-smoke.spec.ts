@@ -1,0 +1,30 @@
+import { expect, test } from "@playwright/test";
+
+test.describe("Storefront smoke", () => {
+  test("catalog page loads with Russian heading", async ({ page }) => {
+    const response = await page.goto("/catalog");
+    expect(response?.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: "Каталог", exact: true })).toBeVisible();
+  });
+
+  test("search page loads with placeholder UI", async ({ page }) => {
+    const response = await page.goto("/search");
+    expect(response?.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: "Поиск" })).toBeVisible();
+    await expect(page.getByText("Поиск скоро будет доступен")).toBeVisible();
+  });
+
+  test("cart page loads with empty state", async ({ page }) => {
+    const response = await page.goto("/cart");
+    expect(response?.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: "Корзина" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Корзина пуста" })).toBeVisible();
+  });
+
+  test("login page loads with Russian form", async ({ page }) => {
+    const response = await page.goto("/login");
+    expect(response?.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: "Вход" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Войти" })).toBeVisible();
+  });
+});

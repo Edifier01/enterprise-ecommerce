@@ -1,0 +1,96 @@
+---
+description: Implementation efficiency — minimal diff within approved architecture. YAGNI ladder for code changes.
+globs: "**/*.{py,ts,tsx}"
+alwaysApply: false
+---
+
+# Implementation Efficiency
+
+Apply this rule when writing or editing application code.
+
+Architecture Rules take precedence over this rule for structural decisions.
+Use this rule for implementation details inside an approved architecture.
+
+---
+
+## Priority
+
+1. User instructions
+2. Core and Architecture Rules
+3. Domain Rules (backend, frontend, ecommerce, security)
+4. This rule (implementation efficiency)
+
+Never use minimal-diff shortcuts to bypass DDD boundaries, security, or module contracts.
+
+---
+
+## YAGNI Ladder
+
+After understanding the task and tracing the affected code end to end, stop at the first rung that holds:
+
+1. Does this need to be built at all?
+2. Does it already exist in this codebase? Reuse existing helpers, utils, or patterns.
+3. Does the standard library already do this?
+4. Does a native platform feature cover it?
+5. Does an already-installed dependency solve it?
+6. Can this be one line? Make it one line.
+7. Only then: write the minimum code that works.
+
+---
+
+## Bug Fixes
+
+Fix root cause, not symptoms.
+
+Grep every caller of the function you touch and fix the shared function once.
+One guard in the shared function beats one patch per caller.
+
+---
+
+## Implementation Rules
+
+- No abstractions that were not explicitly requested or required by Architecture Rules.
+- No new dependency if an existing one covers the need.
+- No boilerplate nobody asked for.
+- Deletion over addition. Boring over clever. Fewest files possible.
+- Shortest working diff wins — only after you understand the problem.
+- Question complex requests: "Do you actually need X, or does Y cover it?"
+- When two approaches are the same size, pick the edge-case-correct one.
+- Mark intentional simplifications with a `ponytail:` comment naming the ceiling and upgrade path.
+
+---
+
+## When NOT to Simplify
+
+Never cut corners for:
+
+- Checkout and payment flows
+- Authentication and authorization
+- Inventory consistency and stock reservation
+- PCI scope and cardholder data handling
+- Input validation at trust boundaries
+- Error handling that prevents data loss
+- Security controls
+- Accessibility requirements
+- Anything explicitly requested in the task or Domain Rules
+
+---
+
+## Verification
+
+Non-trivial logic leaves one runnable check: the smallest thing that fails if the logic breaks.
+Trivial one-liners need no test.
+
+---
+
+## Related Rules
+
+- core/00-core
+- core/02-ai-behavior
+- architecture/00-architecture
+- backend/00-backend
+
+## Related Skills
+
+- cc-skill-coding-standards
+- code-review-checklist

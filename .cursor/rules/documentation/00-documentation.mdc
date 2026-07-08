@@ -1,0 +1,291 @@
+---
+description: Documentation standards including API docs, ADRs, code comments, and README requirements.
+alwaysApply: false
+---
+
+# Documentation Standard
+
+## Purpose
+
+Define documentation requirements for the enterprise e-commerce platform.
+
+Documentation enables team scalability, onboarding, and operational reliability.
+
+Write documentation when it reduces future confusion — not for its own sake.
+
+---
+
+## Documentation Types
+
+| Type | Audience | Location | Update Trigger |
+|------|----------|----------|----------------|
+| README | Developers | Repository root, app roots | Setup changes |
+| API docs | Integrators, frontend | OpenAPI / Swagger | API changes |
+| ADR | Architects, team | `docs/adr/` | Architecture decisions |
+| Project state | AI agents | `.cursor/project-management/` | Every agent session |
+| Handoff archive | AI agents | `docs/handoffs/` | Optional per session |
+| Runbooks | Operations | `docs/runbooks/` | Incident learnings |
+| Code comments | Developers | In code | Non-obvious logic |
+| User docs | Customers | External help center | Feature releases |
+
+---
+
+## README Requirements
+
+Every application directory (`apps/api`, `apps/web`) must have README with:
+
+### Required Sections
+
+1. **Purpose** — what this app does
+2. **Prerequisites** — Node/Python versions, Docker
+3. **Setup** — step-by-step local development
+4. **Environment variables** — table with name, description, example (no real secrets)
+5. **Running** — dev server, tests, migrations
+6. **Architecture** — link to relevant rules and folder structure
+
+### Root README
+
+Monorepo root README includes:
+
+- Project overview
+- Repository structure
+- Quick start (docker compose up)
+- Links to apps, docs, contribution guidelines
+
+---
+
+## API Documentation
+
+### OpenAPI (FastAPI)
+
+FastAPI auto-generates OpenAPI from route definitions.
+
+Requirements:
+
+- Every endpoint has `summary` and `description`
+- Request/response models documented via Pydantic schemas
+- Error responses documented (400, 401, 403, 404, 409, 422)
+- Tags group endpoints by domain (catalog, checkout, orders, admin)
+
+```python
+@router.post(
+    "/checkout/sessions",
+    response_model=CheckoutSessionResponse,
+    status_code=201,
+    summary="Create checkout session",
+    description="Initiates checkout from cart, reserves inventory, and returns session.",
+    responses={
+        409: {"description": "Insufficient inventory or price changed"},
+    },
+)
+async def create_checkout_session(...):
+    ...
+```
+
+### Swagger UI
+
+Available at `/docs` in development and staging.
+
+Disabled or auth-protected in production.
+
+### Versioning
+
+Document breaking changes in changelog. API version in URL path: `/api/v1/`.
+
+---
+
+## Architecture Decision Records (ADR)
+
+Required for:
+
+- New bounded context or module
+- Payment provider selection or change
+- Database technology change
+- Authentication strategy change
+- Caching architecture
+- Multi-tenancy approach
+
+### ADR Format
+
+```markdown
+# ADR-001: Use Stripe Payment Element for Checkout
+
+## Status
+Accepted
+
+## Context
+Need PCI SAQ A compliant payment collection.
+
+## Decision
+Use Stripe Payment Element with PaymentIntent flow.
+
+## Consequences
+- Positive: SAQ A scope, 3DS support
+- Negative: Stripe vendor lock-in, webhook dependency
+```
+
+Store in `docs/adr/NNN-title.md`. See `architecture/06-adr`.
+
+---
+
+## Code Comments
+
+### When to Comment
+
+- Non-obvious business rules ("Tax calculated on discounted subtotal per state X regulation")
+- Workarounds with linked issue ("TODO: remove after PG 17 upgrade — issue #123")
+- Complex algorithms (promotion stacking logic)
+
+### When Not to Comment
+
+- Obvious code (`# increment counter` above `counter += 1`)
+- Restating function names
+- Commented-out dead code (delete it — git has history)
+
+### Docstrings
+
+Public API functions and domain methods:
+
+```python
+async def reserve_inventory(
+    variant_id: int,
+    quantity: int,
+    reference_id: int,
+) -> None:
+    """Reserve stock for checkout session.
+
+    Raises InsufficientInventoryError if available < quantity
+    and backorder is not enabled for the variant.
+
+    Idempotent on (reference_type, reference_id, variant_id).
+    """
+```
+
+---
+
+## Domain Documentation
+
+Document in code or adjacent markdown:
+
+- Order status state machine diagram
+- Checkout flow sequence
+- Promotion rule evaluation order
+- Inventory reservation TTL behavior
+
+Mermaid diagrams preferred for flows:
+
+```mermaid
+sequenceDiagram
+    Client->>API: POST /checkout/sessions
+    API->>Inventory: reserve()
+    API->>Stripe: create PaymentIntent
+    API-->>Client: client_secret
+```
+
+---
+
+## Environment Variable Documentation
+
+Maintain `.env.example` in each app:
+
+```bash
+# Database
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/ecommerce
+
+# Stripe (test keys for local development)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Auth
+JWT_SECRET_KEY=generate-with-openssl-rand-hex-32
+```
+
+Never commit real values. Document required vs optional.
+
+---
+
+## Runbooks
+
+Create runbooks for operational procedures:
+
+| Runbook | Contents |
+|---------|----------|
+| Deployment | Steps, rollback procedure |
+| Database migration failure | Diagnosis, recovery |
+| Stripe webhook failures | Replay, reconciliation |
+| Inventory discrepancy | Investigation steps |
+| Secret rotation | JWT, Stripe, DB credentials |
+
+Store in `docs/runbooks/`. Update after every incident post-mortem.
+
+---
+
+## Changelog
+
+Maintain `CHANGELOG.md` for user-facing and API changes:
+
+```markdown
+## [1.2.0] - 2026-07-07
+
+### Added
+- Partial refund support for admin orders
+
+### Changed
+- Checkout session TTL increased to 30 minutes
+
+### Fixed
+- Cart merge losing quantities on login
+```
+
+Follow Keep a Changelog format.
+
+---
+
+## Pull Request Documentation
+
+PR description must include:
+
+- **What** changed (brief)
+- **Why** (business or technical reason)
+- **Test plan** (checklist of verification steps)
+- **Migration notes** (if Alembic migration included)
+- **Screenshots** (for UI changes)
+
+---
+
+## Onboarding Documentation
+
+New developer checklist in `docs/onboarding.md`:
+
+1. Clone repository
+2. Install prerequisites
+3. Copy `.env.example` → `.env`
+4. `docker compose up -d`
+5. Run migrations
+6. Seed data
+7. Run tests
+8. Read architecture rules
+
+Target: productive in day one for catalog work, day three for checkout.
+
+---
+
+## Anti-Patterns
+
+- Documentation diverged from code (worse than no docs)
+- API endpoints without response model documentation
+- ADR after implementation without recording decision rationale
+- Secrets in README or `.env.example`
+- Auto-generated docs never published or verified
+- Over-commenting obvious code
+- Creating docs files user didn't ask for proactively (follow project scope)
+
+---
+
+## Related Rules
+
+- `architecture/06-adr` — ADR process
+- `git/00-git` — PR documentation
+- `docker/00-docker` — setup documentation
+- `testing/00-testing` — test plan in PRs

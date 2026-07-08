@@ -1,0 +1,268 @@
+---
+description: Data protection standards including PII classification, encryption, GDPR, retention, and anonymization.
+globs: apps/api/**,apps/web/**
+alwaysApply: false
+---
+
+# Data Protection Standard
+
+## Purpose
+
+Define how personally identifiable information (PII) and sensitive data are classified, stored, processed, retained, and deleted in the enterprise e-commerce platform.
+
+Compliance targets: GDPR, CCPA (where applicable), and general data protection best practices.
+
+---
+
+## Data Classification
+
+| Class | Examples | Handling |
+|-------|----------|----------|
+| Public | Product catalog, category names | No restrictions |
+| Internal | Order counts, aggregate analytics | Employee access only |
+| Confidential | Customer email, name, address | Encrypted at rest, access logged |
+| Restricted | Password hashes, payment tokens | Strong encryption, minimal access |
+| Prohibited | PAN, CVV | Never stored — Stripe only |
+
+Label new data fields with classification during schema design.
+
+---
+
+## PII Inventory
+
+| Data | Table/Location | Purpose | Retention |
+|------|----------------|---------|-----------|
+| Email | customers.email | Account, order comms | Account lifetime + 7 years |
+| Name | customers, addresses | Shipping, billing | Same |
+| Phone | addresses.phone | Delivery contact | Same |
+| Physical address | addresses, order snapshots | Fulfillment | Same |
+| IP address | audit_log | Fraud, security | 90 days |
+| Password hash | customers.password_hash | Authentication | Account lifetime |
+| Order history | orders, order_lines | Fulfillment, support | 7 years (tax/legal) |
+| Payment metadata | payment_records | Reconciliation | 7 years |
+
+Review inventory annually and on new feature development.
+
+---
+
+## Encryption
+
+### At Rest
+
+- PostgreSQL: enable transparent data encryption (TDE) via cloud provider or disk encryption
+- Backups encrypted with separate keys
+- Secrets in secrets manager (AWS Secrets Manager, Vault)
+
+### In Transit
+
+- TLS 1.2+ for all API and database connections
+- `sslmode=require` for PostgreSQL connections in production
+
+### Application-Level Encryption
+
+Encrypt especially sensitive fields if required:
+
+```python
+# Optional: encrypt phone numbers at application level
+encrypted_phone = encrypt(phone, key=DATA_ENCRYPTION_KEY)
+```
+
+Use AES-256-GCM with key rotation support.
+
+Password hashes use bcrypt/Argon2id — not reversible encryption.
+
+---
+
+## GDPR Rights
+
+### Right of Access
+
+```
+GET /api/v1/customers/me/data-export
+```
+
+Provide machine-readable export of customer PII and order history within 30 days.
+
+### Right to Rectification
+
+Customer profile and address update via authenticated API.
+
+### Right to Erasure ("Right to be Forgotten")
+
+```
+DELETE /api/v1/customers/me
+```
+
+Process:
+
+1. Verify identity
+2. Check legal retention requirements (completed orders may require retention)
+3. Anonymize or delete:
+   - Customer record → anonymize email to `deleted-{uuid}@anonymized.local`
+   - Remove addresses
+   - Retain order snapshots with anonymized customer reference (legal basis: contract fulfillment records)
+4. Invalidate all tokens
+5. Confirm to customer within 30 days
+
+Cannot erase data under legal hold or required retention.
+
+### Right to Portability
+
+JSON export of customer data in structured format.
+
+### Consent
+
+- Marketing emails: explicit opt-in, easy unsubscribe
+- Cookie consent banner for non-essential cookies
+- Record consent timestamp and version
+
+---
+
+## Data Minimization
+
+Collect only what is needed:
+
+| Required | Optional |
+|----------|----------|
+| Email (checkout) | Phone |
+| Shipping address | Marketing preferences |
+| Name | Company name |
+
+Do not collect date of birth, SSN, or government ID unless legally required.
+
+---
+
+## Retention Policies
+
+| Data Type | Retention | Deletion Method |
+|-----------|-----------|-----------------|
+| Active customer account | Until deletion request | Anonymization |
+| Guest order (email only) | 7 years | Anonymize email |
+| Audit logs | 1 year | Hard delete |
+| Server access logs | 90 days | Hard delete |
+| Cart (abandoned) | 30 days | Hard delete |
+| Idempotency keys | 24 hours | Hard delete |
+| Password reset tokens | 1 hour | Hard delete |
+| Stripe webhook events | 2 years | Hard delete |
+
+Automated cleanup jobs enforce retention.
+
+---
+
+## Anonymization
+
+For analytics and non-production environments:
+
+```python
+def anonymize_customer(customer: Customer) -> Customer:
+    customer.email = f"anon-{hash(customer.id)[:8]}@example.test"
+    customer.name = "Anonymized"
+    # Remove phone, clear addresses
+    return customer
+```
+
+Production data must never be copied to local/staging without anonymization pipeline.
+
+---
+
+## Logging and PII
+
+### Production Logs
+
+Redact or exclude:
+
+- Full email addresses (use `j***@example.com` or hash)
+- Physical addresses
+- Phone numbers
+- JWT tokens
+- Session tokens
+
+Structured logging with explicit field allowlist preferred over logging full request objects.
+
+### Development
+
+May use synthetic data. If using real-like data, use Faker-generated fixtures.
+
+---
+
+## Cross-Border Transfers
+
+If serving EU customers from non-EU infrastructure:
+
+- Document legal basis for transfer (Standard Contractual Clauses)
+- Stripe handles payment data transfer under their DPA
+- Cloud provider region selection documented in ADR
+
+---
+
+## Data Processing Agreements
+
+Maintain DPAs with:
+
+- Stripe (payments)
+- Email service provider
+- Cloud hosting provider
+- Analytics (if processing PII)
+
+Review subprocessors listed in vendor DPAs.
+
+---
+
+## Breach Notification
+
+GDPR requires notification within **72 hours** to supervisory authority if breach likely risks individual rights.
+
+Process:
+
+1. Detect and contain breach
+2. Assess affected data subjects and data types
+3. Notify DPO/legal team immediately
+4. Document timeline and scope
+5. Notify authority if threshold met
+6. Notify affected customers if high risk to rights
+
+Maintain breach response runbook.
+
+---
+
+## Database Security
+
+- Least-privilege DB roles (app role: SELECT/INSERT/UPDATE/DELETE only on app tables)
+- No direct production DB access for developers (use read-only replica with approval)
+- Query audit for admin PII access
+- Row-level security for multi-tenant if applicable
+
+See `database/00-database`.
+
+---
+
+## Backup PII
+
+- Backups encrypted at rest
+- Backup access restricted to ops role
+- Backup retention aligned with data retention policy
+- Test restore in isolated environment only
+
+Erasure requests must consider backup retention — document that backups expire within retention window.
+
+---
+
+## Anti-Patterns
+
+- Logging full customer objects in info-level logs
+- Copying production database to developer laptops
+- Storing PII in URL parameters
+- Sending PII to third-party analytics without consent
+- Indefinite retention of abandoned carts with email
+- Hard-deleting orders (legal/tax requirement — anonymize customer link instead)
+- Exposing full email in API error messages
+
+---
+
+## Related Rules
+
+- `security/00-security` — security baseline
+- `security/01-auth` — password and token handling
+- `security/02-pci` — payment card data
+- `database/01-schema` — PII column design
+- `git/00-git` — prevent committing PII in repos

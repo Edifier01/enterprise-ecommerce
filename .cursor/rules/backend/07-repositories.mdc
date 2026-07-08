@@ -1,0 +1,215 @@
+---
+description: Repository pattern, persistence mapping, and SQLAlchemy 2.0 data access.
+globs: apps/api/**/domain/repositories/**/*.py,apps/api/**/infrastructure/persistence/**/*.py
+alwaysApply: false
+---
+
+# Repositories
+
+## Purpose
+
+This rule defines repository interfaces, SQLAlchemy 2.0 implementations, and mapping between persistence models and domain aggregates.
+
+Repositories isolate persistence from domain logic while keeping queries explicit and testable.
+
+---
+
+## Scope
+
+Applies to:
+
+- Repository interfaces (protocols) in `apps/api/app/features/<feature>/domain/repositories/`
+- SQLAlchemy implementations in `apps/api/app/features/<feature>/infrastructure/persistence/repositories/`
+- ORM models in `apps/api/app/features/<feature>/infrastructure/persistence/models/`
+- Mappers between ORM and domain in `apps/api/app/features/<feature>/infrastructure/persistence/mappers/`
+- Query specifications and filters
+
+Does not apply to:
+
+- Business rules and invariants (domain layer)
+- HTTP pagination response shaping (presentation)
+- Database schema migrations (Alembic)
+- Raw analytics/warehouse ETL
+
+---
+
+## Core Principles
+
+Always:
+
+- Define repository interfaces in domain; implement in infrastructure
+- Repositories speak domain types (`Order`, `ProductId`), not ORM models, at the boundary
+- Keep repositories focused on one aggregate root per interface when possible
+- Use SQLAlchemy 2.0 `select()` API with explicit loading options
+- Map ORM ↔ domain in dedicated mapper functions or classes
+- Accept `AsyncSession` from unit-of-work; do not create sessions internally
+- Name methods by domain language: `get_by_id`, `add`, `remove`, `list_by_customer`
+
+Never:
+
+- Put business logic in repositories ("if status is shipped, raise...")
+- Return ORM models from public repository interface methods
+- Call `commit()` inside repository methods by default
+- Expose generic `query(**filters)` with unlimited filter dicts
+- Access repositories from domain entities
+- Cross feature boundaries with direct table access from another feature's repository
+
+---
+
+## Interface Pattern
+
+```python
+class OrderRepository(Protocol):
+    async def get_by_id(self, order_id: OrderId, session: AsyncSession) -> Order | None: ...
+    async def add(self, order: Order, session: AsyncSession) -> None: ...
+    async def list_by_customer(
+        self, customer_id: CustomerId, session: AsyncSession, *, limit: int, offset: int
+    ) -> Sequence[Order]: ...
+```
+
+Domain depends on protocol. Infrastructure provides `SqlAlchemyOrderRepository`.
+
+---
+
+## Implementation Pattern
+
+```python
+class SqlAlchemyOrderRepository:
+    async def get_by_id(self, order_id: OrderId, session: AsyncSession) -> Order | None:
+        stmt = (
+            select(OrderModel)
+            .where(OrderModel.id == order_id.value)
+            .options(selectinload(OrderModel.lines))
+        )
+        result = await session.execute(stmt)
+        row = result.scalar_one_or_none()
+        return order_mapper.to_domain(row) if row else None
+
+    async def add(self, order: Order, session: AsyncSession) -> None:
+        session.add(order_mapper.to_orm(order))
+```
+
+---
+
+## Mapping Rules
+
+Always:
+
+- Map enums, value objects, and money explicitly both directions
+- Keep mappers pure where possible
+- Handle `None` and not-found at repository boundary
+- Version mapper changes when schema evolves
+
+Never:
+
+- Leak ORM relationship graphs into domain aggregates unintentionally
+- Use `__dict__` copy for mapping
+- Embed business defaults in mappers ("if discount missing, apply 10%")
+
+---
+
+## Query Guidelines
+
+- Prefer explicit methods over generic query builders for maintainability
+- Complex reads may use dedicated query repositories (`OrderReadRepository`)
+- Use indexes aligned with repository query patterns (see database rules)
+- Paginate at database level; never load-all then slice in Python for large sets
+- Use `for_update()` selectively with documented locking strategy
+
+---
+
+## Decision Rules
+
+IF loading one aggregate with children
+THEN use repository on aggregate root with explicit eager loading strategy.
+
+IF query joins multiple bounded contexts for display
+THEN consider read model or application-level composition, not cross-context write repository.
+
+IF method needs ten optional filters
+THEN split into focused methods or specification objects, not a mega-filter dict.
+
+IF persistence model differs significantly from domain
+THEN anti-corruption mapper in infrastructure; do not simplify domain to fit tables.
+
+IF delete is soft-delete by business rule
+THEN implement as domain state change; repository persists status column.
+
+---
+
+## Anti-Patterns
+
+Never create:
+
+- Active Record pattern (entity.save() calling ORM directly)
+- Repository base class with 40 inherited CRUD methods used everywhere
+- Business validation in SQL WHERE clauses only, without domain enforcement
+- Repositories importing FastAPI or Pydantic
+- Shared `BaseRepository[Model]` exposing ORM types project-wide
+- N+1 queries from lazy loading in async request handlers
+- Cross-module SQL joins violating bounded context boundaries
+
+---
+
+## Validation Checklist
+
+Before completing repository work verify:
+
+✓ Interface defined in domain layer.
+
+✓ Implementation lives in infrastructure only.
+
+✓ Public methods return domain types or IDs.
+
+✓ SQLAlchemy 2.0 query style used.
+
+✓ Session passed in; no internal commit.
+
+✓ Mappers handle all value objects correctly.
+
+✓ Loading strategy explicit (no async lazy-load surprises).
+
+✓ No business rules in repository methods.
+
+✓ Tests use in-memory fake or test database with interface contract tests.
+
+✓ Queries paginated and indexed appropriately.
+
+---
+
+## Related Rules
+
+- backend/00-backend
+- backend/05-transactions
+- backend/13-performance-backend
+- architecture/01-ddd
+- architecture/03-dependency-rules
+
+---
+
+## Related Skills
+
+- python-fastapi-development
+- postgresql
+- postgresql-optimization
+- fastapi-pro
+
+---
+
+## Related Agents
+
+- Backend Engineer
+- Database Engineer
+
+---
+
+## Related MCP
+
+- PostgreSQL
+- Filesystem
+
+---
+
+## Summary
+
+Repository interfaces belong to the domain; SQLAlchemy implementations belong to infrastructure. Map explicitly between ORM and aggregates, keep repositories free of business rules, and pass sessions from the unit-of-work.

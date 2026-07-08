@@ -1,0 +1,333 @@
+---
+description: Git workflow standards including branching, commits, pull requests, and code review requirements.
+alwaysApply: false
+---
+
+# Git Workflow Standard
+
+## Purpose
+
+Define version control practices for the enterprise e-commerce platform.
+
+Consistent git workflow enables safe collaboration, traceability, and reliable releases.
+
+---
+
+## Branching Strategy
+
+### Main Branches
+
+| Branch | Purpose | Protection |
+|--------|---------|------------|
+| `main` | Production-ready code | Required PR, CI pass, review |
+| `develop` | Integration branch (optional) | Required PR, CI pass |
+
+For simpler workflow, trunk-based development on `main` is acceptable.
+
+### Feature Branches
+
+```
+feature/{ticket-id}-{short-description}
+fix/{ticket-id}-{short-description}
+chore/{short-description}
+```
+
+Examples:
+
+- `feature/ECOM-123-guest-checkout`
+- `fix/ECOM-456-inventory-race-condition`
+- `chore/upgrade-stripe-sdk`
+
+Branch from `main`. Merge back via pull request.
+
+### Release Branches (If Using Semver)
+
+```
+release/1.2.0
+```
+
+Cut from `main` or `develop` for release stabilization. Merge to `main` and tag.
+
+---
+
+## Commit Messages
+
+### Format
+
+```
+<type>(<scope>): <subject>
+
+[optional body]
+
+[optional footer]
+```
+
+### Types
+
+| Type | Usage |
+|------|-------|
+| feat | New feature |
+| fix | Bug fix |
+| refactor | Code change without behavior change |
+| test | Adding or updating tests |
+| docs | Documentation only |
+| chore | Maintenance, dependencies |
+| perf | Performance improvement |
+| migration | Database migration |
+
+### Scope
+
+Use domain scope: `catalog`, `checkout`, `orders`, `payments`, `inventory`, `auth`, `api`, `web`.
+
+### Examples
+
+```
+feat(checkout): add inventory reservation on session create
+
+fix(payments): deduplicate stripe webhook events by event id
+
+migration(orders): add order_status_history table
+
+refactor(inventory): extract reservation service from checkout
+```
+
+### Rules
+
+- Subject line ≤ 72 characters
+- Imperative mood ("add" not "added")
+- Body explains why, not what (what is in the diff)
+- Reference issue/ticket in footer: `Closes ECOM-123`
+- One logical change per commit when possible
+
+---
+
+## Pull Requests
+
+### Before Opening
+
+- [ ] Branch up to date with base
+- [ ] All tests pass locally
+- [ ] Migrations tested (upgrade + downgrade)
+- [ ] No secrets or debug code committed
+- [ ] Lint passes
+
+### PR Title
+
+Same format as commit message:
+
+```
+feat(checkout): add guest cart merge on login
+```
+
+### PR Description Template
+
+```markdown
+## Summary
+- Brief description of changes and motivation
+
+## Test plan
+- [ ] Unit tests added/updated
+- [ ] Integration tests pass
+- [ ] Manual verification steps
+
+## Migration notes
+- [ ] Alembic migration included (upgrade/downgrade tested)
+- [ ] Backfill required (describe)
+
+## Screenshots
+(if UI changes)
+```
+
+### Size Guidelines
+
+- Prefer PRs < 400 lines changed
+- Split large features into stacked PRs
+- Database migration in separate PR from application logic when possible
+
+---
+
+## Code Review
+
+### Requirements
+
+- Minimum 1 approval for `main` merges
+- 2 approvals for security-sensitive changes (auth, payments, PCI)
+- Author cannot self-approve
+
+### Reviewer Checklist
+
+**Correctness**
+
+- [ ] Business logic matches requirements
+- [ ] Edge cases handled (empty cart, insufficient inventory)
+- [ ] Idempotency where required
+
+**Security**
+
+- [ ] Auth checks on protected endpoints
+- [ ] Input validation at API boundary
+- [ ] No secrets in code
+- [ ] PCI scope maintained (no card data)
+
+**Database**
+
+- [ ] Migration reviewed and tested
+- [ ] FK columns indexed
+- [ ] No N+1 queries introduced
+
+**Tests**
+
+- [ ] Tests cover new behavior
+- [ ] Critical paths not untested
+
+**Architecture**
+
+- [ ] Follows bounded context boundaries
+- [ ] No business logic in wrong layer
+
+### Review Etiquette
+
+- Comment on code, not person
+- Suggest alternatives, not just problems
+- Approve when minor nits remain (note them, don't block)
+- Block only on correctness, security, or architecture violations
+
+---
+
+## Protected Files
+
+Never commit:
+
+- `.env` with real secrets
+- `credentials.json`, `*.pem`, `*.key`
+- Production database dumps
+- Customer PII exports
+
+`.gitignore` must include:
+
+```
+.env
+.env.local
+*.pem
+__pycache__/
+node_modules/
+.next/
+dist/
+.coverage
+htmlcov/
+postgres_data/
+```
+
+Run secret scanning in CI (gitleaks).
+
+---
+
+## Merging
+
+### Strategy
+
+- **Squash merge** for feature branches (clean history on main)
+- **Merge commit** for release branches (preserve history)
+
+### After Merge
+
+- Delete feature branch
+- Verify CI on `main`
+- Deploy to staging automatically
+- Production deploy via tagged release or manual promotion
+
+---
+
+## Tagging and Releases
+
+Semantic versioning: `MAJOR.MINOR.PATCH`
+
+```
+v1.2.0 — new features, backward compatible
+v1.2.1 — bug fix
+v2.0.0 — breaking API change
+```
+
+Tag on `main` after release PR merge:
+
+```bash
+git tag -a v1.2.0 -m "Release 1.2.0: guest checkout, inventory reservations"
+git push origin v1.2.0
+```
+
+Generate release notes from changelog.
+
+---
+
+## Hotfix Process
+
+Production-critical bug:
+
+1. Branch `fix/{id}-{description}` from `main`
+2. Minimal fix + test
+3. Expedited review (1 approver minimum, security review if applicable)
+4. Merge to `main`
+5. Deploy immediately
+6. Tag patch release
+
+Cherry-pick to release branch if maintaining multiple versions.
+
+---
+
+## Database Migration PRs
+
+Special requirements:
+
+- Migration file and model changes in same PR
+- PR description includes SQL preview
+- Downgrade tested
+- Large table changes note lock/concurrent strategy
+- Separate deploy step: migration before app deploy (expand-contract)
+
+---
+
+## Conflict Resolution
+
+- Rebase feature branch on `main` before merge (preferred)
+- Resolve conflicts locally, run tests after resolution
+- Never force push to `main` or shared branches
+- Force push to own feature branch acceptable after rebase
+
+---
+
+## Monorepo Considerations
+
+If monorepo structure:
+
+```
+apps/api/
+apps/web/
+packages/shared/
+```
+
+- Path-based CI: only run tests for changed apps
+- Commit scope indicates affected app
+- Shared package changes may require both app test suites
+
+---
+
+## Anti-Patterns
+
+- Committing directly to `main`
+- Giant PRs with unrelated changes
+- Vague commit messages ("fix stuff", "WIP")
+- Force push to shared branches
+- Committing commented-out code "for later"
+- Merge without CI passing
+- Skipping review for "small" security changes
+- Editing migration files already deployed to production
+
+---
+
+## Related Rules
+
+- `database/02-migrations` — migration PR requirements
+- `testing/00-testing` — CI test requirements
+- `documentation/00-documentation` — PR documentation
+- `security/00-security` — secret scanning
+- `core/03-workflow` — development workflow

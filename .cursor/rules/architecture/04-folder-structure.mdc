@@ -1,0 +1,75 @@
+---
+description: Project folder organization for monorepo and feature modules.
+alwaysApply: false
+---
+
+# Folder Structure
+
+## Monorepo Layout
+
+```
+/
+├── .cursor/          # AI platform (rules, skills, agents, MCP)
+├── apps/
+│   ├── api/          # FastAPI backend
+│   └── web/          # Next.js storefront
+├── docs/             # Platform and project documentation
+├── workflows/        # Domain workflow playbooks (catalog, checkout, handoff)
+├── templates/        # Document templates
+├── openapi.yaml      # API contract (OpenAPI MCP)
+├── docker-compose.yml
+└── .env.example
+```
+
+## Backend (`apps/api/`)
+
+Feature-first under `apps/api/app/features/`:
+
+```
+features/
+├── catalog/
+│   ├── presentation/    # routers
+│   ├── application/     # use cases
+│   ├── domain/          # entities, aggregates
+│   └── infrastructure/  # repositories, adapters
+├── checkout/
+├── orders/
+├── payments/
+└── customers/
+```
+
+Avoid technology-first folders (`controllers/`, `services/`, `utils/` at root).
+
+## Frontend (`apps/web/`)
+
+Feature-first under `apps/web/src/`:
+
+```
+src/
+├── app/              # Next.js App Router
+├── components/       # shared UI, shadcn in components/ui/
+├── features/         # catalog, cart, checkout pages
+├── lib/              # api client, utils
+└── store/            # Zustand stores
+```
+
+## Domain Feature Names
+
+Preferred backend/frontend feature modules:
+
+- catalog
+- orders
+- checkout
+- payments
+- search
+- customers
+
+Each feature contains logical layers (presentation → application → domain → infrastructure on backend).
+
+Avoid dumping unrelated files into shared folders.
+
+## Related Rules
+
+- architecture/02-module-boundaries
+- backend/00-backend
+- frontend/00-frontend

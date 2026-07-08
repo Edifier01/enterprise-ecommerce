@@ -1,0 +1,22 @@
+---
+description: Business domain modeling.
+alwaysApply: false
+---
+
+# Domain Modeling
+
+Model business first.
+
+Technology follows business.
+
+Always identify:
+
+- Business language
+- Invariants
+- Lifecycle
+- Ownership
+- Relationships
+
+Avoid anemic domain models.
+
+Business rules belong inside the domain.

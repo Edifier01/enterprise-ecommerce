@@ -1,0 +1,21 @@
+---
+description: Long-term extensibility rules.
+alwaysApply: false
+---
+
+# Extensibility
+
+Design for future growth.
+
+The architecture should support:
+
+- Marketplace
+- Mobile applications
+- ERP integration
+- CRM integration
+- AI services
+- External APIs
+
+Prefer extension over modification.
+
+Avoid hardcoded assumptions.

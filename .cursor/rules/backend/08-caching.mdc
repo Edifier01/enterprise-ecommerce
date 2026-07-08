@@ -1,0 +1,207 @@
+---
+description: Caching strategy, Redis usage, invalidation, and cache-aside patterns.
+globs: apps/api/**/infrastructure/cache/**/*.py,apps/api/**/application/**/*.py
+alwaysApply: false
+---
+
+# Caching
+
+## Purpose
+
+This rule defines when and how to cache data in the FastAPI backend using Redis or in-process caches without breaking consistency or architectural boundaries.
+
+Caching improves read performance but must never become a hidden source of truth.
+
+---
+
+## Scope
+
+Applies to:
+
+- Cache adapters in `apps/api/app/features/<feature>/infrastructure/cache/`
+- Cache ports/interfaces defined in application or domain when needed
+- Cache key design and TTL policies
+- Invalidation triggered by domain events or writes
+- HTTP cache headers only when documented separately at presentation layer
+
+Does not apply to:
+
+- CDN and static asset caching
+- Database query plan cache tuning
+- Frontend SWR/React Query caches
+- Session storage (see security rules)
+
+---
+
+## Core Principles
+
+Always:
+
+- Treat cache as optional acceleration; database remains source of truth
+- Cache at infrastructure boundary behind explicit port (`CacheStore`, `ProductCache`)
+- Use cache-aside: read cache → on miss load DB → populate cache
+- Define TTL for every key; no infinite TTL without documented reason
+- Invalidate on write via domain events or explicit invalidation in use case
+- Serialize with stable schemas (JSON/msgpack); version cache payloads when shape changes
+- Include tenant/feature prefix in keys: `catalog:product:slug:{slug}`
+
+Never:
+
+- Cache sensitive data (PII, payment tokens, full PAN) without encryption and strict TTL
+- Implement caching inside domain entities
+- Return stale inventory or price data without business-approved TTL
+- Use global mutable cache dict in production multi-worker deployment
+- Cache errors or exceptions as success responses
+- Skip cache invalidation because "TTL is short"
+
+---
+
+## Cache Layers
+
+### Application-Read Cache
+
+For expensive read use cases (product detail, category tree):
+
+- Interface in application layer
+- Implementation wraps Redis in infrastructure
+- Use case decides cacheability
+
+### Infrastructure Gateway Cache
+
+For external API responses (shipping rates, tax provider):
+
+- Cache inside gateway adapter
+- Shorter TTL; respect provider ToS
+
+### HTTP Response Cache
+
+Rare for authenticated commerce APIs. If used:
+
+- Only on truly public, non-personalized GET endpoints
+- Set `Cache-Control` explicitly in presentation layer
+
+---
+
+## Key Design
+
+Format: `{bounded_context}:{entity}:{identifier}[:{variant}]`
+
+Examples:
+
+- `catalog:product:id:{uuid}`
+- `catalog:category:tree:v2`
+- `search:popular:queries:2026-07-07`
+
+Include schema version suffix when breaking serialization changes occur.
+
+---
+
+## Invalidation Strategies
+
+### Event-Driven (Preferred)
+
+On `ProductUpdated`, handler deletes `catalog:product:id:{id}` and related slug keys.
+
+### Write-Through on Update
+
+Use case updates DB, then deletes or refreshes cache before returning.
+
+### TTL-Only
+
+Acceptable only for low-risk, eventually consistent data (marketing banners), documented in code.
+
+---
+
+## Decision Rules
+
+IF data changes frequently (cart, inventory holds)
+THEN do not cache in request path or use sub-second TTL with invalidation.
+
+IF read-heavy, rarely changing (category tree)
+THEN cache-aside with event invalidation and reasonable TTL (5–60 minutes).
+
+IF personalized per user
+THEN key must include user/tenant id; never serve user A cache to user B.
+
+IF cache miss rate is high and TTL too short
+THEN measure before extending TTL; do not guess.
+
+IF stampede risk on hot keys
+THEN use locking, single-flight, or probabilistic early expiration.
+
+IF running multiple API workers
+THEN use Redis (or equivalent shared store), not in-process dict.
+
+---
+
+## Anti-Patterns
+
+Never create:
+
+- `@cache` decorator on repository methods hiding invalidation
+- Caching ORM model instances directly (pickle)
+- Manual cache logic duplicated in every router
+- Cache keys built by string concatenation without naming standard
+- "Clear all cache" on every write
+- Using cache to store authoritative stock counts without invalidation on order placement
+
+---
+
+## Validation Checklist
+
+Before adding caching verify:
+
+✓ Business owner accepts staleness window for this data.
+
+✓ Cache port defined; Redis implementation in infrastructure.
+
+✓ Keys follow naming convention with version where needed.
+
+✓ TTL documented in code or config.
+
+✓ Invalidation path exists for all write operations affecting cached reads.
+
+✓ No sensitive data cached without review.
+
+✓ Multi-worker deployment uses shared cache store.
+
+✓ Metrics/logging for hit rate and errors planned.
+
+✓ Tests cover cache hit, miss, and invalidation paths.
+
+---
+
+## Related Rules
+
+- backend/00-backend
+- backend/06-events
+- backend/13-performance-backend
+- backend/12-security-backend
+
+---
+
+## Related Skills
+
+- python-fastapi-development
+- postgresql-optimization
+- fastapi-pro
+
+---
+
+## Related Agents
+
+- Backend Engineer
+- Database Engineer
+
+---
+
+## Related MCP
+
+- Filesystem
+- PostgreSQL
+
+---
+
+## Summary
+
+Cache for performance, not correctness. Use cache-aside behind infrastructure ports, namespace keys by bounded context, set TTLs, and invalidate on writes via events. Never cache sensitive or highly volatile commerce data without explicit policy.

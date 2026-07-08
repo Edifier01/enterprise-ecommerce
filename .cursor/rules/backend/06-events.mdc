@@ -1,0 +1,242 @@
+---
+description: Domain events, integration events, and async messaging patterns.
+globs: apps/api/**/domain/events/**/*.py,apps/api/**/application/**/*.py,apps/api/**/infrastructure/messaging/**/*.py
+alwaysApply: false
+---
+
+# Domain Events
+
+## Purpose
+
+This rule defines how domain events are modeled, collected, persisted, and published in the FastAPI backend.
+
+Domain events decouple side effects, enable integration between bounded contexts, and preserve audit trails without bloating Application Services.
+
+---
+
+## Scope
+
+Applies to:
+
+- Domain event classes in `apps/api/app/features/<feature>/domain/events/`
+- Event collection on aggregates
+- Application-layer event dispatch after commit
+- Integration event adapters in `apps/api/app/features/<feature>/infrastructure/messaging/`
+- Transactional outbox implementation
+- In-process event handlers where appropriate
+
+Does not apply to:
+
+- Frontend WebSocket notifications
+- Infrastructure logging metrics
+- Celery/ARQ task definitions (see `09-background-jobs`)
+- Kafka/PubSub broker provisioning
+
+---
+
+## Core Principles
+
+Always:
+
+- Name events in past tense: `OrderPlaced`, `PaymentCaptured`, `InventoryReserved`
+- Events represent something that already happened in the domain
+- Raise events inside aggregates; collect via `collect_events()` before persistence
+- Keep event payloads primitive or value-object serializable
+- Publish after successful transaction commit (or outbox in same transaction)
+- Handlers idempotent; assume at-least-once delivery
+- Separate domain events from integration/event-bus DTOs when shapes diverge
+
+Never:
+
+- Publish events before commit unless loss is explicitly acceptable
+- Use events for synchronous request-response between modules in-process without clear need
+- Put HTTP calls inside aggregate event creation
+- Create mega-events that broadcast entire aggregate graphs
+- Use event bus as hidden global state for business logic flow
+- Chain events in infinite loops without guard conditions
+
+---
+
+## Domain Event Structure
+
+```python
+@dataclass(frozen=True, slots=True)
+class OrderPlaced(DomainEvent):
+    order_id: OrderId
+    customer_id: CustomerId
+    total: Money
+    occurred_at: datetime
+```
+
+Aggregate pattern:
+
+```python
+class Order:
+    def place(self) -> None:
+        if self._status != OrderStatus.DRAFT:
+            raise InvalidOrderStateError(...)
+        self._status = OrderStatus.PLACED
+        self._events.append(
+            OrderPlaced(
+                order_id=self.id,
+                customer_id=self.customer_id,
+                total=self.total,
+                occurred_at=datetime.now(UTC),
+            )
+        )
+
+    def collect_events(self) -> list[DomainEvent]:
+        events = self._events.copy()
+        self._events.clear()
+        return events
+```
+
+---
+
+## Domain vs Integration Events
+
+### Domain Events
+
+- Originate from domain layer
+- Express business facts
+- May trigger in-process handlers in same monolith
+
+### Integration Events
+
+- Cross bounded context or external systems
+- Defined in application or infrastructure anti-corruption layer
+- Mapped from domain events before broker publish
+
+```python
+def to_integration(event: OrderPlaced) -> OrderPlacedIntegrationV1:
+    return OrderPlacedIntegrationV1(
+        order_id=str(event.order_id),
+        customer_id=str(event.customer_id),
+        total_amount=str(event.total.amount),
+        currency=event.total.currency.code,
+        occurred_at=event.occurred_at.isoformat(),
+    )
+```
+
+---
+
+## Publishing Strategies
+
+### After Commit (Simple)
+
+Application Service commits, then calls `EventPublisher.publish_all(events)`.
+
+Acceptable when occasional loss on crash after commit is tolerable (rare for commerce).
+
+### Transactional Outbox (Preferred for Critical Flows)
+
+1. Write business data + outbox row in same DB transaction
+2. Background worker reads outbox, publishes, marks processed
+3. Handlers remain idempotent
+
+Use for: payments, inventory, order fulfillment, email triggers.
+
+---
+
+## In-Process Handlers
+
+Location: `apps/api/app/features/<feature>/application/event_handlers/`
+
+- Register handlers explicitly in composition root
+- One handler, one reaction (`OnOrderPlacedSendConfirmationEmail`)
+- Handlers may enqueue background jobs; they do not run heavy work synchronously in request path
+
+---
+
+## Decision Rules
+
+IF another bounded context must react to a state change
+THEN emit domain event; map to integration event for external publish.
+
+IF side effect is required for same request UX (return computed result)
+THEN do not use async event — compute in use case directly.
+
+IF handler failure must not roll back original transaction
+THEN run handler after commit or in background worker.
+
+IF event consumers exist outside the monolith
+THEN version integration payloads (`OrderPlacedV1`).
+
+IF duplicate delivery is possible
+THEN handler checks processed message id or business idempotency key.
+
+---
+
+## Anti-Patterns
+
+Never create:
+
+- `EntityUpdated` generic events without business meaning
+- Events that carry ORM model instances
+- Circular event chains (A triggers B triggers A)
+- Synchronous cross-module event cascades deep enough to hide workflow
+- Using events to bypass module boundary rules with shared database writes
+- Event handlers that start new transactions modifying same aggregate without locking strategy
+
+---
+
+## Validation Checklist
+
+Before completing event implementation verify:
+
+✓ Event names are past tense and business-meaningful.
+
+✓ Events created inside aggregate/domain behavior.
+
+✓ Events collected and cleared before/after publish appropriately.
+
+✓ Publish occurs after commit or via outbox.
+
+✓ Integration mapping isolated from domain event definition.
+
+✓ Handlers are idempotent.
+
+✓ Heavy side effects moved to background jobs.
+
+✓ Event schema versioned for external consumers.
+
+✓ Tests verify event emitted on domain action and handler behavior.
+
+---
+
+## Related Rules
+
+- backend/00-backend
+- backend/05-transactions
+- backend/09-background-jobs
+- architecture/01-ddd
+- architecture/02-module-boundaries
+
+---
+
+## Related Skills
+
+- python-fastapi-development
+- ddd-context-mapping
+- software-architecture
+
+---
+
+## Related Agents
+
+- Backend Engineer
+- Enterprise Architect
+- Checkout Specialist
+
+---
+
+## Related MCP
+
+- PostgreSQL
+- Filesystem
+
+---
+
+## Summary
+
+Domain events record business facts from aggregates. Publish after commit or through transactional outbox. Map to integration events at boundaries. Keep handlers small, idempotent, and free of heavy synchronous work in the request path.

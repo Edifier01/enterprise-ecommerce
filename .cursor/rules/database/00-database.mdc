@@ -1,0 +1,296 @@
+---
+description: PostgreSQL database architecture, ownership, and cross-cutting standards for the enterprise e-commerce platform.
+alwaysApply: false
+---
+
+# Database Architecture Standard
+
+## Purpose
+
+This rule defines how PostgreSQL is used across the platform.
+
+Every database decision must support:
+
+- Data integrity
+- Query performance at scale
+- Safe schema evolution
+- Auditability
+- Operational recoverability
+
+This rule is the parent standard for all database work.
+
+---
+
+## Scope
+
+This rule covers:
+
+- Database technology choice and responsibilities
+- Connection and transaction patterns
+- Naming and schema organization
+- Environment separation
+- Observability and operational standards
+
+Dedicated rules cover:
+
+- `database/01-schema` — table design and constraints
+- `database/02-migrations` — Alembic workflow
+- `database/03-indexing` — index strategy
+- `database/04-queries` — query patterns and optimization
+
+---
+
+## Technology Stack
+
+| Component | Standard |
+|-----------|----------|
+| Database | PostgreSQL 16+ |
+| ORM | SQLAlchemy 2.0 (async) |
+| Migrations | Alembic |
+| Driver | asyncpg |
+| Connection pool | SQLAlchemy pool via FastAPI lifespan |
+
+Do not introduce alternate databases for core transactional domains without an ADR.
+
+---
+
+## Architectural Principles
+
+### Single Source of Truth
+
+PostgreSQL is the system of record for:
+
+- Catalog (products, variants, categories)
+- Inventory and reservations
+- Carts and checkout sessions
+- Orders and fulfillment state
+- Payments metadata (not card data)
+- Customer accounts and addresses
+
+Caches (Redis) and search indexes (optional) are derived data and must be rebuildable from PostgreSQL.
+
+### Domain Alignment
+
+Database schemas mirror bounded contexts:
+
+- `catalog` — product catalog
+- `inventory` — stock and reservations
+- `checkout` — carts and checkout sessions
+- `orders` — order lifecycle
+- `payments` — payment records and Stripe references
+- `customers` — accounts, profiles, addresses
+- `shared` — cross-cutting utilities (audit, outbox)
+
+Schemas may live in separate PostgreSQL schemas or prefixed table groups within `public`, following the project folder structure. Be consistent within the codebase.
+
+### No Business Logic in the Database
+
+Prefer application-layer domain logic.
+
+Acceptable in PostgreSQL:
+
+- Constraints (NOT NULL, CHECK, FK, UNIQUE)
+- Simple derived columns via generated columns
+- Triggers only for audit timestamps or outbox emission when explicitly approved
+
+Avoid:
+
+- Complex stored procedures replacing domain services
+- Business rules hidden in triggers that application code cannot test
+
+---
+
+## Connection Management
+
+### Pool Configuration
+
+- Use a single async engine per application process
+- Configure pool size based on deployment (start: `pool_size=5`, `max_overflow=10`)
+- Set `pool_pre_ping=True` to detect stale connections
+- Set statement timeout at connection or session level (default: 30s for API queries)
+
+### Session Lifecycle
+
+```python
+# Pattern: request-scoped session via FastAPI dependency
+async with session.begin():
+    # read/write within one transaction when mutating
+    ...
+```
+
+Rules:
+
+- One transaction per use case mutation
+- Never hold transactions open across external API calls (Stripe, email)
+- Use `READ COMMITTED` (PostgreSQL default) unless a specific isolation level is documented
+
+### Read Replicas
+
+When read replicas are available:
+
+- Route read-only reporting and analytics queries to replicas
+- Never route writes or read-after-write consistency-sensitive reads to replicas
+- Order confirmation and payment status checks must read from primary
+
+---
+
+## Naming Conventions
+
+| Element | Convention | Example |
+|---------|------------|---------|
+| Tables | plural snake_case | `order_lines` |
+| Columns | snake_case | `created_at` |
+| Primary keys | `id` | `BIGINT GENERATED ALWAYS AS IDENTITY` |
+| Foreign keys | `{entity}_id` | `product_id` |
+| Indexes | `ix_{table}_{columns}` | `ix_orders_customer_id` |
+| Unique constraints | `uq_{table}_{columns}` | `uq_carts_session_token` |
+| Check constraints | `ck_{table}_{description}` | `ck_order_lines_quantity_positive` |
+
+Never use quoted mixed-case identifiers.
+
+---
+
+## Standard Columns
+
+Every transactional table includes:
+
+```sql
+created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+```
+
+Soft-deleted entities add:
+
+```sql
+deleted_at TIMESTAMPTZ NULL
+```
+
+Optimistic locking on contested aggregates:
+
+```sql
+version INTEGER NOT NULL DEFAULT 1
+```
+
+Audit-sensitive tables may add:
+
+```sql
+created_by UUID NULL REFERENCES customers(id),
+updated_by UUID NULL REFERENCES customers(id)
+```
+
+---
+
+## Data Types (Platform Defaults)
+
+| Domain | Type | Notes |
+|--------|------|-------|
+| Money | `NUMERIC(19, 4)` | Never float |
+| Currency | `CHAR(3)` | ISO 4217 |
+| Timestamps | `TIMESTAMPTZ` | Never `TIMESTAMP` without TZ |
+| Status enums | `TEXT` + CHECK or lookup table | Avoid PG ENUM for evolving statuses |
+| Slugs | `TEXT` + UNIQUE | URL-safe, indexed |
+| JSON metadata | `JSONB` | Optional attributes only |
+| Quantities | `INTEGER` or `NUMERIC` | Never float for inventory |
+
+---
+
+## Transaction Boundaries
+
+### Write Operations
+
+Each use case that mutates state runs in one transaction:
+
+1. Validate invariants
+2. Lock or version-check contested rows
+3. Persist changes
+4. Emit domain events (outbox in same transaction when using event-driven patterns)
+
+### Cross-Aggregate Consistency
+
+Prefer eventual consistency via domain events for cross-context updates.
+
+Use synchronous cross-table updates within one transaction only when:
+
+- Financial correctness requires it (inventory reservation + order line creation)
+- The operation is short and well-bounded
+
+### Saga / Compensation
+
+Long-running flows (checkout → payment → fulfillment) use:
+
+- Idempotency keys on external calls
+- Explicit state machines on aggregates
+- Compensation or retry-safe handlers on failure
+
+---
+
+## Security
+
+- Application connects with least-privilege DB role (no superuser in app)
+- Separate roles for migrations (DDL) and runtime (DML)
+- Never embed credentials in code; use environment variables or secrets manager
+- Enable SSL for all non-local connections
+- Row-level security (RLS) for multi-tenant deployments when required
+
+See `security/03-data-protection` for PII handling.
+
+---
+
+## Backup and Recovery
+
+- Continuous WAL archiving or managed-service PITR
+- Daily logical backups for development restore testing
+- Test restore procedure quarterly
+- Document RPO/RTO targets per environment
+
+Production schema changes always go through Alembic migrations (`database/02-migrations`).
+
+---
+
+## Observability
+
+Log and monitor:
+
+- Slow queries (> 500ms warn, > 2s alert)
+- Connection pool exhaustion
+- Deadlock occurrences
+- Migration execution time
+- Replication lag (if replicas)
+
+Use `EXPLAIN (ANALYZE, BUFFERS)` in staging before shipping query changes.
+
+---
+
+## Environment Standards
+
+| Environment | Purpose | Data |
+|-------------|---------|------|
+| local | Developer machines | Seed data, anonymized fixtures |
+| staging | Pre-production validation | Anonymized production subset or synthetic |
+| production | Live traffic | Real customer data — strict access controls |
+
+Never copy production data with real PII to local machines without anonymization.
+
+---
+
+## Anti-Patterns
+
+- Storing prices or inventory only in Redis without PostgreSQL backing
+- Using `SELECT *` in production repository code
+- N+1 queries without eager loading strategy
+- Missing indexes on foreign key columns
+- Float types for money or inventory quantities
+- Manual DDL in production outside Alembic
+- Long-running transactions during Stripe webhook processing
+
+---
+
+## Related Rules
+
+- `database/01-schema` — schema design
+- `database/02-migrations` — Alembic
+- `database/03-indexing` — indexes
+- `database/04-queries` — query standards
+- `architecture/01-ddd` — bounded contexts
+- `backend/00-backend` — repository patterns
+- `security/03-data-protection` — PII and encryption

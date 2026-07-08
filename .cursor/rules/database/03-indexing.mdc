@@ -1,0 +1,318 @@
+---
+description: PostgreSQL indexing strategy, index types, and maintenance standards for e-commerce workloads.
+alwaysApply: false
+---
+
+# Indexing Standard
+
+## Purpose
+
+Define when and how to create indexes in PostgreSQL for the enterprise e-commerce platform.
+
+Indexes must be driven by measured query patterns, not speculation.
+
+---
+
+## Indexing Philosophy
+
+1. Index for queries that run in production, not hypothetical ones
+2. Every foreign key column gets an index
+3. Composite indexes match filter + sort column order
+4. Remove unused indexes — they slow writes and consume storage
+5. Validate with `EXPLAIN (ANALYZE, BUFFERS)` before and after
+
+---
+
+## Mandatory Indexes
+
+### Primary Keys
+
+Created automatically with PRIMARY KEY constraint.
+
+Prefer BIGINT identity for internal tables; UUID when externally exposed.
+
+### Foreign Keys
+
+PostgreSQL does not index FK columns automatically.
+
+```sql
+CREATE INDEX ix_order_lines_order_id ON order_lines (order_id);
+CREATE INDEX ix_order_lines_variant_id ON order_lines (variant_id);
+CREATE INDEX ix_inventory_items_variant_id ON inventory_items (variant_id);
+```
+
+### Unique Business Keys
+
+```sql
+CREATE UNIQUE INDEX uq_products_sku ON products (sku);
+CREATE UNIQUE INDEX uq_products_slug ON products (slug);
+CREATE UNIQUE INDEX uq_orders_order_number ON orders (order_number);
+CREATE UNIQUE INDEX uq_payment_records_stripe_pi ON payment_records (stripe_payment_intent_id);
+```
+
+---
+
+## E-Commerce Query Patterns
+
+### Catalog Listing
+
+Query: active products by category, sorted by created_at
+
+```sql
+CREATE INDEX ix_products_status_created_at ON products (status, created_at DESC)
+  WHERE deleted_at IS NULL;
+```
+
+Partial index excludes soft-deleted rows.
+
+Query: products in category (junction)
+
+```sql
+CREATE INDEX ix_product_categories_category_id ON product_categories (category_id, product_id);
+```
+
+### Product Search
+
+Full-text search:
+
+```sql
+CREATE INDEX ix_products_search ON products
+  USING GIN (to_tsvector('english', coalesce(title, '') || ' ' || coalesce(description, '')));
+```
+
+Prefix/slug lookup:
+
+```sql
+CREATE UNIQUE INDEX uq_products_slug ON products (slug) WHERE deleted_at IS NULL;
+```
+
+### Customer Orders
+
+```sql
+CREATE INDEX ix_orders_customer_id_placed_at ON orders (customer_id, placed_at DESC);
+CREATE INDEX ix_orders_status ON orders (status) WHERE status NOT IN ('delivered', 'cancelled');
+```
+
+Partial index for operational queues (orders needing fulfillment).
+
+### Cart Lookup
+
+```sql
+CREATE UNIQUE INDEX uq_carts_session_token ON carts (session_token) WHERE customer_id IS NULL;
+CREATE INDEX ix_carts_customer_id ON carts (customer_id) WHERE customer_id IS NOT NULL;
+```
+
+### Inventory
+
+```sql
+CREATE UNIQUE INDEX uq_inventory_items_variant_id ON inventory_items (variant_id);
+CREATE INDEX ix_inventory_reservations_expires_at ON inventory_reservations (expires_at)
+  WHERE expires_at IS NOT NULL;
+```
+
+Expiry index supports reservation cleanup jobs.
+
+### Payments
+
+```sql
+CREATE INDEX ix_payment_records_order_id ON payment_records (order_id);
+CREATE UNIQUE INDEX uq_payment_records_idempotency ON payment_records (idempotency_key);
+```
+
+---
+
+## Index Types
+
+| Type | Use Case | Example |
+|------|----------|---------|
+| B-tree (default) | Equality, range, sort | `(customer_id, placed_at)` |
+| GIN | JSONB containment, full-text, arrays | `attributes @> '{"color":"red"}'` |
+| GiST | Ranges, geometric, exclusion | `tstzrange` scheduling |
+| BRIN | Large append-only tables | `audit_log(created_at)` |
+| Hash | Rare — equality only, no range | Generally avoid |
+
+Default to B-tree unless a specific query pattern requires otherwise.
+
+---
+
+## Composite Index Column Order
+
+Leftmost prefix rule applies.
+
+For query:
+
+```sql
+WHERE customer_id = $1 AND status = $2 ORDER BY placed_at DESC
+```
+
+Index:
+
+```sql
+CREATE INDEX ix_orders_customer_status_placed ON orders (customer_id, status, placed_at DESC);
+```
+
+Put columns in order of:
+
+1. Equality filters (most selective first)
+2. Range filters
+3. Sort columns
+
+---
+
+## Partial Indexes
+
+Use when queries consistently filter on a condition:
+
+```sql
+-- Active products only
+CREATE INDEX ix_products_active ON products (category_id)
+  WHERE status = 'active' AND deleted_at IS NULL;
+
+-- Pending reservations
+CREATE INDEX ix_reservations_active ON inventory_reservations (variant_id, expires_at)
+  WHERE quantity > 0;
+```
+
+Benefits: smaller index, faster scans, less write overhead.
+
+---
+
+## Covering Indexes (Index-Only Scans)
+
+When queries need only indexed columns:
+
+```sql
+CREATE INDEX ix_orders_customer_list ON orders (customer_id, placed_at DESC)
+  INCLUDE (order_number, total_amount, status);
+```
+
+Use INCLUDE for columns that appear in SELECT but not in WHERE/ORDER BY.
+
+Verify index-only scan with `EXPLAIN` — requires visibility map freshness (VACUUM).
+
+---
+
+## JSONB Indexing
+
+```sql
+-- Containment queries
+CREATE INDEX ix_products_attributes ON products USING GIN (attributes jsonb_path_ops);
+
+-- Specific key extraction (if hot path)
+CREATE INDEX ix_products_brand ON products ((attributes->>'brand'));
+```
+
+Prefer `jsonb_path_ops` for `@>` containment; default GIN for broader operators.
+
+---
+
+## Index Naming
+
+```
+ix_{table}_{column1}_{column2}     -- non-unique
+uq_{table}_{column1}               -- unique
+```
+
+Keep names under 63 characters (PostgreSQL identifier limit).
+
+---
+
+## Production Index Creation
+
+For tables > 100K rows in production:
+
+```sql
+CREATE INDEX CONCURRENTLY ix_orders_customer_id ON orders (customer_id);
+```
+
+Never use plain `CREATE INDEX` on large hot tables during business hours.
+
+Drop indexes concurrently too:
+
+```sql
+DROP INDEX CONCURRENTLY ix_old_index;
+```
+
+See `database/02-migrations` for Alembic concurrent index pattern.
+
+---
+
+## Index Maintenance
+
+### Monitor Unused Indexes
+
+```sql
+SELECT schemaname, relname, indexrelname, idx_scan, idx_tup_read
+FROM pg_stat_user_indexes
+WHERE idx_scan = 0 AND indexrelname NOT LIKE 'pg_%'
+ORDER BY pg_relation_size(indexrelid) DESC;
+```
+
+Review quarterly. Drop indexes with zero scans after confirming no rare critical queries.
+
+### Bloat
+
+- Ensure autovacuum is configured
+- `REINDEX INDEX CONCURRENTLY` for severely bloated indexes
+- Avoid unnecessary index duplication (e.g., index on `(a)` when `(a, b)` exists and covers `a` equality)
+
+### Statistics
+
+```sql
+ANALYZE orders;
+```
+
+Run after large data loads. Consider increased statistics target for skewed columns:
+
+```sql
+ALTER TABLE orders ALTER COLUMN status SET STATISTICS 1000;
+```
+
+---
+
+## Write Amplification Awareness
+
+Each index adds write cost on INSERT/UPDATE/DELETE.
+
+High-churn tables (cart_lines, inventory_reservations):
+
+- Minimize index count to essential patterns
+- Avoid over-indexing JSONB on write-heavy tables
+
+Low-churn, read-heavy tables (products, categories):
+
+- Accept more indexes for read performance
+
+---
+
+## Anti-Patterns
+
+- Indexing every column "just in case"
+- Duplicate indexes: `(a)` and `(a, b)` where only `(a, b)` is needed — keep `(a, b)` only if queries filter on `a` alone
+- Missing FK indexes (causes slow JOINs and DELETE on parent)
+- Non-concurrent index creation on production large tables
+- Full-table GIN index on JSONB without query justification
+- Ignoring partial index opportunities for soft-deleted rows
+
+---
+
+## Validation Checklist
+
+Before adding an index:
+
+- [ ] Query identified in repository code or EXPLAIN log
+- [ ] `EXPLAIN ANALYZE` shows sequential scan on problematic query
+- [ ] Column order matches filter/sort pattern
+- [ ] Partial index considered for filtered queries
+- [ ] FK column indexed
+- [ ] Concurrent creation planned for production
+- [ ] Downgrade migration drops index
+
+---
+
+## Related Rules
+
+- `database/01-schema` — FK and constraints
+- `database/02-migrations` — index migrations
+- `database/04-queries` — query optimization
+- `performance/00-performance` — broader performance standards

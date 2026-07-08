@@ -1,0 +1,381 @@
+---
+description: API authentication and authorization patterns for FastAPI and Next.js session integration.
+alwaysApply: false
+globs: apps/api/src/api/**/*,apps/api/src/**/auth*,apps/web/src/**/*auth*
+---
+
+# API Authentication Standard
+
+## Purpose
+
+This rule defines authentication and authorization for FastAPI REST endpoints and their integration with the Next.js frontend.
+
+Every protected resource must verify identity and permissions before executing use cases. Authentication failures must fail closed.
+
+---
+
+# Scope
+
+Covers:
+
+- Customer and admin authentication
+- JWT and session cookie patterns
+- FastAPI dependencies for auth
+- Next.js server-side session usage
+- Role-based access control (RBAC)
+- Token refresh and logout
+
+Does not cover payment provider auth (Stripe) — see payment skills.
+
+---
+
+# Authentication Models
+
+| Consumer | Recommended mechanism |
+|----------|----------------------|
+| Next.js Server Components / Actions | HTTP-only session cookie |
+| Next.js Client (browser) | Cookie via same-origin or BFF; no token in localStorage |
+| Machine clients / future mobile | Bearer JWT (short-lived access + refresh) |
+| Admin panel | Session cookie + elevated role + optional MFA |
+
+Default e-commerce customer flow: session cookie issued by FastAPI, read by Next.js on the server.
+
+---
+
+# Session Cookie Flow
+
+```
+1. Customer POST /api/v1/auth/login (credentials)
+2. FastAPI validates via AuthService
+3. FastAPI sets Set-Cookie: session=...; HttpOnly; Secure; SameSite=Lax
+4. Next.js Server Component forwards cookie on server-side fetch
+5. FastAPI Depends(get_current_user) validates session on each request
+```
+
+Cookie attributes (production):
+
+- `HttpOnly` — mandatory
+- `Secure` — mandatory
+- `SameSite=Lax` — default for e-commerce (adjust for cross-site if needed)
+- `Path=/`
+- Reasonable `Max-Age` or session cookie with server-side revocation
+
+Never store JWT access tokens in `localStorage`.
+
+---
+
+# JWT Bearer Flow
+
+For API clients and SPA-adjacent flows when cookies are impractical:
+
+```
+Authorization: Bearer <access_token>
+```
+
+Rules:
+
+- Short access token TTL (15 minutes recommended)
+- Refresh token rotation via `POST /api/v1/auth/refresh`
+- Store refresh token HTTP-only or secure server-side
+- Include `sub`, `exp`, `iat`, `jti` claims
+- Sign with strong secret (RS256 preferred for multi-service)
+
+Document bearer scheme in OpenAPI (`api/03-openapi`).
+
+---
+
+# FastAPI Dependencies
+
+Centralize in `api/deps.py`:
+
+```python
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+security = HTTPBearer(auto_error=False)
+
+async def get_current_user(
+    session: DbSessionDep,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    session_token: str | None = Cookie(None, alias="session"),
+) -> User:
+    user = await auth_service.resolve_user(session, session_token, credentials)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    return user
+
+async def get_current_active_customer(
+    user: User = Depends(get_current_user),
+) -> User:
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
+    return user
+
+def require_roles(*roles: str):
+    async def checker(user: User = Depends(get_current_user)) -> User:
+        if not any(user.has_role(r) for r in roles):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+        return user
+    return checker
+
+AdminRouter = Depends(require_roles("admin"))
+```
+
+Apply dependencies at router level for admin namespaces, per-route for mixed public/private.
+
+---
+
+# Public vs Protected Routes
+
+Public (no auth):
+
+```
+GET  /api/v1/products
+GET  /api/v1/products/{id}
+GET  /api/v1/categories
+POST /api/v1/auth/register
+POST /api/v1/auth/login
+```
+
+Authenticated customer:
+
+```
+GET  /api/v1/customers/me
+GET  /api/v1/orders
+POST /api/v1/cart/items
+POST /api/v1/checkout/sessions
+```
+
+Admin:
+
+```
+POST   /api/v1/admin/products
+PATCH  /api/v1/admin/products/{id}
+DELETE /api/v1/admin/products/{id}
+```
+
+Document security requirements in OpenAPI per operation.
+
+---
+
+# Registration and Login
+
+```python
+@router.post("/auth/register", status_code=201, response_model=AuthResponse)
+async def register(body: RegisterRequest, response: Response):
+    user = await register_use_case.execute(body)
+    session = await auth_service.create_session(user)
+    auth_service.set_session_cookie(response, session)
+    return AuthResponse(user=UserResponse.model_validate(user))
+
+@router.post("/auth/login", response_model=AuthResponse)
+async def login(body: LoginRequest, response: Response):
+    user = await auth_service.authenticate(body.email, body.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    session = await auth_service.create_session(user)
+    auth_service.set_session_cookie(response, session)
+    return AuthResponse(user=UserResponse.model_validate(user))
+```
+
+Rules:
+
+- Hash passwords with bcrypt or argon2 — never store plaintext
+- Rate limit login and register by IP and email
+- Uniform error message for invalid login (prevent user enumeration) or deliberate policy with tradeoff documented
+- Return user profile without sensitive fields
+
+---
+
+# Logout
+
+```python
+@router.post("/auth/logout", status_code=204)
+async def logout(
+    response: Response,
+    user: User = Depends(get_current_user),
+    session_token: str = Cookie(..., alias="session"),
+):
+    await auth_service.revoke_session(session_token)
+    auth_service.clear_session_cookie(response)
+```
+
+Next.js should call logout via Server Action and redirect to home.
+
+---
+
+# Authorization (RBAC)
+
+Roles (minimum):
+
+- `customer` — default registered user
+- `admin` — catalog and order management
+- `support` — read orders, limited mutations (optional)
+
+Permissions checked in application services for resource ownership:
+
+```python
+# orders application service
+if order.customer_id != current_user.id and not current_user.has_role("admin"):
+    raise ForbiddenError()
+```
+
+Defense in depth: router role check + service-level ownership check.
+
+---
+
+# Next.js Integration
+
+Server Component fetch with cookie forwarding:
+
+```typescript
+import { cookies } from "next/headers";
+
+export async function getMe() {
+  const cookieStore = await cookies();
+  const res = await fetch(`${API_BASE}/api/v1/customers/me`, {
+    headers: { Cookie: cookieStore.toString() },
+    cache: "no-store",
+  });
+  if (res.status === 401) return null;
+  if (!res.ok) throw new Error("Failed to load user");
+  return res.json();
+}
+```
+
+Middleware (`apps/web/middleware.ts`):
+
+- Check session cookie presence for `/account/*` and `/admin/*`
+- Redirect to login with `returnUrl`
+- Do not validate JWT signature in Edge unless keys available — prefer lightweight cookie existence check; full validation on server fetch
+
+Full authorization always on FastAPI.
+
+---
+
+# CSRF
+
+When using cookie auth with browser-initiated mutating requests:
+
+- Prefer Server Actions (Next.js CSRF protection) for mutations from UI
+- Or implement double-submit cookie / SameSite strategy
+- Do not expose mutating endpoints to cross-origin browsers without CSRF tokens
+
+GET requests remain safe and idempotent.
+
+---
+
+# Password Reset
+
+```
+POST /api/v1/auth/forgot-password   # Accept email, send token link
+POST /api/v1/auth/reset-password    # Token + new password
+```
+
+Rules:
+
+- Time-limited single-use tokens stored hashed
+- Rate limit forgot-password
+- Same response whether email exists (policy decision)
+
+---
+
+# Admin and MFA
+
+Admin routes require `admin` role.
+
+Consider TOTP MFA for admin accounts before production admin access.
+
+Separate admin session duration (shorter) if policy requires.
+
+---
+
+# Security Headers and CORS
+
+API responses should include appropriate security headers via middleware.
+
+CORS: allow Next.js origin only; credentials `true` when cookie auth from browser (rare — prefer server-side fetch).
+
+---
+
+# Audit and Logging
+
+Log authentication events:
+
+- Login success/failure (without password)
+- Logout
+- Password reset requests
+- Admin actions on sensitive resources
+
+Never log session tokens, JWTs, or passwords.
+
+---
+
+# Testing Auth
+
+- Unit tests for auth service token/session creation
+- Integration tests: 401 without cookie, 403 wrong role, 200 with valid session
+- E2E: login flow through Next.js to FastAPI
+
+---
+
+# Anti-Patterns
+
+Never:
+
+- Trust client-sent `user_id` in request body for authorization
+- Expose admin routes without role checks
+- Store refresh tokens in JavaScript-accessible storage
+- Use long-lived JWT access tokens without rotation
+- Skip auth on "internal" routes exposed to public network
+- Return 200 with empty user for unauthenticated access to protected data
+
+---
+
+# Validation Checklist
+
+- Protected routes use `Depends(get_current_user)` or role checker
+- Passwords hashed; secrets in environment variables
+- Session cookies HttpOnly and Secure in production
+- OpenAPI documents security per operation
+- Next.js forwards cookies only server-side
+- Rate limiting on auth endpoints
+- Resource ownership verified in application layer
+
+---
+
+# Related Rules
+
+- api/00-api
+- api/01-rest
+- api/03-openapi
+- frontend/00-frontend
+- frontend/03-routing
+- backend/00-backend
+
+---
+
+# Related Skills
+
+- cc-skill-security-review
+- security-auditor
+- fastapi-pro
+- pci-compliance
+
+---
+
+# Related Agents
+
+- Security Auditor
+- API Engineer
+- Backend Engineer
+
+---
+
+# Summary
+
+FastAPI authenticates via HTTP-only session cookies for Next.js server fetches and optional JWT for machine clients.
+
+Authorize at the router and application service layers with explicit roles and resource ownership.
+
+Fail closed on any invalid or missing credentials.

@@ -1,0 +1,302 @@
+---
+description: Product catalog domain standards including products, variants, categories, pricing display, and search.
+globs: apps/api/app/features/catalog/**
+alwaysApply: false
+---
+
+# Catalog Domain Standard
+
+## Purpose
+
+Define standards for the product catalog bounded context: products, variants, categories, pricing display, and search.
+
+The catalog is the merchandising source of truth for what can be sold.
+
+---
+
+## Aggregate Roots
+
+### Product
+
+Represents a sellable item with shared attributes.
+
+- Has one or more variants
+- Belongs to one or more categories
+- Has lifecycle status: draft → active → archived
+
+### Category
+
+Hierarchical navigation and filtering taxonomy.
+
+- Self-referential tree (parent/child)
+- Used for browse and SEO URLs
+
+### ProductVariant
+
+Purchasable SKU with specific attributes (size, color) and price.
+
+- Smallest unit of sale
+- Links to inventory item
+- Unique SKU across platform
+
+---
+
+## Product Lifecycle
+
+```
+draft ──▶ active ──▶ archived
+  │                    │
+  └────────────────────┘ (reactivate)
+```
+
+| Status | Visible to Customers | Purchasable |
+|--------|---------------------|-------------|
+| draft | No | No |
+| active | Yes | Yes (if in stock) |
+| archived | No (404 or redirect) | No |
+
+Status transitions enforced in domain layer. Archived products remain in order history via snapshots.
+
+---
+
+## Product Model
+
+### Required Fields
+
+- `sku` — unique platform identifier (master SKU if single variant)
+- `slug` — URL-safe unique identifier
+- `title` — display name
+- `status` — draft | active | archived
+- `created_at`, `updated_at`, `deleted_at`
+
+### Optional Fields
+
+- `description` — rich text / HTML (sanitized on render)
+- `meta_title`, `meta_description` — SEO
+- `attributes` — JSONB for category-specific specs
+- `images` — ordered list (separate table or JSONB with CDN URLs)
+
+### Variants
+
+When product has options:
+
+```python
+class ProductVariant:
+    id: int
+    product_id: int
+    sku: str           # unique globally
+    attributes: dict   # {"size": "L", "color": "Blue"}
+    unit_price: Decimal
+    compare_at_price: Decimal | None  # "was" price for sales
+    currency: str
+    is_default: bool   # one default for single-variant display
+```
+
+Single-variant products still use one variant record for consistency.
+
+---
+
+## Pricing Rules
+
+### Display Pricing
+
+- Show `unit_price` formatted per locale
+- Show `compare_at_price` only when greater than `unit_price` (sale indicator)
+- Prices are per variant, not per product
+
+### Price Changes
+
+- Price changes affect new carts only
+- Active carts revalidate price on checkout entry (show diff to customer)
+- Orders store immutable snapshot — never retroactive
+
+### Multi-Currency
+
+Options (choose one per deployment, document in ADR):
+
+1. **Single currency** — simplest, one price per variant
+2. **Price per currency** — `variant_prices(variant_id, currency, amount)` table
+3. **Exchange conversion** — base price + daily rate (less common for retail)
+
+---
+
+## Categories
+
+### Tree Structure
+
+```sql
+categories (
+  id, parent_id NULL, slug, name, sort_order, is_active, depth
+)
+```
+
+Materialized path or closure table optional for deep trees.
+
+### Product-Category Relationship
+
+Many-to-many via `product_categories`.
+
+- One primary category for breadcrumbs/canonical URL
+- Secondary categories for cross-navigation
+
+### Category Rules
+
+- Slug unique among siblings
+- Cannot delete category with active products (reassign first)
+- Deactivated categories hidden from navigation but products remain accessible via direct URL
+
+---
+
+## Search and Discovery
+
+### Listing Endpoints
+
+```
+GET /api/v1/products?category={slug}&sort=price_asc&page=1&limit=24
+GET /api/v1/categories/{slug}/products
+```
+
+### Sort Options
+
+- `newest` — created_at DESC
+- `price_asc` / `price_desc`
+- `title_asc`
+- `relevance` — search only
+
+### Full-Text Search
+
+```
+GET /api/v1/products/search?q={query}&limit=24
+```
+
+Implementation:
+
+- PostgreSQL `to_tsvector` / `to_tsquery` for MVP
+- Dedicated search engine (Elasticsearch, Meilisearch) when catalog exceeds 100K SKUs or requires faceting at scale
+
+### Faceted Filters
+
+Filter by variant attributes:
+
+```
+GET /api/v1/products?category=shoes&color=blue&size=10
+```
+
+Index attribute keys used in filters (`database/03-indexing`).
+
+---
+
+## Images and Media
+
+- Store CDN URLs, not binary in PostgreSQL
+- Multiple images per product, ordered
+- Variant may override with variant-specific image
+- Require alt text for accessibility and SEO
+- Responsive image sizes via CDN transforms
+
+---
+
+## SEO Requirements
+
+Product pages:
+
+- Canonical URL: `/products/{slug}`
+- Structured data: Product schema.org JSON-LD
+- Open Graph tags for social sharing
+- Unique meta title and description per product
+
+Category pages:
+
+- Canonical URL: `/categories/{slug}`
+- Pagination with rel prev/next
+- BreadcrumbList structured data
+
+See `documentation/00-documentation` for API docs; frontend SEO skills for implementation.
+
+---
+
+## Inventory Integration
+
+Catalog does not own stock counts.
+
+At display time:
+
+```python
+availability = await inventory_service.get_availability(variant_id)
+# Returns: in_stock | low_stock | out_of_stock | backorder
+```
+
+Catalog queries inventory via application service — never direct cross-context repository calls violating module boundaries.
+
+Low stock threshold configurable per variant or globally (default: 5 units).
+
+---
+
+## Admin Operations
+
+Admin API (`/api/v1/admin/catalog/`):
+
+- CRUD products, variants, categories
+- Bulk import via CSV (validated, idempotent on SKU)
+- Price updates with optional effective date (future enhancement)
+- Audit log on all mutations
+
+Admin mutations require `catalog:write` permission.
+
+---
+
+## Validation Rules
+
+| Field | Rule |
+|-------|------|
+| sku | Unique, alphanumeric + hyphen, 3-64 chars |
+| slug | Unique, lowercase, hyphenated, no special chars |
+| title | 1-500 chars, trimmed |
+| unit_price | >= 0, max 4 decimal places |
+| compare_at_price | NULL or > unit_price |
+| description | Max 50KB, HTML sanitized |
+
+---
+
+## Caching Strategy
+
+Cache product detail and category trees:
+
+- TTL: 5 minutes default
+- Invalidate on product/variant/category mutation
+- Cache key includes `updated_at` version
+
+Do not cache personalized prices unless customer-specific pricing is implemented.
+
+---
+
+## Events
+
+Emit on catalog changes:
+
+- `ProductCreated`, `ProductUpdated`, `ProductArchived`
+- `VariantPriceChanged`
+- `CategoryUpdated`
+
+Consumers: search indexer, CDN cache purge, sitemap regeneration.
+
+---
+
+## Anti-Patterns
+
+- Storing inventory count on product table without sync strategy
+- Deleting products that appear in order history (archive instead)
+- Client-side only price display without server validation at checkout
+- SKU reuse across different products
+- Category tree cycles (parent_id pointing to descendant)
+- Unbounded attribute keys in JSONB without indexing plan
+
+---
+
+## Related Rules
+
+- `ecommerce/00-ecommerce` — domain overview
+- `ecommerce/05-inventory` — stock availability
+- `database/01-schema` — table design
+- `database/04-queries` — listing queries
+- `architecture/05-domain-modeling` — aggregates

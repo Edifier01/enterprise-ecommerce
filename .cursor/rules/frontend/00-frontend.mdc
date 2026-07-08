@@ -1,0 +1,379 @@
+---
+description: Frontend architecture overview for Next.js App Router, shadcn/ui, and FastAPI integration.
+alwaysApply: false
+globs: apps/web/**/*
+---
+
+# Frontend Architecture Standard
+
+## Purpose
+
+This rule defines frontend architecture standards for the enterprise e-commerce platform.
+
+Every frontend feature must be:
+
+- Maintainable
+- Accessible
+- Performant
+- Type-safe
+- SEO-friendly
+- Consistent with design system
+
+This rule applies to all code under `apps/web/`.
+
+---
+
+# Scope
+
+This rule covers:
+
+- Next.js 14+ App Router
+- React Server Components and Client Components
+- shadcn/ui component library
+- Tailwind CSS styling
+- TypeScript strict mode
+- Data fetching from FastAPI backend
+- Server Actions and route handlers
+
+It does not define:
+
+- Backend API implementation (see `api/` rules)
+- Database schema
+- Infrastructure deployment
+- E2E test configuration
+
+Those topics have dedicated rules.
+
+---
+
+# Technology Stack
+
+| Layer | Technology |
+|-------|------------|
+| Framework | Next.js 14+ App Router |
+| Language | TypeScript (strict) |
+| Styling | Tailwind CSS |
+| Components | shadcn/ui (Radix UI primitives) |
+| Forms | React Hook Form + Zod |
+| Client state | Zustand |
+| Server state | React Server Components, fetch, cache |
+| API consumer | Typed fetch clients against FastAPI REST |
+
+Never introduce alternative UI libraries without an ADR.
+
+---
+
+# Architectural Principles
+
+The frontend follows:
+
+- Feature-first organization within `apps/web/src/`
+- Server Components by default
+- Client Components only when interactivity requires it
+- Colocation of related files (component, test, styles)
+- Composition over inheritance
+- Explicit data boundaries between server and client
+
+Dependencies flow:
+
+```
+Pages / Layouts (Server)
+    ↓
+Feature Components
+    ↓
+UI Primitives (shadcn)
+    ↓
+Domain Types (shared with API contracts)
+```
+
+---
+
+# Project Structure
+
+```
+apps/web/
+├── src/
+│   ├── app/              # App Router pages, layouts, loading, error
+│   ├── components/       # Shared UI and feature components
+│   │   └── ui/           # shadcn/ui primitives (do not modify casually)
+│   ├── features/         # Feature modules (catalog, cart, checkout, ...)
+│   ├── lib/              # Utilities, API clients, constants
+│   ├── hooks/            # Custom React hooks (client-only)
+│   ├── store/            # Zustand stores (client-only)
+│   └── types/            # Frontend-specific types; prefer generated API types
+├── public/
+└── next.config.ts
+```
+
+Organize by business capability inside `features/`, not by technical role alone.
+
+Correct:
+
+```
+features/catalog/components/ProductCard.tsx
+features/checkout/components/CheckoutForm.tsx
+```
+
+Incorrect:
+
+```
+components/all/ProductCard.tsx
+components/all/CheckoutForm.tsx
+```
+
+---
+
+# Server vs Client Components
+
+Default to Server Components.
+
+Use `"use client"` only when the component needs:
+
+- Event handlers (onClick, onChange)
+- Browser APIs (localStorage, window)
+- React hooks (useState, useEffect, useReducer)
+- Zustand or other client-only state
+- Third-party libraries that require the DOM
+
+Never mark entire page trees as client components. Push `"use client"` to the smallest leaf that needs interactivity.
+
+Pattern:
+
+```
+ProductPage (Server) → fetches data
+  └── AddToCartButton (Client) → handles click
+```
+
+---
+
+# Data Fetching
+
+Fetch from FastAPI in Server Components whenever possible.
+
+Rules:
+
+- Use typed API client functions from `lib/api/`
+- Pass serializable props to Client Components
+- Never expose secrets or service tokens to the client
+- Use Next.js `fetch` caching and revalidation intentionally
+- Handle loading and error states with `loading.tsx` and `error.tsx`
+
+For mutations, prefer Server Actions when the flow stays on the server boundary. Use client-side fetch only for optimistic UI or real-time updates.
+
+Never call FastAPI directly from Client Components with privileged credentials.
+
+---
+
+# shadcn/ui Usage
+
+shadcn/ui components live in `components/ui/`.
+
+Rules:
+
+- Install components via the shadcn CLI; do not copy from random sources
+- Extend via composition and variants, not by editing generated primitives unless fixing a bug
+- Use `cn()` from `lib/utils` for conditional classes
+- Follow Radix accessibility patterns built into primitives
+- Match design tokens defined in Tailwind config
+
+Custom components that wrap shadcn should live in `components/` or `features/*/components/`, not inside `components/ui/`.
+
+---
+
+# API Integration
+
+The frontend consumes FastAPI REST endpoints.
+
+Rules:
+
+- Define request/response types aligned with OpenAPI spec
+- Centralize base URL, headers, and error handling in `lib/api/client.ts`
+- Map HTTP status codes to user-facing messages in one place
+- Use Zod to validate external data at boundaries when types cannot be generated
+- Never duplicate business rules that belong on the backend
+
+See `api/00-api` and `api/01-rest` for contract details.
+
+---
+
+# Styling
+
+Use Tailwind CSS utility classes.
+
+Rules:
+
+- Prefer design tokens (`text-muted-foreground`, `bg-primary`) over arbitrary values
+- Mobile-first responsive breakpoints
+- Dark mode via CSS variables if enabled in theme
+- No inline styles except dynamic values that Tailwind cannot express
+- No CSS Modules unless required for third-party integration
+
+---
+
+# Accessibility
+
+Every interactive UI must:
+
+- Be keyboard navigable
+- Have visible focus states
+- Use semantic HTML
+- Provide ARIA labels where Radix does not cover them
+- Meet WCAG 2.1 AA for customer-facing flows
+
+Run axe or equivalent checks on checkout and auth flows before release.
+
+---
+
+# SEO
+
+Customer-facing pages must:
+
+- Export metadata via `generateMetadata` or static `metadata`
+- Use semantic heading hierarchy
+- Include canonical URLs
+- Support structured data where applicable (see SEO skills)
+
+Admin and account pages may use `noindex` when appropriate.
+
+---
+
+# Error Handling
+
+Handle errors at three levels:
+
+1. Route level — `error.tsx` with recovery action
+2. Feature level — inline error states for partial failures
+3. Global — `global-error.tsx` for catastrophic failures
+
+Never swallow API errors silently. Log server-side; show safe messages client-side.
+
+---
+
+# Security
+
+Frontend security requirements:
+
+- Never store secrets in client code or environment variables prefixed without `NEXT_PUBLIC_` only when truly public
+- Sanitize user-generated content before rendering
+- Use CSRF-safe patterns for Server Actions
+- Validate all form input with Zod before submission
+- Do not trust client-side validation alone
+
+Authentication tokens: prefer HTTP-only cookies set by the backend; avoid localStorage for session tokens.
+
+---
+
+# Testing
+
+Required coverage areas:
+
+- Unit tests for utilities and hooks
+- Component tests for complex interactive UI
+- E2E tests for checkout, auth, and cart (Playwright)
+
+Colocate tests as `*.test.tsx` or in `__tests__/` next to source.
+
+---
+
+# Anti-Patterns
+
+Never:
+
+- Fetch sensitive data in Client Components with admin credentials
+- Put business logic in UI components that belongs on the backend
+- Create god components exceeding ~300 lines without splitting
+- Use `useEffect` for data that Server Components can fetch
+- Bypass the typed API client with raw fetch scattered across files
+- Import server-only modules into client bundles
+- Duplicate shadcn components with one-off copies
+
+---
+
+# Decision Rules
+
+Before implementation ask:
+
+Is this static or server-fetchable?
+
+If yes → Server Component.
+
+Does this need browser interactivity?
+
+If yes → Client Component leaf.
+
+Is this shared UI chrome?
+
+If yes → `components/` or shadcn.
+
+Is this feature-specific?
+
+If yes → `features/<capability>/`.
+
+Is this client-only ephemeral state?
+
+If yes → Zustand (see `frontend/02-state`).
+
+Is this form input validation?
+
+If yes → Zod + React Hook Form (see `frontend/04-forms`).
+
+---
+
+# Validation Checklist
+
+Before completing frontend work verify:
+
+- Server Components used by default
+- Client boundary is minimal
+- shadcn/ui patterns followed
+- API calls go through typed client
+- Loading and error states exist
+- TypeScript strict passes
+- Accessibility basics covered
+- No secrets in client bundle
+- Feature files colocated correctly
+
+---
+
+# Related Rules
+
+- frontend/01-components
+- frontend/02-state
+- frontend/03-routing
+- frontend/04-forms
+- frontend/05-performance-frontend
+- api/00-api
+- api/01-rest
+- architecture/00-architecture
+- architecture/04-folder-structure
+
+---
+
+# Related Skills
+
+- nextjs-app-router-patterns
+- nextjs-best-practices
+- react-nextjs-development
+- shadcn
+- zustand-store-ts
+- zod-validation-expert
+- frontend-seo
+
+---
+
+# Related Agents
+
+- Frontend Engineer
+- Enterprise Architect
+
+---
+
+# Summary
+
+The frontend delivers customer and admin experiences via Next.js App Router and shadcn/ui.
+
+Server Components own data fetching from FastAPI.
+
+Client Components own interactivity and ephemeral state.
+
+Architecture and type safety take precedence over speed of delivery.

@@ -1,0 +1,293 @@
+---
+description: Docker and containerization standards for local development, CI, and production deployment.
+alwaysApply: false
+---
+
+# Docker Standard
+
+## Purpose
+
+Define containerization standards for the enterprise e-commerce platform.
+
+Docker provides consistent environments across development, CI, and production.
+
+---
+
+## Container Strategy
+
+| Environment | Usage |
+|-------------|-------|
+| Local development | docker compose for PostgreSQL, Redis, optional services |
+| CI | Service containers + application test containers |
+| Production | Container orchestration (Kubernetes, ECS, or managed platform) |
+
+Application code runs natively in local dev (hot reload) with containerized dependencies — not always fully containerized during development.
+
+---
+
+## Project Structure
+
+```
+/
+├── docker/
+│   ├── Dockerfile.api
+│   ├── Dockerfile.web
+│   └── nginx.conf (if applicable)
+├── docker-compose.yml
+├── docker-compose.override.yml  # local overrides (gitignored patterns)
+└── .dockerignore
+```
+
+---
+
+## Dockerfile Standards
+
+### Multi-Stage Builds
+
+```dockerfile
+# Dockerfile.api
+FROM python:3.12-slim AS builder
+WORKDIR /app
+RUN pip install --no-cache-dir poetry
+COPY pyproject.toml poetry.lock ./
+RUN poetry export -f requirements.txt --output requirements.txt
+
+FROM python:3.12-slim AS runtime
+WORKDIR /app
+RUN addgroup --system app && adduser --system --ingroup app app
+COPY --from=builder /app/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY apps/api/ .
+USER app
+EXPOSE 8000
+HEALTHCHECK CMD curl -f http://localhost:8000/health || exit 1
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+### Rules
+
+- Pin base image version (`python:3.12-slim`, not `python:latest`)
+- Run as non-root user
+- Multi-stage to minimize image size
+- No secrets in Dockerfile or image layers
+- `.dockerignore` excludes `.git`, `node_modules`, `__pycache__`, `.env`
+- Include HEALTHCHECK instruction
+
+### Web Dockerfile
+
+```dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY apps/web/package*.json ./
+RUN npm ci
+COPY apps/web/ .
+RUN npm run build
+
+FROM node:20-alpine AS runtime
+WORKDIR /app
+RUN addgroup -S app && adduser -S app -G app
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+USER app
+EXPOSE 3000
+HEALTHCHECK CMD wget -qO- http://localhost:3000/api/health || exit 1
+CMD ["node", "server.js"]
+```
+
+Use Next.js standalone output for minimal production image.
+
+---
+
+## Docker Compose (Local Development)
+
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ecommerce
+      POSTGRES_PASSWORD: ecommerce
+      POSTGRES_DB: ecommerce
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecommerce"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+
+volumes:
+  postgres_data:
+```
+
+### Rules
+
+- Named volumes for database persistence
+- Health checks on all services
+- Application connects via service name (`postgres:5432`)
+- `docker-compose.override.yml` for personal local settings (not committed with secrets)
+
+---
+
+## Environment Variables in Containers
+
+- Inject via environment at runtime — not baked into image
+- Use `.env` file for local compose (in `.gitignore`)
+- Production: secrets manager or orchestrator secrets
+- Document all variables in `.env.example`
+
+```yaml
+api:
+  environment:
+    DATABASE_URL: postgresql+asyncpg://ecommerce:ecommerce@postgres:5432/ecommerce
+    STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+  depends_on:
+    postgres:
+      condition: service_healthy
+```
+
+---
+
+## CI Container Usage
+
+### GitHub Actions Example
+
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    env:
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: ecommerce_test
+    options: >-
+      --health-cmd pg_isready
+      --health-interval 10s
+      --health-timeout 5s
+      --health-retries 5
+
+steps:
+  - name: Run migrations
+    run: alembic upgrade head
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:test@localhost/ecommerce_test
+  - name: Run tests
+    run: pytest
+```
+
+Run migrations before tests in CI.
+
+---
+
+## Production Deployment
+
+### Resource Limits
+
+| Service | CPU | Memory |
+|---------|-----|--------|
+| API | 1 core (request 0.5) | 512MB–1GB |
+| Web | 1 core | 512MB–1GB |
+| PostgreSQL | 2+ cores | 4GB+ (managed service preferred) |
+
+Set limits to prevent noisy neighbor issues.
+
+### Scaling
+
+- API: horizontal scaling behind load balancer (stateless)
+- Web: horizontal scaling (stateless)
+- PostgreSQL: vertical scaling or managed service with read replicas
+
+### Health Endpoints
+
+```
+GET /health       — liveness (process alive)
+GET /health/ready — readiness (DB connected, dependencies OK)
+```
+
+Orchestrator uses readiness for traffic routing.
+
+---
+
+## Security
+
+- Non-root container user
+- Read-only root filesystem where possible
+- No SSH into containers — use orchestrator exec for debug
+- Scan images for vulnerabilities (Trivy, Snyk) in CI
+- Private container registry
+- Network policies: API → PostgreSQL only, not public internet to DB
+
+---
+
+## Logging
+
+- Log to stdout/stderr (12-factor app)
+- Orchestrator collects logs (CloudWatch, Datadog, etc.)
+- JSON structured logging in production
+- No log files inside containers
+
+---
+
+## Database in Production
+
+Prefer managed PostgreSQL (RDS, Cloud SQL, Supabase):
+
+- Automated backups and PITR
+- Patch management
+- High availability
+
+Do not run PostgreSQL in container in production unless team has DBA expertise and backup automation.
+
+---
+
+## Local Development Workflow
+
+```bash
+# Start dependencies
+docker compose up -d postgres redis
+
+# Run API natively (hot reload)
+cd apps/api && uvicorn src.main:app --reload
+
+# Run web natively
+cd apps/web && npm run dev
+
+# Run migrations
+cd apps/api && alembic upgrade head
+
+# Tear down
+docker compose down        # keep data
+docker compose down -v     # remove volumes
+```
+
+---
+
+## Anti-Patterns
+
+- `latest` tag in production
+- Secrets in Dockerfile ENV or compose committed files
+- Running as root in production container
+- No health checks
+- Giant monolithic image with dev dependencies included
+- Database data in container without named volume
+- Manual `docker exec` schema changes bypassing Alembic
+
+---
+
+## Related Rules
+
+- `database/02-migrations` — migration in CI/deploy
+- `security/00-security` — container security
+- `performance/00-performance` — resource limits
+- `documentation/00-documentation` — setup docs
+- `testing/00-testing` — CI containers

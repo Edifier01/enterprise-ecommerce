@@ -1,0 +1,255 @@
+---
+description: Enterprise model routing policy for AI development.
+alwaysApply: false
+---
+
+# Enterprise Model Routing
+
+This project uses multiple AI models.
+
+No single model should be used for every task.
+
+Always choose the model that provides the best balance between:
+
+- Accuracy
+- Reliability
+- Speed
+- Cost
+- Context size
+- Reasoning quality
+
+Model routing is intentional.
+
+Never choose a model randomly.
+
+---
+
+# Routing Principles
+
+Always use the least expensive model capable of completing the task with the required quality.
+
+Escalate only when necessary.
+
+Never use the strongest model for simple work.
+
+---
+
+# Preferred Models
+
+Current project preference:
+
+Primary Architecture Model
+
+- Claude Opus 4.7
+
+Primary Research Model
+
+- GPT-5.5
+
+Primary Implementation Model
+
+- Composer 2.5
+
+These preferences may change as better models become available.
+
+---
+
+# GPT-5.5 Routing
+
+Prefer GPT-5.5 for:
+
+- Research
+- Planning
+- Web Search
+- Documentation Analysis
+- Technical Comparison
+- API Research
+- Framework Research
+- Official Documentation
+- Mathematics
+- Algorithms
+- Architecture Review
+- Design Review
+- Requirement Analysis
+
+Use GPT whenever current knowledge is important.
+
+Combine with:
+
+- Context7 MCP
+- Fetch MCP
+- OpenAPI MCP
+
+---
+
+# Claude Opus Routing
+
+Prefer Claude Opus for:
+
+- Enterprise Architecture
+- System Design
+- Domain Modeling
+- Large Refactoring
+- Complex Business Logic
+- Code Review
+- Technical Debt Analysis
+- Design Decisions
+- Security Review
+- Architecture Evolution
+
+Use Opus whenever deep reasoning is more important than speed.
+
+---
+
+# Composer 2.5 Routing
+
+Prefer Composer 2.5 for:
+
+- CRUD implementation
+- Boilerplate generation
+- Repetitive code
+- Unit tests
+- Integration tests
+- DTO generation
+- API implementation
+- UI implementation
+- Component generation
+- Simple refactoring
+- Documentation drafting
+
+Use Composer 2.5 whenever implementation speed is the priority.
+
+---
+
+# Escalation Policy
+
+Escalate from Composer 2.5 to GPT or Opus when:
+
+- Requirements become ambiguous.
+- Architecture changes.
+- Business logic becomes complex.
+- Security is involved.
+- Multiple systems interact.
+- Refactoring spans many modules.
+- The implementation repeatedly fails.
+
+---
+
+# Downgrade Policy
+
+After planning is complete:
+
+Move implementation back to the implementation model.
+
+Avoid keeping expensive models active for repetitive work.
+
+---
+
+# Cost Optimization
+
+Use premium models only when they provide measurable value.
+
+Prefer inexpensive models for:
+
+- Formatting
+- Documentation
+- Small edits
+- Simple implementations
+- Repetitive changes
+
+---
+
+# Context Optimization
+
+Use the smallest context that solves the task.
+
+Avoid loading unnecessary files.
+
+Avoid unnecessary MCP servers.
+
+Avoid unnecessary Rules.
+
+---
+
+# MCP Pairing
+
+Research
+
+- GPT-5.5
+- Context7
+- Fetch
+
+Architecture
+
+- Claude Opus
+- Memory
+- Context7
+
+Backend
+
+- Composer 2.5
+- PostgreSQL
+- OpenAPI
+- Filesystem
+
+Frontend
+
+- Composer 2.5
+- shadcn/ui
+- Playwright
+
+Testing
+
+- Composer 2.5
+- Playwright
+
+Deployment
+
+- GPT-5.5
+- Docker
+- GitHub
+
+Production Debugging
+
+- Claude Opus
+- Sentry
+- GitHub
+
+---
+
+# Verification
+
+Before starting any task verify:
+
+✓ Correct model selected
+
+✓ Correct MCP selected
+
+✓ Correct Rules loaded
+
+✓ Correct Skills loaded
+
+✓ Correct Agent activated
+
+
+# Fallback Strategy
+
+If the preferred model is unavailable:
+
+Architecture
+
+Claude Opus → GPT-5.5
+
+Research
+
+GPT-5.5 → Claude Opus
+
+Implementation
+
+Composer 2.5 → GPT-5.5
+
+Never stop execution because one model is unavailable.
+
+Choose the closest equivalent.
+
+Only then begin implementation.

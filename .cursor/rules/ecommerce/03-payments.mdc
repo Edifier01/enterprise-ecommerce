@@ -1,0 +1,338 @@
+---
+description: Stripe payment integration standards including PaymentIntents, webhooks, idempotency, and reconciliation.
+globs: apps/api/app/features/**
+alwaysApply: false
+---
+
+# Payments Domain Standard (Stripe)
+
+## Purpose
+
+Define how Stripe is integrated for payment processing in the enterprise e-commerce platform.
+
+Payments context owns payment records and Stripe communication — not order fulfillment logic.
+
+---
+
+## Architecture
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Checkout  │────▶│  Payments   │────▶│   Stripe    │
+│   (session) │     │  Service    │     │    API      │
+└─────────────┘     └──────┬──────┘     └──────┬──────┘
+                           │                    │
+                    ┌──────▼──────┐     ┌──────▼──────┐
+                    │  Payment    │◀────│  Webhooks   │
+                    │  Records    │     │  Handler    │
+                    └─────────────┘     └─────────────┘
+```
+
+Webhook handler validates signature, deduplicates events, delegates to domain services.
+
+---
+
+## PCI Scope Reduction
+
+### Allowed
+
+- Stripe Payment Element / Checkout (SAQ A)
+- Store `payment_intent_id`, `charge_id`, last4, brand, exp_month/year
+- Store Stripe customer ID
+
+### Forbidden
+
+- Raw card numbers (PAN)
+- CVV/CVC
+- Magnetic stripe data
+- Custom card input fields
+
+All card data flows directly to Stripe via Elements.
+
+See `security/02-pci` for full compliance requirements.
+
+---
+
+## PaymentIntent Flow
+
+### Create PaymentIntent
+
+```
+POST /api/v1/checkout/sessions/{session_id}/payment-intent
+Headers: Idempotency-Key: {uuid}
+```
+
+Server actions:
+
+1. Load checkout session, validate not expired
+2. Recalculate total server-side
+3. Check idempotency store — return existing if duplicate key
+4. Create Stripe PaymentIntent:
+
+```python
+intent = stripe.PaymentIntent.create(
+    amount=total_in_cents,
+    currency=session.currency.lower(),
+    metadata={
+        "checkout_session_id": str(session.id),
+        "order_reference": session.reference,
+    },
+    automatic_payment_methods={"enabled": True},
+    idempotency_key=idempotency_key,
+)
+```
+
+5. Persist `PaymentRecord` with status `pending`
+6. Return `client_secret` to frontend
+
+### Amount Rules
+
+- Convert Decimal to integer cents: `int(total * 100)` with explicit rounding
+- Minimum amounts per Stripe currency rules
+- Amount must match checkout session total at creation time
+
+### Confirm on Client
+
+Frontend calls `stripe.confirmPayment()` with Elements.
+
+Never confirm payment entirely server-side for standard card flow unless using specific Stripe integration patterns documented in ADR.
+
+---
+
+## PaymentRecord Model
+
+```python
+class PaymentRecord:
+    id: int
+    order_id: int | None          # set after order creation
+    checkout_session_id: int
+    stripe_payment_intent_id: str  # unique
+    stripe_charge_id: str | None
+    amount: Decimal
+    currency: str
+    status: str  # pending | processing | succeeded | failed | cancelled | refunded
+    idempotency_key: str           # unique
+    failure_code: str | None
+    failure_message: str | None
+    payment_method_summary: dict | None  # {brand, last4, exp_month, exp_year}
+    created_at: datetime
+    updated_at: datetime
+```
+
+---
+
+## Webhook Handling
+
+### Endpoint
+
+```
+POST /api/v1/webhooks/stripe
+```
+
+Raw body required for signature verification — do not parse JSON before verify.
+
+### Signature Verification
+
+```python
+event = stripe.Webhook.construct_event(
+    payload=request.body,
+    sig_header=request.headers["Stripe-Signature"],
+    secret=settings.STRIPE_WEBHOOK_SECRET,
+)
+```
+
+Reject with 400 if verification fails. Log attempt without sensitive data.
+
+### Idempotent Event Processing
+
+```python
+if await event_repo.exists(stripe_event_id=event.id):
+    return Response(status_code=200)  # already processed
+
+async with session.begin():
+    await event_repo.store(stripe_event_id=event.id, type=event.type)
+    await payment_event_handler.handle(event)
+```
+
+Store processed event IDs permanently.
+
+### Handled Events
+
+| Event | Action |
+|-------|--------|
+| `payment_intent.succeeded` | Update PaymentRecord → trigger order placement |
+| `payment_intent.payment_failed` | Update PaymentRecord, notify customer |
+| `payment_intent.canceled` | Update PaymentRecord, release inventory |
+| `charge.refunded` | Update refund status on order |
+| `charge.dispute.created` | Alert ops, flag order |
+
+Return 200 quickly. Heavy processing async if needed, but maintain idempotency.
+
+### Webhook Security
+
+- Separate webhook secret per environment
+- HTTPS only
+- Rate limit endpoint
+- No authentication header beyond Stripe signature
+- Rotate webhook secrets via Stripe dashboard when compromised
+
+---
+
+## Payment Status State Machine
+
+```
+pending ──▶ processing ──▶ succeeded
+   │              │
+   │              └──▶ failed
+   │
+   └──▶ cancelled
+```
+
+`succeeded` is terminal for payment capture.
+
+Refunds are separate records linked to original payment.
+
+---
+
+## Refunds
+
+### Full Refund
+
+```python
+stripe.Refund.create(
+    payment_intent=payment.stripe_payment_intent_id,
+    reason="requested_by_customer",
+)
+```
+
+Triggered by order cancellation or customer service action.
+
+### Partial Refund
+
+```python
+stripe.Refund.create(
+    payment_intent=payment.stripe_payment_intent_id,
+    amount=partial_amount_cents,
+)
+```
+
+Update order with refund line items. Validate refund <= captured amount.
+
+### Refund Webhook
+
+`charge.refunded` → update PaymentRecord and Order payment status.
+
+---
+
+## Reconciliation
+
+Daily job:
+
+1. List PaymentRecords in `pending`/`processing` older than 1 hour
+2. Fetch status from Stripe API
+3. Reconcile discrepancies
+4. Alert on mismatches
+
+Monthly:
+
+- Compare Stripe dashboard totals with `payment_records` aggregates
+- Investigate any variance > 0
+
+---
+
+## Stripe Customer Mapping
+
+Optional but recommended for registered customers:
+
+```python
+stripe_customer = stripe.Customer.create(
+    email=customer.email,
+    metadata={"customer_id": str(customer.id)},
+)
+# Store stripe_customer_id on customers table
+```
+
+Reuse customer for saved payment methods (Stripe Customer Portal or SetupIntent).
+
+---
+
+## Error Handling
+
+| Stripe Error | Application Response |
+|--------------|------------------------|
+| Card declined | Return friendly message, allow retry |
+| Insufficient funds | Same |
+| Invalid request | Log, return 400, alert if config error |
+| Rate limit | Retry with exponential backoff |
+| API connection | Retry 3x, then 503 |
+
+Never expose raw Stripe error messages to customers.
+
+---
+
+## Configuration
+
+Environment variables:
+
+```
+STRIPE_SECRET_KEY=sk_test_... / sk_live_...
+STRIPE_PUBLISHABLE_KEY=pk_test_... / pk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+- Test keys in local/staging
+- Live keys only in production secrets manager
+- Never commit keys to repository
+
+Use Stripe CLI for local webhook forwarding:
+
+```bash
+stripe listen --forward-to localhost:8000/api/v1/webhooks/stripe
+```
+
+---
+
+## Testing
+
+### Unit Tests
+
+- Mock Stripe SDK
+- Test idempotency key deduplication
+- Test webhook signature validation
+
+### Integration Tests
+
+- Stripe test mode with test card `4242424244244242`
+- Webhook fixture replay
+
+### Test Cards
+
+| Number | Scenario |
+|--------|----------|
+| 4242424244244242 | Success |
+| 4000000000000002 | Decline |
+| 4000000000009995 | Insufficient funds |
+| 4000002500003155 | Requires 3D Secure |
+
+---
+
+## Anti-Patterns
+
+- Business logic only in webhook handler without domain service
+- Trusting client-side payment success without webhook confirmation
+- Processing webhooks without signature verification
+- Storing Stripe secret key in frontend
+- Creating multiple PaymentIntents for same checkout without idempotency
+- Double order placement on webhook retry without dedup
+- Synchronous Stripe calls inside DB transactions
+- Logging full webhook payloads with PII in production
+
+---
+
+## Related Rules
+
+- `ecommerce/02-checkout` — checkout flow
+- `ecommerce/04-orders` — post-payment order creation
+- `security/02-pci` — PCI compliance
+- `security/00-security` — general security
+- `testing/00-testing` — payment test strategy

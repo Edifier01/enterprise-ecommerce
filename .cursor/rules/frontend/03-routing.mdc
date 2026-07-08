@@ -1,0 +1,360 @@
+---
+description: Next.js App Router patterns for layouts, pages, loading, error boundaries, and parallel routes.
+alwaysApply: false
+globs: apps/web/src/app/**/*
+---
+
+# App Router Standards
+
+## Purpose
+
+This rule defines routing, navigation, and route-level patterns for the Next.js App Router frontend consuming FastAPI REST APIs.
+
+Routes must be predictable, SEO-friendly, and leverage Server Components for data loading at the edge of each navigation segment.
+
+---
+
+# Scope
+
+Applies to all files under `apps/web/src/app/`.
+
+Covers:
+
+- File-system routing conventions
+- Layouts and nested layouts
+- Loading and error UI
+- Route groups and dynamic segments
+- Server Actions in routes
+- Middleware integration
+
+---
+
+# Route File Conventions
+
+| File | Purpose |
+|------|---------|
+| `page.tsx` | Route UI; must export default component |
+| `layout.tsx` | Shared shell for segment and children |
+| `loading.tsx` | Suspense fallback for segment |
+| `error.tsx` | Error boundary (Client Component) |
+| `not-found.tsx` | 404 for segment |
+| `route.ts` | Route Handler (API proxy, webhooks) |
+| `template.tsx` | Re-mounted layout variant (rare) |
+| `default.tsx` | Parallel route fallback |
+
+Only create files that are needed. Do not scaffold empty `loading.tsx` everywhere without Suspense boundaries.
+
+---
+
+# URL Design
+
+URLs are user-facing product surface. Design for:
+
+- Readability (`/products/running-shoes` not `/p?id=123` when SEO matters)
+- Stable identifiers (slug + internal id where needed)
+- Locale prefix if i18n enabled (`/en/products`, `/ar/products`)
+- No trailing slash inconsistency (pick one in config)
+
+E-commerce route examples:
+
+```
+/                          # Home
+/products                  # Catalog listing
+/products/[slug]           # Product detail
+/categories/[slug]         # Category listing
+/cart                      # Cart
+/checkout                  # Checkout flow
+/checkout/success          # Order confirmation
+/account                   # Account layout group
+/account/orders            # Order history
+/account/orders/[id]       # Order detail
+/admin/...                 # Admin route group (protected)
+```
+
+---
+
+# Layout Hierarchy
+
+Use nested layouts for shared chrome:
+
+```
+app/
+├── layout.tsx              # Root: html, body, providers
+├── (shop)/
+│   ├── layout.tsx          # Shop header/footer
+│   ├── page.tsx            # Home
+│   └── products/
+│       ├── layout.tsx      # Optional product section nav
+│       └── [slug]/page.tsx
+└── (account)/
+    ├── layout.tsx          # Account sidebar
+    └── orders/page.tsx
+```
+
+Route groups `(shop)` and `(account)` do not affect URL path.
+
+Layouts are Server Components by default. Do not convert root layout to client unless required for providers — wrap providers in a thin client `Providers` component instead.
+
+---
+
+# Data Loading in Pages
+
+Fetch data in `page.tsx` Server Components:
+
+```tsx
+interface PageProps {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
+}
+
+export default async function ProductPage({ params, searchParams }: PageProps) {
+  const { slug } = await params;
+  const { page } = await searchParams;
+  const product = await getProductBySlug(slug);
+  if (!product) notFound();
+  return <ProductDetail product={product} />;
+}
+```
+
+Rules:
+
+- Use `notFound()` for missing resources
+- Use `redirect()` for auth guards when middleware is insufficient
+- Await `params` and `searchParams` (Next.js 15 async API)
+- Parallelize independent fetches with `Promise.all`
+
+---
+
+# Loading States
+
+Add `loading.tsx` when the page suspends on slow data:
+
+```tsx
+// app/products/loading.tsx
+import { ProductGridSkeleton } from "@/components/skeletons";
+
+export default function Loading() {
+  return <ProductGridSkeleton />;
+}
+```
+
+Streaming: wrap slow sub-sections in `<Suspense fallback={...}>` inside the page for granular streaming instead of blocking the entire page.
+
+---
+
+# Error Boundaries
+
+`error.tsx` must be a Client Component:
+
+```tsx
+"use client";
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <div>
+      <h2>Something went wrong</h2>
+      <button onClick={reset}>Try again</button>
+    </div>
+  );
+}
+```
+
+Use segment-level errors for isolated failures (e.g., recommendations widget). Use `global-error.tsx` at root for catastrophic errors.
+
+Never expose stack traces to customers in production.
+
+---
+
+# Dynamic Segments
+
+| Pattern | Use case |
+|---------|----------|
+| `[slug]` | Single dynamic param |
+| `[...slug]` | Catch-all (CMS pages) |
+| `[[...slug]]` | Optional catch-all |
+
+Validate params with Zod before API calls:
+
+```typescript
+const paramsSchema = z.object({ slug: z.string().min(1) });
+const { slug } = paramsSchema.parse(await params);
+```
+
+Use `generateStaticParams` for high-traffic product pages when data is available at build time.
+
+---
+
+# Metadata and SEO
+
+Export metadata from layouts or pages:
+
+```tsx
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await getProductBySlug(slug);
+  return {
+    title: product?.name ?? "Product",
+    description: product?.description,
+    openGraph: { images: product?.imageUrl ? [product.imageUrl] : [] },
+  };
+}
+```
+
+Listing pages: canonical URLs, pagination `rel` links when applicable.
+
+---
+
+# Navigation
+
+Use `<Link>` from `next/link` for internal navigation.
+
+Prefetching is on by default; disable with `prefetch={false}` for low-value links (e.g., admin destructive actions).
+
+Programmatic navigation: `useRouter` from `next/navigation` in Client Components only.
+
+Preserve scroll behavior intentionally for back navigation on product lists.
+
+---
+
+# Middleware
+
+`middleware.ts` at app root handles:
+
+- Authentication redirects (`/account/*`, `/admin/*`)
+- Locale detection and redirect
+- Security headers (optional; may also live in next.config)
+
+Keep middleware fast. No heavy API calls — validate JWT signature or session cookie only.
+
+---
+
+# Route Handlers
+
+Use `app/api/**/route.ts` sparingly.
+
+Valid uses:
+
+- BFF proxy when hiding credentials from browser
+- Webhook receivers (Stripe)
+- Health checks
+
+Prefer calling FastAPI directly from Server Components when no credential hiding is needed.
+
+Route Handlers must not duplicate business logic from FastAPI.
+
+---
+
+# Server Actions
+
+Colocate actions in `actions.ts` next to the feature or in `features/*/actions.ts`.
+
+```tsx
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { updateCart } from "@/lib/api/cart";
+
+export async function addToCartAction(productId: string, quantity: number) {
+  await updateCart(productId, quantity);
+  revalidatePath("/cart");
+}
+```
+
+Rules:
+
+- Validate input with Zod inside every action
+- Revalidate affected paths or tags after mutations
+- Return `{ success, error }` objects for form integration
+- Never expose raw FastAPI errors to the client
+
+---
+
+# Parallel and Intercepting Routes
+
+Use parallel routes (`@modal`) for:
+
+- Cart drawer overlay
+- Quick view product modal
+- Login modal without losing context
+
+Use intercepting routes (`(.)`) for soft navigation that preserves background page.
+
+Only adopt when UX requirements justify complexity.
+
+---
+
+# Auth-Protected Routes
+
+Defense in depth:
+
+1. Middleware — coarse redirect if no session cookie
+2. Layout — server-side session validation via FastAPI
+3. Page — resource-level authorization (order belongs to user)
+
+Never rely on hiding links alone for admin routes.
+
+---
+
+# Anti-Patterns
+
+Never:
+
+- Fetch the same FastAPI resource in layout and page without `cache()` deduplication
+- Use Pages Router patterns (`getServerSideProps`) in App Router
+- Create client-only pages that fetch everything in `useEffect`
+- Hardcode API URLs in page files
+- Use route handlers as a second backend with business logic
+
+---
+
+# Validation Checklist
+
+- URL structure is semantic and stable
+- `page.tsx` is a Server Component unless impossible
+- Loading and error UI exist for slow/critical routes
+- Metadata defined for public pages
+- Params validated before API calls
+- Auth enforced at middleware and server layout
+- Server Actions revalidate cache after mutations
+
+---
+
+# Related Rules
+
+- frontend/00-frontend
+- frontend/01-components
+- frontend/02-state
+- frontend/05-performance-frontend
+- api/04-auth-api
+
+---
+
+# Related Skills
+
+- nextjs-app-router-patterns
+- nextjs-best-practices
+- nextjs-seo-indexing
+
+---
+
+# Related Agents
+
+- Frontend Engineer
+
+---
+
+# Summary
+
+The App Router maps URLs to Server Component pages with nested layouts.
+
+Data loads at the page boundary from FastAPI; loading and error files handle UX edge cases.
+
+Keep routes thin, metadata rich, and auth enforced on the server.

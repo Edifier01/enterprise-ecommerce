@@ -1,0 +1,24 @@
+---
+description: Architecture Decision Records.
+alwaysApply: false
+---
+
+# Architecture Decision Records
+
+Create or update an ADR whenever:
+
+- Architecture changes
+- Technology changes
+- Major dependency changes
+- Public API changes
+- Database strategy changes
+
+Each ADR includes:
+
+- Context
+- Decision
+- Alternatives
+- Consequences
+- Status
+
+Reference previous ADRs whenever applicable.

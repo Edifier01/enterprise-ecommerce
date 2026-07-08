@@ -1,0 +1,231 @@
+---
+description: Unit of work, transaction boundaries, and SQLAlchemy 2.0 session management.
+globs: apps/api/**/application/**/*.py,apps/api/**/infrastructure/**/*.py
+alwaysApply: false
+---
+
+# Transactions
+
+## Purpose
+
+This rule defines transaction boundaries, unit-of-work patterns, and SQLAlchemy 2.0 async session management for the FastAPI backend.
+
+Correct transaction scope ensures atomicity, consistency, and predictable failure behavior across use cases.
+
+---
+
+## Scope
+
+Applies to:
+
+- Unit of Work abstractions in `apps/api/core/persistence/` or feature infrastructure
+- Application Service and use case transaction boundaries
+- SQLAlchemy 2.0 async session lifecycle
+- Repository commit/flush semantics
+- Idempotent write operations and outbox patterns
+
+Does not apply to:
+
+- Read-only query optimization (see `13-performance-backend`)
+- Background job retry logic (see `09-background-jobs`)
+- Distributed saga orchestration across services (future microservice extraction)
+- Database migration transactions (Alembic)
+
+---
+
+## Core Principles
+
+Always:
+
+- Begin transactions in Application layer (use case or Application Service)
+- Use one transaction per business operation unless explicitly sagas
+- Use SQLAlchemy 2.0 async sessions with `async with session.begin()`
+- Keep transactions short; no external HTTP calls inside open transactions
+- Flush for ID generation; commit at use case success boundary
+- Roll back on any unhandled exception
+- Pass session/unit-of-work into repositories; repositories do not own transactions
+
+Never:
+
+- Open transactions in FastAPI route handlers directly
+- Nest transactions without clear isolation requirements
+- Hold transactions open across `await` calls to external APIs
+- Call `commit()` inside repositories by default
+- Span one transaction across unrelated aggregates/features
+- Use autocommit mode for business writes
+
+---
+
+## Unit of Work Pattern
+
+```python
+class SqlAlchemyUnitOfWork:
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
+        self._session_factory = session_factory
+
+    async def __aenter__(self) -> Self:
+        self.session = self._session_factory()
+        self._transaction = await self.session.begin()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        if exc_type is not None:
+            await self.session.rollback()
+        await self.session.close()
+
+    async def commit(self) -> None:
+        await self.session.commit()
+```
+
+Application Service:
+
+```python
+async with self._uow as uow:
+    order = Order.create(command)
+    await self._orders.add(order, uow.session)
+    await uow.commit()
+```
+
+---
+
+## SQLAlchemy 2.0 Standards
+
+Always:
+
+- Use `AsyncSession` and `async_sessionmaker`
+- Prefer `select()` / `update()` / `delete()` 2.0 style queries in repositories
+- Use `session.execute()` with typed `select()` constructs
+- Configure `expire_on_commit=False` only when measured and justified
+- Use explicit `relationship()` loading strategies; avoid implicit lazy IO in async code
+
+Never:
+
+- Use legacy `Query` API in new code
+- Use synchronous sessions in async request path
+- Rely on implicit lazy loading in async contexts (raises `MissingGreenlet`)
+
+---
+
+## Read vs Write
+
+### Write Use Cases
+
+- Require transactional unit-of-work
+- Commit once at end of successful orchestration
+- Publish domain events after commit (or via transactional outbox)
+
+### Read Use Cases
+
+- Prefer read-only session or no explicit transaction when possible
+- Use dedicated query repositories or read models for complex reads
+- Do not commit on read-only paths
+
+---
+
+## Decision Rules
+
+IF performing a single aggregate state change with one repository
+THEN one transaction in Application Service still applies — consistency standard.
+
+IF external side effect cannot roll back (payment capture)
+THEN use outbox/event + compensating action; do not keep DB transaction open during payment API call.
+
+IF operation is idempotent (webhook retry)
+THEN enforce idempotency key with unique constraint; short transaction for dedup + apply.
+
+IF read path needs consistent snapshot
+THEN use explicit read transaction or repeatable read only when required.
+
+IF crossing feature boundaries in one operation
+THEN prefer domain events or application-level integration; avoid cross-feature DB joins in write transaction.
+
+---
+
+## Domain Events and Commit Order
+
+Preferred order:
+
+1. Mutate aggregates in memory
+2. Persist changes (flush)
+3. Commit transaction
+4. Publish events to broker or outbox processor
+
+Transactional outbox: write event to outbox table in same transaction; separate worker publishes.
+
+Never publish to message broker before commit unless loss is acceptable and documented.
+
+---
+
+## Anti-Patterns
+
+Never create:
+
+- `@transactional` decorator magic that hides session scope
+- Repository methods that call `commit()` silently
+- Long-running transactions including file uploads or email sends
+- Per-entity commit in loops (N commits for N items)
+- Sharing one session across concurrent tasks without isolation
+- Manual session creation in random utility modules
+
+---
+
+## Validation Checklist
+
+Before completing transactional code verify:
+
+✓ Transaction begins in Application layer.
+
+✓ Repositories receive session; they do not commit by default.
+
+✓ No external I/O inside open transaction.
+
+✓ Async SQLAlchemy 2.0 API used throughout.
+
+✓ Rollback occurs on failure paths.
+
+✓ Events publish after commit or via outbox.
+
+✓ Read use cases avoid unnecessary transactions.
+
+✓ Idempotency enforced for retry-prone writes.
+
+✓ Integration tests verify rollback on domain failure.
+
+---
+
+## Related Rules
+
+- backend/00-backend
+- backend/01-services
+- backend/06-events
+- backend/07-repositories
+- architecture/11-dependency-injection
+
+---
+
+## Related Skills
+
+- python-fastapi-development
+- fastapi-pro
+- postgresql
+- postgresql-optimization
+
+---
+
+## Related Agents
+
+- Backend Engineer
+- Database Engineer
+
+---
+
+## Related MCP
+
+- PostgreSQL
+- Filesystem
+
+---
+
+## Summary
+
+Application layer owns transaction boundaries. SQLAlchemy 2.0 async sessions flow through unit-of-work into repositories. Keep transactions short, commit once per business operation, and publish events after successful persistence.

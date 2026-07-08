@@ -1,0 +1,248 @@
+---
+description: Platform-wide security standards including threat model, secure development, secrets, and compliance baseline.
+globs: apps/api/**,apps/web/**
+alwaysApply: false
+---
+
+# Security Standard
+
+## Purpose
+
+Establish the security baseline for the enterprise e-commerce platform.
+
+Security is not optional and not deferred to production.
+
+Every feature must be designed and implemented with security requirements from the start.
+
+---
+
+## Security Principles
+
+1. **Defense in depth** — multiple layers, no single point of failure
+2. **Least privilege** — minimum access required for every role and service
+3. **Fail secure** — errors deny access, never grant it
+4. **Secure by default** — safe configuration out of the box
+5. **Never trust client input** — validate everything server-side
+6. **Minimize attack surface** — disable unused features, close unused ports
+
+---
+
+## Threat Model (STRIDE)
+
+| Threat | E-Commerce Example | Mitigation |
+|--------|-------------------|------------|
+| Spoofing | Fake admin JWT | Strong auth, MFA for admin |
+| Tampering | Price manipulation | Server-side price validation |
+| Repudiation | Disputed order | Audit logs, signed webhooks |
+| Information disclosure | PII leak in logs | Data classification, redaction |
+| Denial of service | Checkout flood | Rate limiting, WAF |
+| Elevation of privilege | Customer → admin | RBAC, scope checks |
+
+Review threat model when adding new integrations or data flows.
+
+---
+
+## Authentication and Authorization
+
+See `security/01-auth` for detailed auth standards.
+
+Summary:
+
+- JWT access tokens (short-lived) + refresh tokens (rotating)
+- RBAC for admin endpoints
+- Session tokens for guest carts (cryptographically random, HttpOnly cookie)
+- MFA required for admin accounts in production
+
+Every protected endpoint validates auth before business logic.
+
+---
+
+## Input Validation
+
+All external input validated at API boundary:
+
+- Pydantic models for request bodies (FastAPI)
+- Zod schemas for frontend forms
+- Path parameter type validation
+- Query parameter bounds (page size max 100)
+
+Reject invalid input with 400 — do not sanitize and accept silently for security-sensitive fields.
+
+---
+
+## Output Encoding
+
+- JSON API responses — no HTML injection risk in API
+- Frontend: React auto-escapes; never use `dangerouslySetInnerHTML` without DOMPurify
+- Product descriptions: sanitize HTML server-side before storage or render
+
+---
+
+## HTTPS and Transport
+
+- TLS 1.2+ everywhere in staging and production
+- HSTS header enabled in production
+- Secure cookie flags: `Secure`, `HttpOnly`, `SameSite=Lax` (or Strict for sensitive)
+- No sensitive data in URL query parameters
+
+---
+
+## Secrets Management
+
+| Secret | Storage |
+|--------|---------|
+| Database credentials | Environment / secrets manager |
+| Stripe keys | Environment / secrets manager |
+| JWT signing key | Environment / secrets manager |
+| Webhook secrets | Environment / secrets manager |
+
+Rules:
+
+- Never commit secrets to git
+- `.env` in `.gitignore` — provide `.env.example` with placeholders
+- Rotate secrets on team member departure or suspected compromise
+- Separate secrets per environment
+
+Scan commits with secret detection in CI (gitleaks, trufflehog).
+
+---
+
+## Dependency Security
+
+- Pin dependencies with lock files
+- Run `pip audit` / `npm audit` in CI
+- Automated Dependabot or Renovate for updates
+- Review critical CVEs before merge
+- No dependencies with known critical unpatched vulnerabilities
+
+---
+
+## API Security
+
+### Rate Limiting
+
+| Endpoint | Limit |
+|----------|-------|
+| Login | 5/min per IP |
+| Registration | 3/min per IP |
+| Checkout | 10/min per session |
+| Webhooks | 100/min per IP (Stripe ranges) |
+| Public catalog | 100/min per IP |
+
+Return 429 with `Retry-After` header.
+
+### CORS
+
+- Explicit allowed origins — never `*` in production with credentials
+- Allow only required methods and headers
+
+### Security Headers
+
+```
+Content-Security-Policy: default-src 'self'; ...
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+```
+
+---
+
+## Logging and Monitoring
+
+### Log
+
+- Authentication failures
+- Authorization denials
+- Payment failures
+- Webhook verification failures
+- Admin actions
+- Unusual error rates
+
+### Never Log
+
+- Passwords or password hashes
+- Full credit card numbers
+- CVV
+- JWT tokens (full)
+- Stripe secret keys
+- Unredacted PII in production info-level logs
+
+See `security/03-data-protection` for PII handling.
+
+### Alerting
+
+- Spike in 401/403 responses
+- Payment webhook failures
+- Database connection errors
+- Unusual admin activity patterns
+
+Integrate with Sentry or equivalent for error tracking.
+
+---
+
+## PCI DSS Scope
+
+Payment card data handled exclusively by Stripe.
+
+Platform maintains SAQ A eligibility:
+
+- No card data touches application servers
+- Stripe Elements for card entry
+- HTTPS enforced
+
+See `security/02-pci` for full requirements.
+
+---
+
+## Secure Development Lifecycle
+
+1. **Design** — identify sensitive data flows, auth requirements
+2. **Implement** — follow auth, validation, and PCI rules
+3. **Review** — security checklist on PRs touching auth, payments, PII
+4. **Test** — include security test cases (auth bypass, injection)
+5. **Deploy** — secrets via CI/CD secrets, not manual config
+
+Security review required for:
+
+- Authentication changes
+- Payment flow changes
+- New PII collection
+- Admin permission changes
+- New third-party integrations
+
+---
+
+## Incident Response
+
+1. **Detect** — monitoring alerts, customer reports
+2. **Contain** — revoke tokens, rotate secrets, disable affected endpoints
+3. **Investigate** — audit logs, access patterns
+4. **Remediate** — patch vulnerability, deploy fix
+5. **Notify** — affected customers per legal requirements (GDPR 72h for breaches)
+6. **Post-mortem** — document root cause and preventive measures
+
+Maintain runbook for common incidents (credential leak, webhook compromise).
+
+---
+
+## Anti-Patterns
+
+- Security through obscurity
+- Client-side authorization checks only
+- Logging full request bodies in production
+- Default admin credentials
+- Disabled SSL verification in production code
+- `eval()` or dynamic code execution on user input
+- SQL string concatenation
+- Storing secrets in frontend JavaScript
+
+---
+
+## Related Rules
+
+- `security/01-auth` — authentication
+- `security/02-pci` — payment card compliance
+- `security/03-data-protection` — PII and GDPR
+- `ecommerce/03-payments` — Stripe integration
+- `backend/00-backend` — API layer security

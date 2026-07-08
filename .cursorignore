@@ -1,0 +1,29 @@
+﻿# Dependencies and build output
+node_modules/
+apps/web/.next/
+apps/web/out/
+apps/api/.venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+.cursor/mcp.local.json
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs and artifacts
+*.log
+dist/
+build/
+*.egg-info/

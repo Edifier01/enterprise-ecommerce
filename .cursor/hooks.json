@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/pm-session-start.ps1"
+      }
+    ],
+    "stop": [
+      {
+        "type": "prompt",
+        "prompt": "The agent is finishing. Verify whether PROJECT_STATUS.md, TASKS.md, HANDOFF.md, and CURRENT_CONTEXT.md in .cursor/project-management/ were updated this session. If the agent made code or task changes but did not update PM files, respond with a follow-up reminding the agent to update all four files and DECISIONS.md if a decision was made. Hook input: $ARGUMENTS",
+        "timeout": 15,
+        "loop_limit": 1
+      }
+    ],
+    "subagentStop": [
+      {
+        "type": "prompt",
+        "prompt": "A subagent has finished. The parent agent must aggregate subagent results and update .cursor/project-management/ (TASKS.md, HANDOFF.md, PROJECT_STATUS.md, CURRENT_CONTEXT.md). If parallel work changed task status or files, remind the parent to update PM state before ending. Hook input: $ARGUMENTS",
+        "timeout": 10,
+        "loop_limit": 1
+      }
+    ]
+  }
+}

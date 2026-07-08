@@ -1,0 +1,367 @@
+---
+description: Order lifecycle standards including state machine, fulfillment, cancellation, and customer order management.
+globs: apps/api/app/features/orders/**
+alwaysApply: false
+---
+
+# Orders Domain Standard
+
+## Purpose
+
+Define the orders bounded context: order creation, status lifecycle, fulfillment tracking, cancellation, and customer order history.
+
+An order is the immutable commercial record of a completed purchase.
+
+---
+
+## Aggregate Root: Order
+
+### Order Entity
+
+```python
+class Order:
+    id: int
+    order_number: str          # unique, human-readable: ORD-00012345
+    customer_id: int | None    # null for guest with email only
+    guest_email: str | None
+    status: OrderStatus
+    currency: str
+
+    subtotal: Decimal
+    discount_amount: Decimal
+    shipping_amount: Decimal
+    tax_amount: Decimal
+    total_amount: Decimal
+
+    shipping_address: AddressSnapshot
+    billing_address: AddressSnapshot
+    shipping_method: str
+
+    payment_record_id: int
+    checkout_session_id: int
+
+    lines: list[OrderLine]
+    status_history: list[OrderStatusChange]
+
+    placed_at: datetime
+    version: int
+    created_at: datetime
+    updated_at: datetime
+```
+
+### OrderLine (Entity within Order)
+
+```python
+class OrderLine:
+    id: int
+    order_id: int
+    variant_id: int
+    quantity: int
+    unit_price: Decimal          # immutable snapshot
+    line_total: Decimal
+    product_snapshot: dict       # {title, sku, attributes, image_url}
+```
+
+Product snapshot ensures order history remains accurate after catalog changes.
+
+---
+
+## Order Creation
+
+Triggered by `payment_intent.succeeded` webhook — not by checkout UI directly.
+
+```python
+async def place_order_from_checkout(session_id: int, payment_record_id: int) -> Order:
+    session = await checkout_repo.get(session_id)
+    # Idempotent: return existing order if already placed for this session
+    existing = await order_repo.get_by_checkout_session(session_id)
+    if existing:
+        return existing
+
+    order = Order.create_from_checkout(session, payment_record_id)
+    await order_repo.save(order)
+    await inventory_service.confirm_reservation(session_id)
+    await emit(OrderPlaced(order_id=order.id))
+    return order
+```
+
+Creation is idempotent on `checkout_session_id`.
+
+---
+
+## Order Number Generation
+
+Format: `ORD-{zero_padded_id}` or `ORD-{date}-{sequence}`
+
+Requirements:
+
+- Unique across platform
+- Human-readable for customer support
+- Generated atomically (database sequence or dedicated counter table)
+
+```sql
+CREATE SEQUENCE order_number_seq START 100000;
+-- order_number = 'ORD-' || nextval('order_number_seq')
+```
+
+Never expose sequential database IDs alone as order numbers (enumeration risk).
+
+---
+
+## Status State Machine
+
+```
+                    ┌─────────────┐
+                    │   pending   │ (optional: awaiting payment)
+                    └──────┬──────┘
+                           │ payment confirmed
+                    ┌──────▼──────┐
+              ┌─────│  confirmed  │─────┐
+              │     └──────┬──────┘     │
+              │            │            │
+       ┌──────▼──────┐     │     ┌──────▼──────┐
+       │  cancelled  │◀────┼─────│  (payment   │
+       └─────────────┘     │     │   failed)   │
+                           │     └─────────────┘
+                    ┌──────▼──────┐
+                    │ processing  │
+                    └──────┬──────┘
+                           │
+                    ┌──────▼──────┐
+                    │   shipped   │
+                    └──────┬──────┘
+                           │
+                    ┌──────▼──────┐
+                    │  delivered  │
+                    └─────────────┘
+
+       refunded ◀── (from confirmed/processing/shipped via refund flow)
+```
+
+### Valid Transitions
+
+| From | To | Trigger |
+|------|-----|---------|
+| pending | confirmed | Payment succeeded |
+| pending | cancelled | Payment failed / timeout |
+| confirmed | processing | Warehouse picks order |
+| confirmed | cancelled | Customer/admin cancel (pre-ship) |
+| processing | shipped | Carrier label created |
+| processing | cancelled | Admin cancel (exception) |
+| shipped | delivered | Delivery confirmation |
+| confirmed/processing/shipped | refunded | Refund processed |
+
+Invalid transitions raise `InvalidStatusTransition` domain error.
+
+---
+
+## Status History
+
+Every transition recorded:
+
+```python
+class OrderStatusChange:
+    order_id: int
+    from_status: str
+    to_status: str
+    changed_at: datetime
+    changed_by: str      # system | customer_id | admin_id
+    reason: str | None
+```
+
+Append-only — never mutate history records.
+
+---
+
+## Customer Order APIs
+
+```
+GET  /api/v1/orders                    # list (authenticated)
+GET  /api/v1/orders/{order_number}     # detail
+POST /api/v1/orders/{order_number}/cancel  # if allowed
+```
+
+Guest order lookup:
+
+```
+GET /api/v1/orders/lookup?email={email}&order_number={number}
+```
+
+Requires email verification token sent to email (prevent enumeration).
+
+---
+
+## Admin Order APIs
+
+```
+GET   /api/v1/admin/orders             # filter by status, date, customer
+GET   /api/v1/admin/orders/{id}
+PATCH /api/v1/admin/orders/{id}/status # transition with reason
+POST  /api/v1/admin/orders/{id}/refund
+```
+
+Require `orders:write` permission. Audit log all admin mutations.
+
+---
+
+## Cancellation
+
+### Customer Cancellation
+
+Allowed when status is `confirmed` (not yet processing).
+
+Actions:
+
+1. Transition to `cancelled`
+2. Release inventory (if reserved) or restock (if deducted)
+3. Initiate full Stripe refund
+4. Send cancellation email
+
+### Admin Cancellation
+
+Allowed through `processing` with documented reason.
+
+May require partial refund if items already shipped.
+
+---
+
+## Fulfillment Integration
+
+On transition to `shipped`:
+
+```python
+order.ship(
+    carrier=carrier,
+    tracking_number=tracking_number,
+    shipped_at=now(),
+)
+```
+
+Store:
+
+- `carrier`, `tracking_number`, `shipped_at`, `estimated_delivery`
+
+Emit `OrderShipped` event for notification service.
+
+Fulfillment may be internal module or external WMS via integration adapter.
+
+---
+
+## Refunds
+
+Refund initiated from order, executed via Payments context:
+
+```python
+await payment_service.refund(
+    payment_record_id=order.payment_record_id,
+    amount=refund_amount,
+    reason=reason,
+)
+```
+
+Partial refunds specify line items or amount.
+
+Update order status to `refunded` when fully refunded.
+
+---
+
+## Address Snapshots
+
+Addresses copied at order time — not referenced by ID alone:
+
+```python
+shipping_address: {
+    "name": "Jane Doe",
+    "line1": "123 Main St",
+    "line2": null,
+    "city": "Portland",
+    "state": "OR",
+    "postal_code": "97201",
+    "country": "US",
+    "phone": "+1..."
+}
+```
+
+Customer address changes do not affect existing orders.
+
+---
+
+## Totals Integrity
+
+Invariant checked at creation and persisted:
+
+```python
+assert order.total_amount == (
+    order.subtotal
+    - order.discount_amount
+    + order.shipping_amount
+    + order.tax_amount
+)
+assert order.subtotal == sum(line.line_total for line in order.lines)
+assert all(line.line_total == line.unit_price * line.quantity for line in order.lines)
+```
+
+Database CHECK constraints as secondary guard (`database/01-schema`).
+
+---
+
+## Notifications
+
+| Event | Channel |
+|-------|---------|
+| OrderPlaced | Email confirmation with order summary |
+| OrderShipped | Email with tracking link |
+| OrderDelivered | Email (optional) |
+| OrderCancelled | Email confirmation |
+| OrderRefunded | Email receipt |
+
+Templates use order snapshot data, not live catalog.
+
+---
+
+## Reporting Queries
+
+Common admin reports:
+
+- Orders by status (fulfillment queue)
+- Revenue by day (`placed_at`, excluding cancelled/refunded)
+- Average order value
+- Top products by order line quantity
+
+Use read replica for heavy reports (`database/04-queries`).
+
+---
+
+## Events
+
+- `OrderPlaced`
+- `OrderConfirmed`
+- `OrderProcessing`
+- `OrderShipped`
+- `OrderDelivered`
+- `OrderCancelled`
+- `OrderRefunded`
+
+Downstream: analytics, CRM, inventory finalization, email service.
+
+---
+
+## Anti-Patterns
+
+- Mutable order lines after placement
+- Deleting orders (soft cancel instead)
+- Order creation without payment confirmation
+- Skipping product snapshot (breaks history when catalog changes)
+- Status transitions without history record
+- Exposing internal database ID as customer-facing order reference
+- Refund without corresponding order status update
+
+---
+
+## Related Rules
+
+- `ecommerce/00-ecommerce` — domain overview
+- `ecommerce/02-checkout` — pre-order flow
+- `ecommerce/03-payments` — payment and refunds
+- `ecommerce/05-inventory` — stock deduction
+- `database/01-schema` — order tables

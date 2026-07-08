@@ -1,0 +1,209 @@
+---
+description: Backend performance — async I/O, query optimization, pooling, and profiling.
+globs: apps/api/**/*.py
+alwaysApply: false
+---
+
+# Backend Performance
+
+## Purpose
+
+This rule defines performance standards for the FastAPI backend: async I/O, database query efficiency, connection pooling, caching integration, and measurement-driven optimization.
+
+Prefer correctness first. Optimize only after identifying bottlenecks with data.
+
+---
+
+## Scope
+
+Applies to:
+
+- Async request handlers and non-blocking I/O in `apps/api/`
+- SQLAlchemy query design and loading strategies
+- Connection pool configuration
+- Pagination and batch processing
+- CPU-bound work offloading decisions
+- Integration with caching (`08-caching`) and background jobs (`09-background-jobs`)
+
+Does not apply to:
+
+- Frontend Core Web Vitals
+- Database server hardware sizing
+- CDN configuration
+- Premature microservice splitting for "performance"
+
+---
+
+## Core Principles
+
+Always:
+
+- Use async end-to-end in request path: FastAPI → async services → AsyncSession → async HTTP clients
+- Measure before optimizing (APM, query logging, profiling, EXPLAIN ANALYZE)
+- Paginate list endpoints with cursor or offset/limit caps
+- Set explicit `limit` maximum on user-controlled page sizes
+- Use appropriate SQL indexes for repository query patterns
+- Batch inserts/updates when processing many rows in jobs
+- Offload CPU-heavy work (image processing, PDF generation) to background workers
+- Set timeouts on outbound HTTP calls
+
+Never:
+
+- Block event loop with synchronous I/O (`requests.get`, `time.sleep`, heavy CPU)
+- Load unbounded collections into memory
+- Optimize without baseline metrics
+- Add caching before fixing N+1 queries
+- Increase pool size without understanding connection limits
+- Run long synchronous reports in HTTP request handlers
+
+---
+
+## Async FastAPI Standards
+
+Always:
+
+- `async def` route handlers when awaiting I/O
+- Use `httpx.AsyncClient` or async SDK clients
+- Use `asyncio.to_thread()` sparingly for unavoidable sync libraries
+
+If sync dependency required:
+
+- Isolate and document; consider sync worker path instead
+
+Detect event loop blocking in staging with monitoring or slow request alerts.
+
+---
+
+## Database Performance
+
+### Query Design
+
+- Select only needed columns for large lists
+- Use `selectinload` / `joinedload` deliberately; profile both
+- Avoid N+1: load related data in one query when needed for response
+- Use partial indexes and composite indexes aligned with WHERE/ORDER BY
+- Use database counts, not Python `len(query_all())`
+
+### SQLAlchemy 2.0 Async
+
+- One session per request/unit-of-work
+- Configure pool: `pool_size`, `max_overflow`, `pool_pre_ping=True`
+- Monitor connection wait time and pool exhaustion
+
+### Pagination
+
+```python
+MAX_PAGE_SIZE = 100
+
+class PaginationParams(BaseModel):
+    limit: int = Field(default=20, ge=1, le=MAX_PAGE_SIZE)
+    offset: int = Field(default=0, ge=0)
+```
+
+Prefer keyset/cursor pagination for large, frequently scanned tables.
+
+---
+
+## API Response Performance
+
+- Response models exclude unused relations
+- Compress large JSON at reverse proxy when appropriate
+- Stream large exports from workers via signed URLs, not inline responses
+- Return 202 Accepted for long operations with status polling endpoint
+
+---
+
+## Decision Rules
+
+IF endpoint latency p95 exceeds SLA
+THEN profile: DB queries, external calls, serialization — fix largest contributor first.
+
+IF N+1 detected in traces
+THEN fix loading strategy before adding cache.
+
+IF query scans millions of rows
+THEN add index, narrow projection, or move to read model/search index.
+
+IF CPU > 100ms in request path
+THEN move to background job or `to_thread` with worker scaling.
+
+IF list endpoint unbounded
+THEN enforce pagination and max limit immediately.
+
+IF repeated identical read queries at high QPS
+THEN consider read cache with invalidation policy (`08-caching`).
+
+---
+
+## Anti-Patterns
+
+Never create:
+
+- `SELECT *` on wide tables for list views
+- Synchronous HTTP clients in async routes
+- Caching unbounded lists "because DB is slow"
+- Missing indexes on foreign keys used in joins
+- Per-item commit in bulk import loops
+- Loading full aggregate graphs when API returns summary DTO
+- Performance tuning via random `sleep()` or retry storms
+
+---
+
+## Validation Checklist
+
+Before claiming performance work complete verify:
+
+✓ Baseline and post-change metrics captured.
+
+✓ No sync blocking in async request path.
+
+✓ List endpoints paginated with enforced max limit.
+
+✓ Queries reviewed for N+1 and missing indexes.
+
+✓ Connection pool settings documented.
+
+✓ External calls have timeouts.
+
+✓ Heavy work moved off request path where needed.
+
+✓ EXPLAIN ANALYZE run for new complex queries.
+
+✓ Load test or staging validation for critical endpoints.
+
+---
+
+## Related Rules
+
+- backend/00-backend
+- backend/07-repositories
+- backend/08-caching
+- backend/09-background-jobs
+
+---
+
+## Related Skills
+
+- python-fastapi-development
+- postgresql-optimization
+- fastapi-pro
+
+---
+
+## Related Agents
+
+- Backend Engineer
+- Database Engineer
+
+---
+
+## Related MCP
+
+- PostgreSQL
+- Filesystem
+
+---
+
+## Summary
+
+Stay async in the request path, paginate aggressively, eliminate N+1 queries, index intentionally, and optimize based on measurements. Cache and background jobs complement — not replace — sound data access.

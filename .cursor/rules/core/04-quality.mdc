@@ -1,0 +1,62 @@
+---
+description: Quality requirements for every implementation.
+alwaysApply: false
+---
+
+# Quality Checklist
+
+Every completed task must satisfy the following criteria.
+
+## Architecture
+
+- Consistent
+- Modular
+- Extensible
+
+## Code
+
+- Readable
+- Maintainable
+- DRY
+- KISS
+- SOLID
+
+## Security
+
+- Validate input
+- Prevent vulnerabilities
+- Protect sensitive data
+
+## Performance
+
+- Avoid unnecessary work
+- Minimize allocations
+- Optimize expensive operations
+
+## Reliability
+
+- Handle errors gracefully
+- Avoid hidden failures
+- Log meaningful information
+
+## Testing
+
+Changes should be testable.
+
+Prefer deterministic behavior.
+
+## Documentation
+
+Document architectural decisions when appropriate.
+
+Explain non-obvious implementations.
+
+## Final Validation
+
+Before finishing verify:
+
+- No duplicated logic
+- No unnecessary abstractions
+- No dead code
+- No broken architecture
+- No hidden side effects

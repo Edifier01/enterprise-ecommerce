@@ -1,0 +1,566 @@
+---
+description: Enterprise backend architecture, responsibilities, and implementation standards.
+alwaysApply: false
+---
+
+# Backend Architecture Standard
+
+## Purpose
+
+This rule defines the backend architecture standards for the project.
+
+Its purpose is to ensure that every backend feature is:
+
+- Maintainable
+- Predictable
+- Testable
+- Secure
+- Scalable
+- Modular
+
+This rule applies to every backend module.
+
+---
+
+# Scope
+
+This rule covers:
+
+- Controllers
+- Application Services
+- Domain Services
+- Repositories
+- Infrastructure
+- API Layer
+- Business Logic
+- Dependency Flow
+
+It does not define:
+
+- Database implementation
+- Frontend architecture
+- Deployment
+- Infrastructure configuration
+
+Those topics have dedicated rules.
+
+---
+
+# Backend Philosophy
+
+Backend exists to implement business capabilities.
+
+Technology serves business.
+
+Business never serves technology.
+
+Always model the business first.
+
+Implementation details come second.
+
+---
+
+# Architectural Style
+
+The backend follows:
+
+- Modular Monolith
+- Clean Architecture
+- Domain Driven Design
+- SOLID
+- DRY
+- KISS
+- YAGNI
+
+Every feature must respect these principles.
+
+---
+
+# Feature-First Organization
+
+Organize backend by business capability.
+
+Correct:
+
+Catalog
+
+Orders
+
+Checkout
+
+Payments
+
+Customers
+
+Inventory
+
+Search
+
+Incorrect:
+
+Controllers
+
+Services
+
+Repositories
+
+Helpers
+
+Utils
+
+Technology-first organization is prohibited.
+
+---
+
+# Layered Architecture
+
+Every feature contains four logical layers.
+
+Presentation
+
+↓
+
+Application
+
+↓
+
+Domain
+
+↓
+
+Infrastructure
+
+Dependencies always point inward.
+
+---
+
+# Presentation Layer
+
+Responsibilities:
+
+- Receive requests
+- Validate transport objects
+- Call application services
+- Return responses
+
+Controllers must remain thin.
+
+Controllers never contain business logic.
+
+Controllers never access repositories directly.
+
+Controllers never manipulate the database.
+
+---
+
+# Application Layer
+
+Responsibilities:
+
+- Execute use cases
+- Coordinate workflows
+- Manage transactions
+- Invoke domain objects
+- Publish events
+
+Application Services orchestrate.
+
+They do not implement business rules.
+
+---
+
+# Domain Layer
+
+The Domain layer owns:
+
+- Business rules
+- Entities
+- Value Objects
+- Aggregates
+- Domain Services
+- Domain Events
+
+Everything critical to business belongs here.
+
+The Domain layer knows nothing about:
+
+- HTTP
+- SQL
+- Frameworks
+- ORM
+- Cache
+- External APIs
+
+---
+
+# Infrastructure Layer
+
+Infrastructure implements:
+
+- Database
+- Cache
+- Email
+- Payment Providers
+- Search Engines
+- External APIs
+- Storage
+- Messaging
+
+Infrastructure depends on Domain.
+
+Never the opposite.
+
+---
+
+# Business Logic
+
+Business rules belong only inside:
+
+- Entities
+- Aggregates
+- Domain Services
+
+Never place business logic inside:
+
+Controllers
+
+Repositories
+
+Database Queries
+
+HTTP Middleware
+
+DTOs
+
+Utility Classes
+
+---
+
+# Service Responsibilities
+
+Application Services
+
+Coordinate business operations.
+
+Domain Services
+
+Implement domain behavior.
+
+Infrastructure Services
+
+Communicate with external systems.
+
+Each service has exactly one responsibility.
+
+---
+
+# Repositories
+
+Repositories provide persistence.
+
+Repositories never contain business rules.
+
+Repositories never implement workflows.
+
+Repositories expose domain objects.
+
+---
+
+# DTO Usage
+
+DTOs exist only for data transfer.
+
+DTOs never contain business behavior.
+
+DTOs should remain simple.
+
+---
+
+# Dependency Rules
+
+Allowed
+
+Controller
+
+↓
+
+Application
+
+↓
+
+Domain
+
+↓
+
+Infrastructure
+
+Forbidden
+
+Infrastructure
+
+↓
+
+Application
+
+Domain
+
+↓
+
+Infrastructure
+
+Presentation
+
+↓
+
+Database
+
+---
+
+# Module Communication
+
+Modules communicate only through:
+
+- Public interfaces
+- Application services
+- Domain Events
+
+Never import internal implementation from another module.
+
+---
+
+# State Management
+
+Business state belongs inside Aggregates.
+
+Avoid shared mutable state.
+
+Avoid global state.
+
+---
+
+# Transactions
+
+Transactions begin in Application Services.
+
+Never create transactions inside repositories.
+
+Never span transactions across unrelated business operations.
+
+---
+
+# Error Handling
+
+Business errors belong to Domain.
+
+Infrastructure errors belong to Infrastructure.
+
+Transport errors belong to Presentation.
+
+Never mix error types.
+
+---
+
+# Validation
+
+Transport validation
+
+↓
+
+Application validation
+
+↓
+
+Business validation
+
+Each validation occurs exactly once.
+
+---
+
+# Logging
+
+Business logic does not log.
+
+Infrastructure logs technical operations.
+
+Application logs workflows.
+
+Audit logging has dedicated rules.
+
+---
+
+# Performance
+
+Prefer correctness over optimization.
+
+Optimize only after measurement.
+
+Avoid premature optimization.
+
+---
+
+# Security
+
+Security is mandatory.
+
+Always:
+
+Validate input.
+
+Authorize actions.
+
+Protect secrets.
+
+Never trust client input.
+
+---
+
+# Code Reuse
+
+Before creating:
+
+Service
+
+Repository
+
+Handler
+
+Utility
+
+Validator
+
+Always search for an existing implementation.
+
+Reuse before creating.
+
+---
+
+# Anti-Patterns
+
+Never create:
+
+God Services
+
+Fat Controllers
+
+Anemic Domain Models
+
+Static Business Classes
+
+Hidden Dependencies
+
+Cross-Module Database Access
+
+Business Logic inside Controllers
+
+Business Logic inside SQL
+
+Shared Mutable State
+
+Circular Dependencies
+
+---
+
+# Decision Rules
+
+Before implementation ask:
+
+Is this business logic?
+
+If yes →
+
+Domain.
+
+Is this orchestration?
+
+If yes →
+
+Application.
+
+Is this persistence?
+
+If yes →
+
+Infrastructure.
+
+Is this HTTP?
+
+If yes →
+
+Presentation.
+
+---
+
+# Validation Checklist
+
+Before completing implementation verify:
+
+✓ Controller is thin.
+
+✓ Business logic lives in Domain.
+
+✓ Services have one responsibility.
+
+✓ Dependencies point inward.
+
+✓ No module boundaries are violated.
+
+✓ No duplicated logic exists.
+
+✓ Repository contains no business rules.
+
+✓ Infrastructure depends on abstractions.
+
+✓ DTOs contain no behavior.
+
+✓ Architecture remains consistent.
+
+---
+
+# Related Rules
+
+- architecture/00-architecture
+- architecture/01-ddd
+- architecture/03-dependency-rules
+- architecture/11-dependency-injection
+
+---
+
+# Related Skills
+
+- Backend Architecture
+- Use Case Design
+- Refactoring
+- Code Review
+
+---
+
+# Related Agents
+
+- Enterprise Architect
+- Backend Architect
+- Backend Engineer
+
+---
+
+# Related MCP
+
+- Filesystem
+- PostgreSQL
+- Context7
+- Memory
+
+---
+
+# Summary
+
+The backend is responsible for implementing business capabilities.
+
+Business rules belong to the Domain.
+
+Controllers remain thin.
+
+Application Services orchestrate.
+
+Infrastructure provides implementation.
+
+Architecture always takes precedence over implementation speed.

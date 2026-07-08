@@ -1,0 +1,294 @@
+---
+description: Client and server state management with Zustand, React cache, and FastAPI data boundaries.
+alwaysApply: false
+globs: apps/web/src/store/**/*,apps/web/src/features/**/*
+---
+
+# State Management Standard
+
+## Purpose
+
+This rule defines where state lives in the Next.js frontend and how to manage it without duplicating backend truth or creating inconsistent UI.
+
+State must have a single owner. Never synchronize the same data in multiple places without a clear strategy.
+
+---
+
+# Scope
+
+Covers:
+
+- Server state (FastAPI data in Server Components)
+- URL state (search params, route segments)
+- Client ephemeral state (Zustand)
+- Form state (React Hook Form — see `frontend/04-forms`)
+- Cache and revalidation (Next.js fetch cache)
+
+Does not cover backend session storage or database state.
+
+---
+
+# State Ownership Matrix
+
+| State type | Owner | Mechanism | Example |
+|------------|-------|-----------|---------|
+| Remote authoritative data | Server / API | Server Component fetch | Product catalog |
+| User session | Backend + cookie | Server Component reads cookie | Auth status |
+| URL-driven UI | URL | `searchParams`, `useRouter` | Filters, pagination |
+| Cross-page client UI | Client | Zustand | Cart drawer open |
+| Form in progress | Client | React Hook Form | Checkout address |
+| Optimistic UI | Client + server reconcile | Zustand + mutation response | Cart quantity |
+
+When unsure, prefer server ownership. Move to client only with justification.
+
+---
+
+# Server State
+
+Fetch in Server Components from FastAPI.
+
+Rules:
+
+- Treat API responses as read-only in Server Components
+- Use `cache()` from React for deduplicated reads within a request
+- Configure revalidation explicitly (`next: { revalidate: 60 }` or tags)
+- Pass serializable snapshots to Client Components as props
+- Do not pass class instances, functions, or Dates without serialization
+
+Pattern:
+
+```tsx
+// app/products/page.tsx (Server Component)
+import { getProducts } from "@/lib/api/catalog";
+
+export default async function ProductsPage() {
+  const products = await getProducts();
+  return <ProductGrid products={products} />;
+}
+```
+
+Invalidate server cache after mutations via `revalidatePath`, `revalidateTag`, or Server Actions.
+
+---
+
+# URL State
+
+Use URL search params for shareable, bookmarkable UI state.
+
+Good for:
+
+- Pagination (`?page=2`)
+- Sort order (`?sort=price-asc`)
+- Facet filters (`?category=shoes&size=42`)
+- Tab selection when shareable
+
+Implement in Server Components by reading `searchParams` prop; update via `<Link>` or `router.push` preserving other params.
+
+Avoid mirroring URL state into Zustand. The URL is the source of truth.
+
+---
+
+# Client State with Zustand
+
+Use Zustand for client-only state that:
+
+- Spans multiple Client Components
+- Must persist across navigations within the session (cart, UI chrome)
+- Is not authoritative (backend still validates on submit)
+
+Store location: `apps/web/src/store/`
+
+---
+
+# Zustand Store Structure
+
+Always use `subscribeWithSelector` middleware.
+
+Separate state and actions interfaces:
+
+```typescript
+import { create } from "zustand";
+import { subscribeWithSelector } from "zustand/middleware";
+
+interface CartState {
+  items: CartItem[];
+  isOpen: boolean;
+}
+
+interface CartActions {
+  addItem: (item: CartItem) => void;
+  removeItem: (id: string) => void;
+  setOpen: (open: boolean) => void;
+}
+
+type CartStore = CartState & CartActions;
+
+export const useCartStore = create<CartStore>()(
+  subscribeWithSelector((set, get) => ({
+    items: [],
+    isOpen: false,
+    addItem: (item) =>
+      set((state) => ({
+        items: [...state.items.filter((i) => i.id !== item.id), item],
+      })),
+    removeItem: (id) =>
+      set((state) => ({ items: state.items.filter((i) => i.id !== id) })),
+    setOpen: (open) => set({ isOpen: open }),
+  }))
+);
+```
+
+Export stores from `apps/web/src/store/index.ts`.
+
+---
+
+# Zustand Selector Rules
+
+Use atomic selectors to minimize re-renders:
+
+```typescript
+// Good
+const items = useCartStore((s) => s.items);
+
+// Avoid — re-renders on any store change
+const { items, isOpen } = useCartStore();
+```
+
+For derived data, use selectors or memoized helpers outside the store when expensive.
+
+---
+
+# Cart and Checkout State
+
+The cart is a special case:
+
+- Optimistic UI may live in Zustand for instant feedback
+- Server cart (FastAPI) is authoritative at checkout
+- On checkout submit, send cart to API; handle conflicts (price change, stock) with server response
+- Clear client cart only after confirmed order creation
+
+Never store payment card data in Zustand or any client store.
+
+---
+
+# React Context
+
+Use React Context sparingly.
+
+Acceptable for:
+
+- Theme provider (shadcn/next-themes)
+- Narrow feature-scoped dependency injection
+
+Do not use Context as a global application store. Use Zustand instead for app-wide client state.
+
+---
+
+# Server Actions vs Client Mutations
+
+Prefer Server Actions when:
+
+- Mutation should revalidate server cache
+- No optimistic UI is required
+- Credentials stay server-side
+
+Use client fetch + Zustand when:
+
+- Optimistic updates improve perceived performance
+- Real-time feedback is critical (cart badge)
+
+Always reconcile optimistic state with API response errors.
+
+---
+
+# Persistence
+
+Default: Zustand stores are in-memory only.
+
+If persisting to `localStorage` (e.g., cart guest session):
+
+- Use `persist` middleware with a versioned schema
+- Never persist auth tokens or PII beyond what GDPR/policy allows
+- Hydration must handle SSR mismatch (`skipHydration` or client-only mount)
+
+---
+
+# Synchronization Anti-Patterns
+
+Never:
+
+- Copy full product catalog into Zustand
+- Store user profile in Zustand when Server Components can refetch
+- Dual-write the same field to URL and Zustand
+- Use `useEffect` to sync props into global store on every render
+- Treat client cart as source of truth through payment
+
+---
+
+# Decision Rules
+
+Ask:
+
+Is this data from FastAPI?
+
+Yes → Server state unless optimistic UI requires a client copy.
+
+Should the user share this view via URL?
+
+Yes → URL state.
+
+Is this UI-only and ephemeral?
+
+Yes → Local `useState` or Zustand if shared.
+
+Does it survive navigation?
+
+Yes → Zustand or URL, not `useState` in a leaf.
+
+---
+
+# Validation Checklist
+
+- Single source of truth identified
+- No duplicated API data in global client store
+- Zustand selectors are atomic
+- Store files in `src/store/` with tests
+- Server cache invalidation defined for mutations
+- No secrets or card data in client stores
+
+---
+
+# Related Rules
+
+- frontend/00-frontend
+- frontend/01-components
+- frontend/03-routing
+- frontend/04-forms
+- api/04-auth-api
+
+---
+
+# Related Skills
+
+- zustand-store-ts
+- nextjs-best-practices
+- react-nextjs-development
+
+---
+
+# Related Agents
+
+- Frontend Engineer
+- Checkout Specialist
+
+---
+
+# Summary
+
+Server state comes from FastAPI in Server Components.
+
+URL state owns shareable filters and navigation.
+
+Zustand owns client ephemeral UI and optimistic cart behavior.
+
+Never fight the backend for authoritative business data.

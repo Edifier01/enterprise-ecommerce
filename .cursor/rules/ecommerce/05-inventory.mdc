@@ -1,0 +1,296 @@
+---
+description: Inventory management standards including stock levels, reservations, optimistic locking, and availability.
+globs: apps/api/app/features/**
+alwaysApply: false
+---
+
+# Inventory Domain Standard
+
+## Purpose
+
+Define the inventory bounded context: stock tracking, reservations during checkout, deduction on order confirmation, and availability queries.
+
+Inventory protects against overselling — a critical e-commerce invariant.
+
+---
+
+## Aggregate Root: InventoryItem
+
+One record per product variant.
+
+```python
+class InventoryItem:
+    id: int
+    variant_id: int              # unique
+    quantity_on_hand: int        # physical stock
+    quantity_reserved: int       # held for checkout sessions
+    version: int                 # optimistic lock
+    allow_backorder: bool        # default False
+    low_stock_threshold: int     # default 5
+    updated_at: datetime
+```
+
+### Invariants
+
+```python
+quantity_on_hand >= 0
+quantity_reserved >= 0
+quantity_reserved <= quantity_on_hand  # unless backorder enabled
+available = quantity_on_hand - quantity_reserved
+```
+
+Enforce in domain layer and CHECK constraints in database.
+
+---
+
+## Availability States
+
+| State | Condition | Customer Display |
+|-------|-----------|------------------|
+| in_stock | available > low_stock_threshold | "In Stock" |
+| low_stock | 0 < available <= threshold | "Only X left" |
+| out_of_stock | available <= 0, no backorder | "Out of Stock" |
+| backorder | available <= 0, backorder enabled | "Available on backorder" |
+
+Catalog displays availability via inventory service query — never cached so long that overselling occurs during flash sales.
+
+---
+
+## Reservation Model
+
+```python
+class InventoryReservation:
+    id: int
+    variant_id: int
+    quantity: int
+    reference_type: str    # checkout_session
+    reference_id: int
+    expires_at: datetime
+    created_at: datetime
+```
+
+Reservations temporarily reduce available stock without decrementing on_hand.
+
+---
+
+## Operations
+
+### Check Availability
+
+```python
+async def get_availability(variant_id: int) -> Availability:
+    item = await repo.get_by_variant(variant_id)
+    available = item.quantity_on_hand - item.quantity_reserved
+    return Availability.from_item(item, available)
+```
+
+Read-only, no lock required for display.
+
+### Reserve (Checkout Start)
+
+```python
+async def reserve(
+    variant_id: int,
+    quantity: int,
+    reference_type: str,
+    reference_id: int,
+    expires_at: datetime,
+) -> None:
+    async with session.begin():
+        item = await repo.get_for_update(variant_id)  # SELECT FOR UPDATE
+        available = item.quantity_on_hand - item.quantity_reserved
+        if available < quantity and not item.allow_backorder:
+            raise InsufficientInventoryError(variant_id, quantity, available)
+        item.quantity_reserved += quantity
+        item.version += 1
+        await reservation_repo.create(...)
+```
+
+Uses pessimistic locking (`FOR UPDATE`) on inventory row.
+
+Idempotent on `(reference_type, reference_id, variant_id)` — return success if reservation exists.
+
+### Release (Checkout Cancel/Expire)
+
+```python
+async def release(reference_type: str, reference_id: int) -> None:
+    reservations = await reservation_repo.get_by_reference(reference_type, reference_id)
+    for reservation in reservations:
+        item = await repo.get_for_update(reservation.variant_id)
+        item.quantity_reserved -= reservation.quantity
+        await reservation_repo.delete(reservation.id)
+```
+
+### Confirm (Order Placed)
+
+```python
+async def confirm(reference_type: str, reference_id: int) -> None:
+    reservations = await reservation_repo.get_by_reference(reference_type, reference_id)
+    for reservation in reservations:
+        item = await repo.get_for_update(reservation.variant_id)
+        item.quantity_on_hand -= reservation.quantity
+        item.quantity_reserved -= reservation.quantity
+        item.version += 1
+        await reservation_repo.delete(reservation.id)
+```
+
+Atomic: reservation release + on_hand decrement in same transaction.
+
+### Restock (Cancellation/Return)
+
+```python
+async def restock(variant_id: int, quantity: int, reason: str) -> None:
+    item = await repo.get_for_update(variant_id)
+    item.quantity_on_hand += quantity
+    await audit_log.record("restock", variant_id, quantity, reason)
+```
+
+---
+
+## Expired Reservation Cleanup
+
+Background job every 5 minutes:
+
+```python
+expired = await reservation_repo.get_expired(before=now())
+for reservation in expired:
+    await release_reservation(reservation)
+```
+
+Index on `expires_at` for efficient cleanup (`database/03-indexing`).
+
+Default TTL: 15 minutes (aligned with checkout session).
+
+---
+
+## Admin Inventory Management
+
+```
+GET  /api/v1/admin/inventory?variant_id=&low_stock=true
+PATCH /api/v1/admin/inventory/{variant_id}
+{ "quantity_on_hand": 100, "low_stock_threshold": 10, "allow_backorder": false }
+```
+
+Admin adjustments:
+
+- Require `inventory:write` permission
+- Audit log with reason code (restock, damage, correction, return)
+- Never directly set `quantity_reserved` — managed by reservation system
+
+Bulk import via CSV with SKU → quantity mapping.
+
+---
+
+## Optimistic vs Pessimistic Locking
+
+| Operation | Strategy | Reason |
+|-----------|----------|--------|
+| Reserve | Pessimistic (FOR UPDATE) | Prevent oversell race |
+| Confirm | Pessimistic | Atomic multi-field update |
+| Admin adjust | Optimistic (version) | Lower contention |
+| Read availability | None | Snapshot read |
+
+On optimistic conflict:
+
+```python
+raise ConcurrentModificationError("Inventory updated by another process")
+```
+
+Client retries up to 3 times with backoff.
+
+---
+
+## Overselling Prevention
+
+Critical path during high concurrency (flash sales):
+
+1. Pessimistic lock on inventory row
+2. Check available before reserve
+3. Reservation TTL prevents indefinite holds
+4. Confirm only after payment success
+5. Never skip reservation step
+
+Load test reservation path before major sales events.
+
+---
+
+## Backorder Policy
+
+When `allow_backorder = True`:
+
+- Availability check passes even when available <= 0
+- Order confirmation still decrements on_hand (may go negative)
+- Display clear delivery estimate to customer
+- Fulfillment queue prioritizes in-stock orders
+
+Negative on_hand requires ops monitoring and restock workflow.
+
+---
+
+## Integration Points
+
+| Consumer | Method |
+|----------|--------|
+| Catalog | `get_availability(variant_id)` |
+| Checkout | `reserve`, `release` |
+| Orders | `confirm`, `restock` |
+| Admin | Direct adjustment APIs |
+
+Integration via application services in infrastructure layer — not cross-module repository imports.
+
+---
+
+## Events
+
+- `InventoryReserved`
+- `InventoryReleased`
+- `InventoryConfirmed` (deducted)
+- `InventoryRestocked`
+- `LowStockAlert` (when available crosses threshold)
+
+`LowStockAlert` triggers ops notification, not customer-facing by default.
+
+---
+
+## Monitoring
+
+Alert on:
+
+- Negative `quantity_on_hand` (should not occur without backorder)
+- Reservation cleanup failures
+- High `InsufficientInventoryError` rate (demand spike or sync issue)
+- Lock wait timeouts on inventory rows
+
+---
+
+## Testing
+
+- Concurrent reservation requests for last unit — only one succeeds
+- Expired reservation releases stock
+- Confirm reduces on_hand and reserved correctly
+- Cancel restocks properly
+- Backorder allows reservation when available = 0
+- Idempotent reserve on same checkout session
+
+Integration tests with real PostgreSQL and parallel async requests.
+
+---
+
+## Anti-Patterns
+
+- Decrementing on_hand at add-to-cart (too early)
+- No reservation TTL (indefinite stock holds)
+- Checking availability without lock then reserving separately (TOCTOU race)
+- Storing inventory only in Redis
+- Allowing admin to set negative on_hand without backorder flag
+- Skipping restock on cancelled paid orders
+
+---
+
+## Related Rules
+
+- `ecommerce/02-checkout` — reservation during checkout
+- `ecommerce/04-orders` — confirm on order placement
+- `database/01-schema` — inventory tables
+- `database/04-queries` — locking patterns
+- `performance/00-performance` — concurrency testing

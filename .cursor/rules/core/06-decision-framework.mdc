@@ -1,0 +1,243 @@
+---
+description: Decision-making framework for architecture, implementation, and planning.
+alwaysApply: false
+---
+
+# Decision Framework
+
+This rule defines how decisions are made throughout the project.
+
+Never make important technical decisions impulsively.
+
+Always prefer predictable, maintainable, and well-reasoned solutions.
+
+---
+
+# Decision Hierarchy
+
+When making decisions, follow this priority:
+
+1. User instructions
+2. Core Rules
+3. Project Architecture
+4. Business Requirements
+5. Existing Project Conventions
+6. Simplicity
+7. Performance
+8. Personal Preference
+
+Never violate a higher-priority rule to satisfy a lower-priority one.
+
+---
+
+# Before Making Any Decision
+
+Always determine:
+
+- What problem is being solved?
+- Is there already an existing solution?
+- Can existing code be reused?
+- Does this change affect architecture?
+- Does this introduce technical debt?
+- Does this increase long-term maintenance cost?
+
+Only then decide.
+
+---
+
+# Clarification Rules
+
+Ask clarifying questions when:
+
+- Business requirements are ambiguous.
+- Multiple interpretations are possible.
+- Missing information affects architecture.
+- Security implications are unknown.
+- Database changes are unclear.
+- Public APIs may change.
+- Existing behavior could break.
+
+Do not ask unnecessary questions when a safe, obvious interpretation exists.
+
+---
+
+# Safe Assumptions
+
+The AI may make reasonable assumptions only when:
+
+- The decision has no architectural impact.
+- The decision is reversible.
+- Existing project conventions clearly indicate the correct choice.
+- User intent is obvious.
+
+State assumptions explicitly.
+
+---
+
+# Stop and Request Approval
+
+Do NOT continue without approval if the task involves:
+
+- Architecture redesign
+- Database schema redesign
+- Public API changes
+- Authentication changes
+- Authorization changes
+- Payment flow changes
+- Checkout logic changes
+- Security-sensitive modifications
+- Breaking backward compatibility
+- Introducing a new dependency
+- Creating a new service or module
+- Large-scale refactoring
+
+Present the proposed plan before implementation.
+
+---
+
+# Architecture Decisions
+
+When multiple architectural options exist:
+
+1. Identify all realistic options.
+2. Compare advantages.
+3. Compare disadvantages.
+4. Estimate long-term maintenance cost.
+5. Recommend one solution.
+6. Explain why it is preferred.
+
+Never choose based only on implementation speed.
+
+---
+
+# ADR Requirement
+
+Create or update an Architecture Decision Record when:
+
+- A new architectural pattern is introduced.
+- A technology choice changes.
+- A core dependency changes.
+- A long-term design decision is made.
+- A business-critical workflow changes.
+
+Reference previous ADRs whenever applicable.
+
+---
+
+# Rule Selection
+
+Before implementation determine which Rules are required.
+
+Examples:
+
+Backend → backend rules
+
+Frontend → frontend rules
+
+API → api rules
+
+Database → database rules
+
+Checkout → ecommerce + checkout rules
+
+Security → security rules
+
+Performance → performance rules
+
+Never load unrelated Rules.
+
+---
+
+# Skill Selection
+
+Load only Skills relevant to the current task.
+
+Prefer existing project Skills over creating new workflows.
+
+---
+
+# Agent Selection
+
+Use specialized agents whenever appropriate.
+
+Possible specialists include:
+
+- Enterprise Architect
+- Solution Architect
+- Backend Engineer
+- Frontend Engineer
+- Database Engineer
+- API Engineer
+- QA Engineer
+- Security Engineer
+- Performance Engineer
+- DevOps Engineer
+- UX Designer
+- SEO Specialist
+
+Do not involve unnecessary agents.
+
+---
+
+# MCP Selection
+
+Enable only the MCP servers required for the task.
+
+Possible MCP servers:
+
+- Filesystem
+- GitHub
+- Docker
+- PostgreSQL
+- Context7
+- Playwright
+- OpenAPI
+- Memory
+- Fetch
+- Figma
+- shadcn/ui
+- Sentry
+
+Avoid unnecessary context.
+
+---
+
+# Memory Usage
+
+Before introducing a new convention:
+
+- Check project Memory.
+- Check previous architectural decisions.
+- Check existing workflows.
+
+Do not duplicate established conventions.
+
+---
+
+# Error Recovery
+
+If uncertainty is discovered during implementation:
+
+1. Stop.
+2. Re-evaluate the decision.
+3. Gather missing context.
+4. Ask for clarification if required.
+5. Continue only when confident.
+
+Never continue with known uncertainty.
+
+---
+
+# Final Validation
+
+Before finishing any task verify:
+
+- User requirements satisfied
+- Architecture preserved
+- Existing conventions followed
+- No duplicated logic
+- No unnecessary abstractions
+- No breaking changes
+- Documentation updated if required
+
+Only then consider the task complete.

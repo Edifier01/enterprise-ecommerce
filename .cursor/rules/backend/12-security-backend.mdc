@@ -1,0 +1,221 @@
+---
+description: Backend security — authentication, authorization, input hardening, and PCI scope.
+globs: apps/api/**/*.py
+alwaysApply: false
+---
+
+# Backend Security
+
+## Purpose
+
+This rule defines mandatory security practices for the FastAPI backend: authentication, authorization, input hardening, secret protection, and PCI-aware payment handling.
+
+Security is not optional. Every endpoint and use case must fail closed when identity or permissions are uncertain.
+
+---
+
+## Scope
+
+Applies to:
+
+- Authentication dependencies in `apps/api/core/security/`
+- Authorization policies in feature application layers
+- Password hashing, JWT/session handling, API keys
+- CORS, security headers, rate limiting middleware
+- Webhook signature verification (Stripe, etc.)
+- Input sanitization and SSRF-safe outbound calls
+- PCI scope minimization for payment flows
+
+Does not apply to:
+
+- Frontend XSS prevention (web app rules)
+- WAF/CDN configuration
+- Organization-wide IAM policies
+- Penetration test execution
+
+---
+
+## Core Principles
+
+Always:
+
+- Authenticate before authorization; authorize every mutating and sensitive read operation
+- Use established libraries: `passlib`/argon2, `python-jose` or equivalent for JWT, official SDK signature verification
+- Store password hashes with strong algorithms (Argon2id or bcrypt); never plaintext or reversible encryption
+- Validate webhook signatures before processing payload
+- Apply least privilege to service accounts and DB roles
+- Parameterize all SQL via SQLAlchemy; never string-concatenate user input into queries
+- Use HTTPS-only cookies with `HttpOnly`, `Secure`, `SameSite` when cookie auth applies
+- Rate limit login, password reset, checkout, and webhook endpoints
+- Keep cardholder data out of application logs and databases (Stripe Elements / tokenization)
+
+Never:
+
+- Trust client-supplied user ids or roles without server verification
+- Expose internal stack traces or schema details in production errors
+- Disable auth for "temporary" debugging in committed code
+- Store CVV, full track data, or PIN
+- Run production with default secrets or `debug=True`
+- Bypass authorization in "admin shortcut" endpoints
+
+---
+
+## Authentication
+
+Location: `apps/api/core/security/auth.py`
+
+- FastAPI `Depends(get_current_user)` validates token/session on protected routes
+- Separate optional auth dependency for public endpoints with enhanced features when logged in
+- Token expiry, refresh rotation, and revocation strategy documented
+- Service-to-service auth via mTLS or signed tokens where applicable
+
+JWT guidelines:
+
+- Short-lived access tokens
+- Sign with strong secret or asymmetric keys from settings (`SecretStr`)
+- Validate `aud`, `iss`, `exp` claims
+
+---
+
+## Authorization
+
+Location: `apps/api/app/features/<feature>/application/policies/`
+
+- Policy methods: `can_cancel_order(user, order) -> bool`
+- Checked in Application layer before domain mutation
+- Role-based + resource-based rules explicit; no magic role strings scattered in routers
+
+Fail closed: if policy cannot decide → deny.
+
+---
+
+## Input and Output Safety
+
+- Pydantic validates all inbound data
+- Bound string lengths and collection sizes on list endpoints
+- Reject unexpected fields when strict mode warranted
+- Serialize responses through response models; do not return raw dicts from ORM
+- File uploads: validate content type, size limits, store outside web root, scan if policy requires
+
+---
+
+## Webhooks (Payments)
+
+For Stripe and similar:
+
+- Verify signature with raw body and endpoint secret
+- Enqueue processing idempotently; respond quickly with 2xx after persistence to outbox
+- Never trust client-side payment success without webhook or server-side confirmation
+
+See skills: `stripe-integration`, `pci-compliance`, `payment-integration`.
+
+---
+
+## Secrets and Configuration
+
+- Secrets only via settings (`10-configuration`)
+- Rotate keys without code deploy when platform supports
+- Separate DB credentials per environment
+
+---
+
+## Decision Rules
+
+IF endpoint mutates data or reads private user data
+THEN require authentication and authorization policy.
+
+IF receiving third-party webhook
+THEN verify signature before any business logic.
+
+IF handling payment
+THEN use provider tokenization; PCI scope stays with provider-hosted fields.
+
+IF calling external URL from user-provided input
+THEN block private IP ranges (SSRF guard) or disallow user-controlled URLs.
+
+IF error message might reveal resource existence to attacker
+THEN use consistent 404/403 policy (see `04-error-handling`).
+
+IF brute-force risk (login, coupon codes)
+THEN rate limit and audit failures.
+
+---
+
+## Anti-Patterns
+
+Never create:
+
+- `@router.get("/admin/users")` without auth because "it's internal"
+- Hardcoded API keys in repository
+- SQL built with f-strings from query params
+- Logging Authorization headers or payment payloads
+- CORS `allow_origins=["*"]` with credentials in production
+- Custom crypto for passwords or tokens
+- Trusting `X-User-Id` header from client
+
+---
+
+## Validation Checklist
+
+Before shipping backend changes verify:
+
+✓ Protected routes use auth dependencies.
+
+✓ Authorization policy enforced in application layer.
+
+✓ Webhooks verify signatures.
+
+✓ No secrets in code or logs.
+
+✓ SQL injection prevented via ORM/parameters.
+
+✓ Rate limiting on sensitive endpoints.
+
+✓ PCI scope minimized for payments.
+
+✓ Security headers and CORS configured for environment.
+
+✓ Dependencies scanned for known vulnerabilities.
+
+✓ Security tests cover authz bypass attempts.
+
+---
+
+## Related Rules
+
+- backend/00-backend
+- backend/03-validation
+- backend/04-error-handling
+- backend/10-configuration
+- backend/11-logging
+
+---
+
+## Related Skills
+
+- cc-skill-security-review
+- security-auditor
+- pci-compliance
+- stripe-integration
+- payment-integration
+
+---
+
+## Related Agents
+
+- Security Auditor
+- Backend Engineer
+- Checkout Specialist
+
+---
+
+## Related MCP
+
+- Filesystem
+- Context7
+
+---
+
+## Summary
+
+Authenticate every sensitive operation, authorize with explicit policies, verify webhooks, parameterize data access, and keep secrets and cardholder data out of logs and storage. Fail closed and minimize PCI scope through provider tokenization.

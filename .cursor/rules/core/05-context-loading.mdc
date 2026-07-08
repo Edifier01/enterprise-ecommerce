@@ -1,0 +1,266 @@
+---
+description: Determines which Rules, Skills, Agents, MCP tools, Templates, and Workflows should be loaded before starting a task.
+alwaysApply: false
+---
+
+# Context Loading Strategy
+
+Before starting any task, determine which project resources are required.
+
+Load only the context necessary to complete the current task.
+
+Avoid loading unrelated rules or skills.
+
+---
+
+# Step 0 — Load Project State (Mandatory)
+
+Before ANY task, read project state in order:
+
+1. `.cursor/project-management/CURRENT_CONTEXT.md`
+2. `.cursor/project-management/PROJECT_STATUS.md`
+3. `.cursor/project-management/TASKS.md`
+4. `.cursor/project-management/DECISIONS.md`
+5. `.cursor/project-management/HANDOFF.md`
+6. `PROJECT_ROADMAP.md`
+
+Never select rules, skills, agents, or MCP until project state is loaded.
+
+See `core/10-project-state-management.mdc` and skill `context-loading`.
+
+---
+
+# Step 1 — Understand the Task
+
+Identify:
+
+- User goal
+- Business domain
+- Technical domain
+- Complexity
+- Files involved
+
+---
+
+# Step 2 — Select Rules
+
+Load only relevant Rules.
+
+Examples:
+
+Backend task
+
+→ backend rules
+
+Frontend task
+
+→ frontend rules
+
+Database migration
+
+→ database rules
+
+Checkout implementation
+
+→ ecommerce + payments + checkout rules
+
+API endpoint
+
+→ api rules
+
+Security review
+
+→ security rules
+
+Performance optimization
+
+→ performance rules
+
+---
+
+# Step 3 — Select Skills
+
+Load only the Skills required.
+
+Examples:
+
+API Design
+
+Database Migration
+
+Refactoring
+
+Playwright Testing
+
+Code Review
+
+Architecture Review
+
+Deployment
+
+Documentation
+
+---
+
+# Step 4 — Select Agents
+
+Determine whether specialized agents are needed.
+
+Possible agents:
+
+Enterprise Architect
+
+Solution Architect
+
+Backend Engineer
+
+Frontend Engineer
+
+Database Engineer
+
+API Engineer
+
+QA Engineer
+
+Security Engineer
+
+Performance Engineer
+
+DevOps Engineer
+
+SEO Specialist
+
+UX Designer
+
+Catalog Specialist
+
+Checkout Specialist
+
+Payments Specialist
+
+Documentation Specialist
+
+---
+
+# Step 5 — Select MCP Servers
+
+Enable only MCP servers required for the task.
+
+Possible MCPs:
+
+Filesystem
+
+GitHub
+
+Docker
+
+PostgreSQL
+
+Context7
+
+Playwright
+
+OpenAPI
+
+Memory
+
+Fetch
+
+Figma
+
+shadcn/ui
+
+Sentry
+
+---
+
+# Step 6 — Select Templates
+
+When applicable, use project templates.
+
+Examples:
+
+ADR
+
+Feature Specification
+
+API Specification
+
+Migration
+
+Architecture Decision
+
+Test Plan
+
+---
+
+# Step 7 — Select Workflow
+
+Choose the appropriate workflow.
+
+Examples:
+
+New Feature
+
+Bug Fix
+
+Refactoring
+
+Architecture Review
+
+Performance Optimization
+
+Deployment
+
+Release
+
+Security Audit
+
+Documentation Update
+
+---
+
+# Context Optimization
+
+Prefer minimal context.
+
+Do not load unrelated Rules.
+
+Do not load unrelated Skills.
+
+Do not activate unnecessary Agents.
+
+Do not connect unused MCP servers.
+
+Keep the context focused on the current task.
+
+---
+
+# Priority Order
+
+When multiple sources provide guidance, use the following priority:
+
+1. User instructions
+2. Core Rules
+3. Architecture Rules and ADRs (`docs/adr/`)
+4. Project state files (`.cursor/project-management/`)
+5. Domain Rules
+6. Skills
+7. Templates
+8. Workflows
+
+Never violate higher-priority guidance.
+
+---
+
+# After Work — Update Project State
+
+Before finishing a session, update:
+
+- `PROJECT_STATUS.md` — always
+- `TASKS.md` — always
+- `HANDOFF.md` — always
+- `CURRENT_CONTEXT.md` — always
+- `DECISIONS.md` — when a decision was made
+
+See `core/10-project-state-management.mdc`.

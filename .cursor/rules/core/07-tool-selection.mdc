@@ -1,0 +1,365 @@
+---
+description: Select the most appropriate model, MCP servers, tools, and workflows for every task.
+alwaysApply: false
+---
+
+# Tool Selection Framework
+
+The AI must intentionally select the best combination of:
+
+- Model
+- MCP servers
+- Rules
+- Skills
+- Agents
+- Templates
+- Workflows
+
+Do not use every available tool.
+
+Load only what improves the current task.
+
+---
+
+# General Principles
+
+Always prefer:
+
+- Accuracy
+- Maintainability
+- Minimal context
+- Lowest reasonable cost
+- Reproducibility
+
+Avoid unnecessary tool usage.
+
+---
+
+# Model Selection
+
+Choose the model according to the task.
+
+## Architecture
+
+Preferred characteristics:
+
+- Deep reasoning
+- Long context
+- Design analysis
+
+Examples:
+
+- Claude Opus
+- GPT reasoning models
+- Other architecture-focused models
+
+---
+
+## Implementation
+
+Preferred characteristics:
+
+- Fast coding
+- Predictable edits
+- High implementation speed
+
+Examples:
+
+- GPT
+- Composer 2.5
+- Claude Sonnet
+
+---
+
+## Large Refactoring
+
+Prefer models with:
+
+- Long context
+- Strong reasoning
+- Codebase understanding
+
+---
+
+## Documentation
+
+Prefer models with:
+
+- Strong writing
+- Good summarization
+- Consistency
+
+---
+
+## Research
+
+When current information is required:
+
+Prefer:
+
+- Context7
+- Official documentation
+- Web search
+
+Never rely only on model memory.
+
+---
+
+# MCP Selection
+
+Enable only required MCP servers.
+
+---
+
+## Filesystem MCP
+
+Use when:
+
+- Reading project files
+- Refactoring
+- Searching code
+- Updating documentation
+
+---
+
+## GitHub MCP
+
+Use when:
+
+- Reviewing Pull Requests
+- Creating Issues
+- Reading Discussions
+- Working with branches
+- Reviewing commits
+
+---
+
+## Docker MCP
+
+Use when:
+
+- Containers
+- Docker Compose
+- Images
+- Networks
+- Local infrastructure
+
+---
+
+## PostgreSQL MCP
+
+Use when:
+
+- Schema inspection
+- SQL analysis
+- Migrations
+- Performance analysis
+
+Never use Production databases without approval.
+
+---
+
+## Context7 MCP
+
+Always prefer Context7 before guessing:
+
+- Library APIs
+- Framework behavior
+- Official documentation
+- Version-specific features
+
+---
+
+## Playwright MCP
+
+Use for:
+
+- End-to-end testing
+- UI validation
+- Checkout testing
+- Authentication flows
+- Regression testing
+
+Do not use for static code analysis.
+
+---
+
+## OpenAPI MCP
+
+Use when:
+
+- Designing APIs
+- Reviewing APIs
+- Generating clients
+- Validating contracts
+
+---
+
+## Memory MCP
+
+Use before:
+
+- Creating conventions
+- Making architecture decisions
+- Introducing patterns
+- Starting large refactoring
+
+Check existing project memory first.
+
+---
+
+## Fetch MCP
+
+Use when:
+
+- Reading external documentation
+- Reading articles
+- Importing reference material
+
+---
+
+## Figma MCP
+
+Use only when:
+
+- UI design exists
+- Components are derived from design
+- Tokens need synchronization
+
+---
+
+## shadcn/ui MCP
+
+Use for:
+
+- Component selection
+- Component generation
+- UI consistency
+- Registry lookup
+
+Do not recreate existing components.
+
+---
+
+## Sentry MCP
+
+Use when:
+
+- Debugging production issues
+- Stack traces
+- Runtime exceptions
+- Error investigation
+
+---
+
+# Rule Selection
+
+Load only Rules related to the task.
+
+Never load unrelated Rules.
+
+---
+
+# Skill Selection
+
+Use Skills only when they improve execution.
+
+Avoid overlapping Skills.
+
+Prefer one specialized Skill over multiple generic Skills.
+
+---
+
+# Agent Selection
+
+Activate only specialists required.
+
+Examples:
+
+Architecture
+
+→ Enterprise Architect
+
+Backend
+
+→ Backend Engineer
+
+Frontend
+
+→ Frontend Engineer
+
+Database
+
+→ Database Engineer
+
+Security
+
+→ Security Engineer
+
+Performance
+
+→ Performance Engineer
+
+QA
+
+→ QA Engineer
+
+SEO
+
+→ SEO Specialist
+
+---
+
+# Context Optimization
+
+Always minimize context.
+
+Use:
+
+- fewer Rules
+- fewer Skills
+- fewer Agents
+- fewer MCP servers
+
+while maintaining solution quality.
+
+---
+
+# Cost Optimization
+
+Prefer the least expensive solution that still provides the required quality.
+
+Escalate to more capable models only when necessary.
+
+---
+
+# Escalation Rules
+
+Escalate to stronger models when:
+
+- architecture changes
+- complex debugging
+- ambiguous requirements
+- large refactoring
+- critical business logic
+- security review
+
+---
+
+# Validation
+
+Before implementation verify:
+
+✓ Correct model selected
+
+✓ Correct MCP enabled
+
+✓ Correct Rules loaded
+
+✓ Correct Skills loaded
+
+✓ Correct Agents activated
+
+✓ Correct workflow selected
+
+Only then begin implementation.

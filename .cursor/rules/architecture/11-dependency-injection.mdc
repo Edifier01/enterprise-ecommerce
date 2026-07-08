@@ -1,0 +1,253 @@
+---
+description: Dependency Injection architecture and service composition guidelines.
+alwaysApply: false
+---
+
+# Dependency Injection
+
+This project uses Dependency Injection (DI) as the standard mechanism for managing dependencies.
+
+The primary goals are:
+
+- Loose coupling
+- High testability
+- Maintainability
+- Explicit dependencies
+- Easy replacement of implementations
+
+Never instantiate business dependencies directly inside application code.
+
+---
+
+# Core Principles
+
+Always:
+
+- Depend on abstractions.
+- Inject dependencies explicitly.
+- Keep dependencies visible.
+- Keep object creation centralized.
+
+Never:
+
+- Hide dependencies.
+- Instantiate services with `new` inside business logic.
+- Use global services.
+- Use service locators.
+- Create implicit dependencies.
+
+---
+
+# Dependency Direction
+
+Dependencies always point toward abstractions.
+
+Implementation depends on interfaces.
+
+Business logic must never depend on infrastructure implementations.
+
+Correct:
+
+Controller
+
+↓
+
+Application Service
+
+↓
+
+Interface
+
+↓
+
+Infrastructure Implementation
+
+Incorrect:
+
+Controller
+
+↓
+
+Concrete Database Class
+
+---
+
+# Constructor Injection
+
+Constructor Injection is the default strategy.
+
+Prefer:
+
+- Constructor Injection
+- Explicit dependency lists
+- Immutable dependencies
+
+Avoid:
+
+- Property Injection
+- Field Injection
+- Setter Injection
+
+unless required by the framework.
+
+---
+
+# Service Lifetime
+
+Services should declare the appropriate lifetime.
+
+Typical lifetimes:
+
+- Singleton
+- Scoped
+- Transient
+
+Choose the smallest lifetime that satisfies the requirement.
+
+Avoid unnecessary singletons.
+
+---
+
+# Interface Design
+
+Every interface should have one clear responsibility.
+
+Prefer small interfaces.
+
+Avoid "God Interfaces."
+
+Interfaces should represent business capabilities rather than implementation details.
+
+---
+
+# Dependency Registration
+
+Register dependencies in a centralized composition root.
+
+Examples:
+
+- Startup
+- Program
+- Dependency Module
+- Service Provider Configuration
+
+Never scatter registrations throughout the codebase.
+
+---
+
+# Object Creation
+
+Business code should not create infrastructure objects.
+
+Examples of forbidden object creation:
+
+Database Connections
+
+HTTP Clients
+
+Repositories
+
+External API Clients
+
+Message Brokers
+
+These should always be injected.
+
+---
+
+# Configuration
+
+Configuration values should be injected.
+
+Avoid reading environment variables directly from business logic.
+
+Prefer configuration providers.
+
+---
+
+# Testing
+
+Dependency Injection must make testing easier.
+
+Replace infrastructure with:
+
+- Mocks
+- Stubs
+- Fakes
+- Test Implementations
+
+Never require real infrastructure for unit tests.
+
+---
+
+# Circular Dependencies
+
+Circular dependencies are prohibited.
+
+If they appear:
+
+- Redesign responsibilities.
+- Introduce an abstraction.
+- Split the service.
+
+Never work around circular dependencies.
+
+---
+
+# Anti-Patterns
+
+Avoid:
+
+- Service Locator
+- Global State
+- Hidden Dependencies
+- Static Business Services
+- Massive Constructors
+- Interface Per Class without purpose
+- Cyclic Dependencies
+
+If a constructor has many dependencies:
+
+Re-evaluate its responsibilities.
+
+---
+
+# Cross-Module Dependencies
+
+Modules communicate through interfaces.
+
+Never inject another module's internal implementation.
+
+Depend only on published contracts.
+
+---
+
+# Performance
+
+Dependency Injection should improve maintainability.
+
+Do not sacrifice architecture for micro-optimizations.
+
+Only optimize after profiling.
+
+---
+
+# Validation Checklist
+
+Before completing implementation verify:
+
+✓ Dependencies are injected.
+
+✓ Dependencies are explicit.
+
+✓ Interfaces are meaningful.
+
+✓ No hidden dependencies.
+
+✓ No service locator.
+
+✓ No circular dependencies.
+
+✓ Registration is centralized.
+
+✓ Business logic is infrastructure-independent.

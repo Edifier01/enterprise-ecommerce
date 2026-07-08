@@ -1,0 +1,42 @@
+---
+description: Project vision and business goals.
+alwaysApply: true
+---
+
+# Project Vision
+
+This project is a modern enterprise-grade e-commerce platform.
+
+The goal is to build a scalable, maintainable and extensible online store capable of supporting future growth without architectural rewrites.
+
+The project should support:
+
+- Product catalog
+- Categories
+- Inventory
+- Pricing
+- Customers
+- Authentication
+- Orders
+- Checkout
+- Payments
+- Shipping
+- Promotions
+- Reviews
+- Search
+- SEO
+- Analytics
+- Administration
+
+The architecture must allow future integration with:
+
+- ERP
+- CRM
+- Marketplace APIs
+- Payment providers
+- Logistics providers
+- AI services
+
+Business continuity is more important than development speed.
+
+Every implementation should improve the project rather than simply complete a task.

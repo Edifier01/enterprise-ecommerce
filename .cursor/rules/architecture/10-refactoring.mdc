@@ -1,0 +1,23 @@
+---
+description: Refactoring policy.
+alwaysApply: false
+---
+
+# Refactoring
+
+Refactor only when it improves:
+
+- Readability
+- Maintainability
+- Architecture
+- Testability
+
+Never refactor solely for personal preference.
+
+Large refactoring requires approval.
+
+Preserve behavior.
+
+Avoid unnecessary code movement.
+
+Validate after every refactoring.

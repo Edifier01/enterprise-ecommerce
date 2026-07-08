@@ -1,0 +1,328 @@
+---
+description: Cart and checkout session standards including pricing validation, address collection, and order placement flow.
+globs: apps/api/app/features/checkout/**
+alwaysApply: false
+---
+
+# Checkout Domain Standard
+
+## Purpose
+
+Define the checkout bounded context: shopping cart, checkout session, and the path from cart to order placement.
+
+Checkout orchestrates catalog, inventory, customers, payments, and orders without owning their invariants.
+
+---
+
+## Aggregate Roots
+
+### Cart
+
+Pre-purchase container of line items.
+
+- Owned by guest (session token) or customer (account)
+- Single active cart per owner
+- Mutable until converted or abandoned
+
+### CheckoutSession
+
+Short-lived checkout state machine from cart review to payment.
+
+- References cart snapshot
+- Collects shipping/billing addresses
+- Computes totals (subtotal, tax, shipping, discounts)
+- Links to Stripe PaymentIntent
+
+---
+
+## Cart Lifecycle
+
+```
+active ──▶ converted (order placed)
+  │
+  └──▶ abandoned (TTL cleanup)
+```
+
+### Cart Lines
+
+```python
+class CartLine:
+    id: int
+    cart_id: int
+    variant_id: int
+    quantity: int          # positive integer
+    unit_price_snapshot: Decimal  # captured at add-to-cart or refresh
+    currency: str
+```
+
+Rules:
+
+- One line per variant per cart (merge quantities on duplicate add)
+- Maximum quantity per line: configurable (default 99)
+- Maximum lines per cart: configurable (default 50)
+- Remove lines with quantity 0
+
+---
+
+## Add to Cart Flow
+
+```
+1. Validate variant exists and is active
+2. Check inventory availability >= requested quantity
+3. Capture current unit_price from catalog
+4. Upsert cart line
+5. Return updated cart
+```
+
+API:
+
+```
+POST /api/v1/cart/lines
+{ "variant_id": 123, "quantity": 2 }
+```
+
+Guest carts identified by `X-Cart-Session` header or cookie.
+
+---
+
+## Cart Merge (Login)
+
+When guest authenticates:
+
+1. Load guest cart by session token
+2. Load customer active cart
+3. For each guest line: merge into customer cart (sum quantities, keep fresher price snapshot)
+4. Mark guest cart as merged/abandoned
+5. Return customer cart
+
+Merge is idempotent on session token.
+
+---
+
+## Checkout Session Flow
+
+```
+┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐
+│  Review  │──▶│ Address  │──▶│ Shipping │──▶│ Payment  │──▶│ Confirm  │
+│   Cart   │   │          │   │  Method  │   │          │   │          │
+└──────────┘   └──────────┘   └──────────┘   └──────────┘   └──────────┘
+```
+
+### Step 1: Initiate Checkout
+
+```
+POST /api/v1/checkout/sessions
+{ "cart_id": 456 }
+```
+
+Actions:
+
+1. Validate cart not empty
+2. Revalidate all line prices against catalog — update snapshots if changed
+3. Revalidate inventory availability
+4. Create inventory reservations (TTL: 15 min, configurable)
+5. Create checkout session record
+6. Return session with line items, warnings (price changes)
+
+### Step 2: Addresses
+
+```
+PATCH /api/v1/checkout/sessions/{id}
+{
+  "shipping_address": { ... },
+  "billing_address": { ... }  // or same_as_shipping: true
+}
+```
+
+Validate address format. Registered customers may select saved addresses.
+
+### Step 3: Shipping Method
+
+```
+PATCH /api/v1/checkout/sessions/{id}
+{ "shipping_method_id": "standard" }
+```
+
+Compute shipping cost server-side based on rules (weight, destination, method).
+
+### Step 4: Payment
+
+Handled by Payments context (`ecommerce/03-payments`):
+
+```
+POST /api/v1/checkout/sessions/{id}/payment-intent
+```
+
+Returns Stripe client secret for frontend Payment Element.
+
+### Step 5: Confirm
+
+On `payment_intent.succeeded` webhook:
+
+1. Place order (`ecommerce/04-orders`)
+2. Convert cart status to `converted`
+3. Confirm inventory reservations → deduction
+4. Send confirmation email
+
+---
+
+## Price Validation
+
+Never trust client-submitted prices.
+
+At every checkout boundary:
+
+```python
+catalog_price = await catalog_service.get_variant_price(variant_id)
+if cart_line.unit_price_snapshot != catalog_price:
+    cart_line.unit_price_snapshot = catalog_price
+    warnings.append(PriceChangedWarning(variant_id, old, new))
+```
+
+Reject checkout if customer has not acknowledged price changes (return 409 with diff).
+
+---
+
+## Totals Calculation
+
+```python
+subtotal = sum(line.unit_price_snapshot * line.quantity for line in lines)
+discount_amount = apply_promotions(subtotal, promo_codes)  # server-validated
+shipping_amount = calculate_shipping(session)
+tax_amount = calculate_tax(subtotal - discount_amount, shipping_address)
+total = subtotal - discount_amount + shipping_amount + tax_amount
+```
+
+All amounts `Decimal`, currency from cart.
+
+Tax calculation:
+
+- Integrate tax service or table-based rules
+- Store tax breakdown for audit
+- Tax address based on shipping destination
+
+---
+
+## Promotions
+
+```
+POST /api/v1/checkout/sessions/{id}/promotions
+{ "code": "SUMMER20" }
+```
+
+Rules:
+
+- Validate code server-side (expiry, usage limits, eligibility)
+- Stackable promotions require explicit configuration
+- Remove invalid promotions on session refresh
+
+---
+
+## Inventory Reservation
+
+During checkout session creation:
+
+```python
+await inventory_service.reserve(
+    variant_id=line.variant_id,
+    quantity=line.quantity,
+    reference_type="checkout_session",
+    reference_id=session.id,
+    expires_at=now() + timedelta(minutes=15),
+)
+```
+
+On session expiry or cancellation:
+
+```python
+await inventory_service.release_reservation(reference_id=session.id)
+```
+
+On order placement:
+
+```python
+await inventory_service.confirm_reservation(reference_id=session.id)
+```
+
+See `ecommerce/05-inventory`.
+
+---
+
+## Session Expiry
+
+- Checkout sessions expire after 30 minutes of inactivity (configurable)
+- Inventory reservations expire after 15 minutes (configurable)
+- Background job releases expired reservations
+- Expired session returns 410 Gone — client must restart checkout
+
+---
+
+## Error Handling
+
+| Condition | HTTP | Code |
+|-----------|------|------|
+| Empty cart | 400 | CART_EMPTY |
+| Insufficient inventory | 409 | INSUFFICIENT_INVENTORY |
+| Price changed | 409 | PRICE_CHANGED |
+| Invalid promotion | 400 | INVALID_PROMOTION |
+| Session expired | 410 | SESSION_EXPIRED |
+| Variant inactive | 400 | PRODUCT_UNAVAILABLE |
+
+---
+
+## Frontend Integration
+
+- Cart state: Zustand store synced with API
+- Optimistic UI for add/remove with server reconciliation
+- Checkout: multi-step form with Zod validation
+- Stripe Payment Element embedded at payment step
+- Display price change warnings before payment
+- Disable pay button during processing
+
+Never collect card numbers in custom form fields — use Stripe Elements only.
+
+---
+
+## Idempotency
+
+| Endpoint | Key |
+|----------|-----|
+| Create checkout session | `Idempotency-Key` header |
+| Create payment intent | `Idempotency-Key` header |
+| Place order | Stripe event ID + session ID |
+
+---
+
+## Testing Requirements
+
+- Happy path: cart → checkout → payment → order
+- Inventory contention: two sessions, one unit left
+- Price change mid-checkout
+- Session expiry and reservation release
+- Guest cart merge on login
+- Promotion apply/remove
+
+Use Playwright E2E for full flow (`testing/00-testing`).
+
+---
+
+## Anti-Patterns
+
+- Creating order before payment confirmation
+- Skipping inventory reservation during checkout
+- Trusting frontend cart totals at payment
+- Holding database transaction during Stripe API call
+- Unlimited cart line quantities
+- Storing full card data in checkout session
+- Single-step checkout without session state for recovery
+
+---
+
+## Related Rules
+
+- `ecommerce/00-ecommerce` — domain overview
+- `ecommerce/01-catalog` — pricing source
+- `ecommerce/03-payments` — Stripe flow
+- `ecommerce/04-orders` — order creation
+- `ecommerce/05-inventory` — reservations
+- `security/02-pci` — payment data handling

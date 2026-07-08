@@ -1,0 +1,201 @@
+---
+description: Background jobs, task queues, workers, and async side-effect processing.
+globs: apps/api/**/infrastructure/workers/**/*.py,apps/api/**/tasks/**/*.py
+alwaysApply: false
+---
+
+# Background Jobs
+
+## Purpose
+
+This rule defines how asynchronous work is enqueued, processed, retried, and monitored in the FastAPI backend.
+
+Background jobs handle side effects that must not block HTTP requests: emails, search indexing, outbox publishing, report generation, and webhook retries.
+
+---
+
+## Scope
+
+Applies to:
+
+- Task definitions in `apps/api/app/features/<feature>/infrastructure/workers/tasks/`
+- Worker entrypoints in `apps/api/workers/`
+- Job enqueue ports called from application/event handlers
+- Retry, idempotency, and dead-letter handling
+- Scheduled periodic jobs (cron-style)
+
+Does not apply to:
+
+- Async `asyncio` within a single request (still bounded by request timeout)
+- Domain event in-process handlers that complete in milliseconds
+- Frontend background sync
+- Infrastructure provisioning (Kubernetes CronJob manifests — see DevOps)
+
+---
+
+## Core Principles
+
+Always:
+
+- Enqueue jobs after successful business transaction when job depends on committed state
+- Make job handlers idempotent with business or technical deduplication keys
+- Pass identifiers, not ORM objects, in job payloads
+- Configure explicit retry with exponential backoff for transient failures
+- Set hard max retries; route poison messages to dead-letter queue/table
+- Log job start, success, failure with correlation ids
+- Keep job handlers thin: load data, delegate to use case or application service
+
+Never:
+
+- Pass SQLAlchemy sessions or open transactions to workers via payload
+- Run payment capture solely in fire-and-forget job without status tracking
+- Retry forever on non-transient errors (validation, 404)
+- Duplicate business logic inline in worker bypassing use cases
+- Enqueue before DB commit for jobs that read written state
+- Use background jobs to hide synchronous failures from users when UX requires immediate feedback
+
+---
+
+## Recommended Stack Patterns
+
+Acceptable implementations for this monolith:
+
+- **ARQ** or **Celery** with Redis broker for general tasks
+- **Dedicated outbox worker** for domain event publishing
+- **FastAPI `BackgroundTasks`** only for best-effort, non-critical, in-process work (dev/single-node); not for commerce-critical flows in production
+
+Production commerce side effects prefer durable queue + worker process.
+
+---
+
+## Task Definition Pattern
+
+```python
+@dataclass(frozen=True, slots=True)
+class SendOrderConfirmationPayload:
+    order_id: str
+    idempotency_key: str
+
+async def send_order_confirmation(ctx: dict, payload: dict) -> None:
+    data = SendOrderConfirmationPayload(**payload)
+    service = build_send_confirmation_service(ctx)
+    await service.execute(data.order_id, idempotency_key=data.idempotency_key)
+```
+
+Enqueue from event handler:
+
+```python
+await queue.enqueue(
+    "send_order_confirmation",
+    {"order_id": str(event.order_id), "idempotency_key": f"confirm-{event.order_id}"},
+)
+```
+
+---
+
+## Idempotency and Retries
+
+Always:
+
+- Store processed job keys (`job_idempotency` table) for critical tasks
+- Classify errors: transient (network, 503) vs permanent (validation)
+- Retry only transient errors up to `max_retries`
+- Alert on dead-letter threshold
+
+Backoff example: 30s, 2m, 10m, 30m — tune per integration SLA.
+
+---
+
+## Decision Rules
+
+IF work takes >500ms or calls external systems
+THEN enqueue background job; do not block request.
+
+IF user must know outcome immediately (payment declined)
+THEN execute synchronously in use case; do not hide behind job.
+
+IF job depends on DB writes from current request
+THEN enqueue after commit or via outbox pattern.
+
+IF exactly-once delivery is required
+THEN idempotency key + unique constraint + handler guard.
+
+IF periodic cleanup (expire carts)
+THEN scheduled worker with observability and locking (single leader).
+
+IF job fails repeatedly
+THEN dead-letter with manual replay tooling; do not silently drop.
+
+---
+
+## Anti-Patterns
+
+Never create:
+
+- Mega `process_task(task_type, **kwargs)` string dispatchers
+- Jobs that re-implement entire use cases with copy-pasted logic
+- Unlimited retry on payment or inventory operations without audit
+- Sharing in-memory queue across workers
+- Serializing domain entity pickles to Redis
+- Cron jobs without monitoring or last-success timestamp
+
+---
+
+## Validation Checklist
+
+Before adding background jobs verify:
+
+✓ Job enqueued after commit when depending on persisted state.
+
+✓ Payload contains ids and primitives only.
+
+✓ Handler is idempotent.
+
+✓ Retry policy distinguishes transient vs permanent failures.
+
+✓ Max retries and dead-letter path configured.
+
+✓ Handler delegates to application/use case layer.
+
+✓ Correlation id flows from request to job logs.
+
+✓ Critical jobs have metrics/alerts.
+
+✓ Integration tests cover enqueue and handler success/failure.
+
+---
+
+## Related Rules
+
+- backend/00-backend
+- backend/05-transactions
+- backend/06-events
+- backend/11-logging
+
+---
+
+## Related Skills
+
+- python-fastapi-development
+- ci-cd-and-automation
+- fastapi-pro
+
+---
+
+## Related Agents
+
+- Backend Engineer
+- DevOps Engineer
+
+---
+
+## Related MCP
+
+- Filesystem
+- PostgreSQL
+
+---
+
+## Summary
+
+Use durable queues for side effects and heavy work. Enqueue after commit, pass ids not ORM objects, make handlers idempotent, and configure bounded retries with dead-letter handling. Delegate job logic to application layer, not duplicated scripts.

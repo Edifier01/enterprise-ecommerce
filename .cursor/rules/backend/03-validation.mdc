@@ -1,0 +1,239 @@
+---
+description: Validation layers with Pydantic v2 at the boundary and domain invariants in the core.
+globs: apps/api/**/presentation/**/*.py,apps/api/**/schemas/**/*.py,apps/api/**/domain/**/*.py
+alwaysApply: false
+---
+
+# Validation
+
+## Purpose
+
+This rule defines where validation occurs, how Pydantic v2 schemas are used at API boundaries, and how domain invariants are enforced in the core.
+
+Validation must happen exactly once at the correct layer. Duplicated or misplaced validation creates drift, security gaps, and anemic domain models.
+
+---
+
+## Scope
+
+Applies to:
+
+- Pydantic v2 request/response schemas in `apps/api/app/features/<feature>/presentation/schemas/`
+- FastAPI route parameter and body validation
+- Application-layer structural validation on commands and queries
+- Domain invariant enforcement on entities, aggregates, and value objects
+- Custom validators and field constraints
+
+Does not apply to:
+
+- Database constraints (see database rules)
+- Frontend form validation
+- Infrastructure retry logic
+- Business workflow orchestration
+
+---
+
+## Core Principles
+
+Always:
+
+- Validate transport shape at the Presentation layer with Pydantic v2
+- Enforce business invariants inside Domain entities and value objects
+- Use `field_validator` and `model_validator` for schema-level rules that are transport concerns
+- Use explicit value objects (`Email`, `Money`, `SKU`) for domain constraints
+- Fail fast with clear, stable error codes/messages at each layer
+- Separate request schemas from response schemas
+- Use `ConfigDict(strict=True)` or explicit types where ambiguity causes bugs
+
+Never:
+
+- Rely on Pydantic alone for business rules ("is this coupon valid for this cart?")
+- Duplicate the same invariant in router, service, and entity
+- Accept `dict[str, Any]` at API boundaries for production endpoints
+- Use Pydantic models as domain entities
+- Skip validation because "the frontend already checked"
+- Mutate validated models to fix invalid state silently
+
+---
+
+## Validation Layers
+
+### Layer 1 — Transport (Presentation)
+
+Location: `apps/api/app/features/<feature>/presentation/schemas/`
+
+Responsibilities:
+
+- JSON shape, required fields, string formats, numeric ranges for HTTP
+- Enum parsing and coercion
+- Pagination and sorting parameter bounds
+- File upload size/type metadata
+
+Example:
+
+```python
+class PlaceOrderRequest(BaseModel):
+    model_config = ConfigDict(strict=True)
+
+    cart_id: UUID
+    payment_method_id: UUID
+    idempotency_key: str = Field(min_length=8, max_length=128)
+
+    @field_validator("idempotency_key")
+    @classmethod
+    def normalize_key(cls, v: str) -> str:
+        return v.strip()
+```
+
+Router maps `PlaceOrderRequest` → `PlaceOrderCommand`. No business rules here.
+
+### Layer 2 — Application
+
+Responsibilities:
+
+- Cross-field checks that are use-case preconditions but not core domain (e.g., caller context present)
+- Authorization prerequisites
+- Existence checks that gate domain work (load aggregate, then domain decides)
+
+Application validation does not replace domain invariants.
+
+### Layer 3 — Domain
+
+Responsibilities:
+
+- Business invariants: "order cannot ship without payment", "quantity must be positive"
+- Aggregate consistency
+- Value object construction rules
+
+Example:
+
+```python
+@dataclass(frozen=True, slots=True)
+class Money:
+    amount: Decimal
+    currency: Currency
+
+    def __post_init__(self) -> None:
+        if self.amount < 0:
+            raise InvalidMoneyAmount("Amount cannot be negative")
+```
+
+---
+
+## Pydantic v2 Standards
+
+Always:
+
+- Prefer `BaseModel` for HTTP schemas; prefer dataclasses or value objects in domain
+- Use `Field(description=...)` for OpenAPI clarity
+- Use `Annotated` with constraints where readable
+- Model optional updates with dedicated schemas (`UpdateProductRequest`), not all-optional create models
+- Version breaking API schema changes explicitly
+
+For partial updates:
+
+- Use `model_validator(mode="after")` to require at least one field
+- Do not reuse create schemas for patch endpoints without thought
+
+---
+
+## Decision Rules
+
+IF validating JSON format, length, or type
+THEN use Pydantic at the Presentation layer.
+
+IF validating a concept that exists throughout the domain (`Money`, `Email`)
+THEN use a value object in Domain; construct it as early as application allows.
+
+IF validating a rule involving multiple aggregates or historical state
+THEN enforce in Application or Domain Service after loading required data.
+
+IF validation logic is reused across endpoints with identical transport rules
+THEN extract a shared schema module within the feature presentation layer.
+
+IF validation requires external lookup (duplicate SKU)
+THEN Application Service checks via repository; domain confirms invariants on the entity.
+
+---
+
+## Error Mapping
+
+- Pydantic validation failures → HTTP 422 with structured field errors
+- Domain invariant violations → mapped domain exceptions (see `04-error-handling`)
+- Never expose internal validation stack traces to clients
+
+---
+
+## Anti-Patterns
+
+Never create:
+
+- 500-line Pydantic models with business logic methods
+- Domain entities inheriting from `BaseModel`
+- Validation scattered across middleware, router, service, and repository
+- Silent coercion that hides client bugs (unintended string-to-number)
+- `@validator` v1 syntax (deprecated); use Pydantic v2 validators
+- Generic `validate_data()` utility that bypasses typed schemas
+
+---
+
+## Validation Checklist
+
+Before completing validation work verify:
+
+✓ Request/response schemas exist in presentation layer.
+
+✓ Pydantic v2 validators are used; no v1 patterns.
+
+✓ Business invariants live on entities/value objects.
+
+✓ No duplicate validation across layers.
+
+✓ Routers map schemas to commands/queries explicitly.
+
+✓ Error responses are consistent and documented in OpenAPI.
+
+✓ Strict types used where coercion caused bugs.
+
+✓ Domain value objects reject invalid construction.
+
+✓ Tests cover schema edge cases and domain invariant failures.
+
+---
+
+## Related Rules
+
+- backend/00-backend
+- backend/02-use-cases
+- backend/04-error-handling
+- architecture/05-domain-modeling
+- architecture/08-naming
+
+---
+
+## Related Skills
+
+- python-fastapi-development
+- fastapi-pro
+- zod-validation-expert
+
+---
+
+## Related Agents
+
+- Backend Engineer
+- API Engineer
+- Security Auditor
+
+---
+
+## Related MCP
+
+- Context7
+- Filesystem
+
+---
+
+## Summary
+
+Pydantic v2 validates transport at the edge. Domain entities and value objects enforce business invariants. Application layer gates use cases but does not duplicate domain rules. Validate once, at the right layer, with typed objects throughout.

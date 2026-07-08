@@ -1,0 +1,315 @@
+---
+description: Authentication and authorization standards including JWT, sessions, RBAC, and password security.
+globs: apps/api/**,apps/web/**
+alwaysApply: false
+---
+
+# Authentication and Authorization Standard
+
+## Purpose
+
+Define how users authenticate and how access is authorized across the enterprise e-commerce platform.
+
+Authentication verifies identity. Authorization determines what an authenticated identity may do.
+
+---
+
+## Authentication Methods
+
+| Actor | Method | Token |
+|-------|--------|-------|
+| Registered customer | Email + password | JWT access + refresh |
+| Guest | Anonymous session | Cart session cookie |
+| Admin | Email + password + MFA | JWT with admin scope |
+| Service-to-service | API key or mTLS | Internal only |
+
+---
+
+## Password Security
+
+### Hashing
+
+Use **bcrypt** or **Argon2id** via passlib:
+
+```python
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+hashed = pwd_context.hash(plain_password)
+verified = pwd_context.verify(plain_password, hashed)
+```
+
+Never store plaintext passwords. Never use MD5, SHA1, or unsalted SHA256.
+
+### Password Policy
+
+- Minimum 8 characters (recommend 12+)
+- Check against breached password lists (Have I Been Pwned API)
+- No maximum length under 128 chars (bcrypt truncates at 72 bytes — prefer Argon2id for long passwords)
+
+### Password Reset
+
+1. User requests reset with email
+2. Generate cryptographically random token (32+ bytes)
+3. Store token hash in database with expiry (1 hour)
+4. Send email with reset link
+5. Validate token, accept new password, invalidate all sessions
+
+Always return generic "If account exists, email sent" — prevent email enumeration.
+
+---
+
+## JWT Standards
+
+### Access Token
+
+```python
+{
+  "sub": "customer_uuid",
+  "type": "access",
+  "scope": "customer",
+  "exp": 1234567890,  # 15 minutes
+  "iat": 1234567890,
+  "jti": "unique-token-id"
+}
+```
+
+- Algorithm: **RS256** (asymmetric) or **HS256** with strong secret (256+ bits)
+- Expiry: 15 minutes
+- Include `jti` for revocation support
+
+### Refresh Token
+
+- Expiry: 7 days (customer), 24 hours (admin)
+- Stored as hash in database
+- Rotated on each use — old token invalidated
+- HttpOnly secure cookie or secure storage
+
+```python
+{
+  "sub": "customer_uuid",
+  "type": "refresh",
+  "exp": 1234567890,
+  "jti": "unique-refresh-id",
+  "family_id": "rotation-family-uuid"
+}
+```
+
+Detect refresh token reuse (stolen token) → invalidate entire token family.
+
+---
+
+## Registration and Login
+
+### Register
+
+```
+POST /api/v1/auth/register
+{ "email": "...", "password": "...", "name": "..." }
+```
+
+1. Validate email format and uniqueness
+2. Hash password
+3. Create customer record (status: pending_verification)
+4. Send verification email
+5. Return tokens or require verification before login (configurable)
+
+### Login
+
+```
+POST /api/v1/auth/login
+{ "email": "...", "password": "..." }
+```
+
+1. Rate limit (5/min per IP + email)
+2. Lookup customer by email
+3. Constant-time password verify (even if user not found — use dummy hash)
+4. Check account status (locked, unverified)
+5. Issue access + refresh tokens
+6. Update `last_login_at`
+7. Merge guest cart if session cookie present
+
+### Logout
+
+```
+POST /api/v1/auth/logout
+```
+
+Invalidate refresh token in database. Client clears cookies/local storage.
+
+---
+
+## Guest Session
+
+Cart session for unauthenticated users:
+
+```python
+session_token = secrets.token_urlsafe(32)  # 256 bits entropy
+```
+
+- Stored in HttpOnly cookie: `cart_session`
+- `Secure`, `SameSite=Lax`
+- Expiry: 30 days
+- Mapped to cart record in database
+
+Never use predictable session IDs.
+
+---
+
+## Authorization (RBAC)
+
+### Customer Scopes
+
+Customers access only their own resources:
+
+```python
+async def get_order(order_id: int, current_user: Customer):
+    order = await order_repo.get(order_id)
+    if order.customer_id != current_user.id:
+        raise HTTPException(403, "Forbidden")
+    return order
+```
+
+Object-level authorization on every resource endpoint.
+
+### Admin Roles
+
+| Role | Permissions |
+|------|-------------|
+| admin:read | View orders, products, customers |
+| catalog:write | Manage products and categories |
+| inventory:write | Adjust stock |
+| orders:write | Update order status, refunds |
+| customers:read | View customer PII |
+| superadmin | All permissions |
+
+Permissions stored in JWT `permissions` claim or resolved from role table.
+
+```python
+@router.patch("/admin/orders/{id}/status")
+async def update_status(
+    id: int,
+    user: Admin = Depends(require_permission("orders:write")),
+):
+    ...
+```
+
+### Default Deny
+
+Missing permission → 403 Forbidden.
+
+Never rely on frontend hiding admin UI as security control.
+
+---
+
+## MFA (Admin)
+
+Production admin accounts require TOTP MFA:
+
+1. Enroll via authenticator app (Google Authenticator, Authy)
+2. Store TOTP secret encrypted
+3. Require MFA code on login after password
+4. Backup codes for recovery (hashed, single use)
+
+Customer MFA optional for future enhancement.
+
+---
+
+## Token Validation Middleware
+
+```python
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> Customer:
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            public_key,
+            algorithms=["RS256"],
+            options={"require": ["exp", "sub", "type"]},
+        )
+        if payload["type"] != "access":
+            raise InvalidTokenError()
+        if await token_blocklist.is_revoked(payload["jti"]):
+            raise RevokedTokenError()
+        return await customer_repo.get(payload["sub"])
+    except JWTError:
+        raise HTTPException(401, "Invalid or expired token")
+```
+
+Every protected route uses dependency injection — no manual token parsing scattered in handlers.
+
+---
+
+## Account Security
+
+### Lockout
+
+- Lock account after 10 failed login attempts in 15 minutes
+- Unlock after 30 minutes or admin reset
+- Notify customer via email on lockout
+
+### Email Verification
+
+- Required before first purchase (configurable)
+- Verification token expires in 24 hours
+
+### Session Management
+
+- Customer can view and revoke active sessions (future)
+- Password change invalidates all refresh tokens
+
+---
+
+## OAuth (Optional Extension)
+
+If social login added (Google, Apple):
+
+- Use OAuth 2.0 authorization code flow with PKCE
+- Link OAuth identity to customer record
+- Never use OAuth implicit flow
+- Validate `state` parameter against CSRF
+
+Requires ADR before implementation.
+
+---
+
+## API Key Authentication (Internal)
+
+Service-to-service only:
+
+- Keys stored hashed in database
+- Scoped to specific operations
+- Rotation policy: 90 days
+- Never exposed to frontend
+
+---
+
+## Testing Auth
+
+- Valid login returns tokens
+- Invalid password returns 401 (generic message)
+- Expired access token returns 401
+- Refresh rotation invalidates old refresh token
+- Customer cannot access another customer's order (403)
+- Admin endpoint rejects customer token (403)
+- Rate limiting triggers on brute force
+
+---
+
+## Anti-Patterns
+
+- JWT in URL query parameters
+- Long-lived access tokens (> 1 hour) without refresh
+- Storing JWT in localStorage without XSS mitigation plan
+- Hardcoded admin backdoor accounts
+- Authorization check only at router level, not object level
+- Returning different error messages for "user not found" vs "wrong password"
+- Skipping auth on "internal" endpoints exposed to network
+
+---
+
+## Related Rules
+
+- `security/00-security` — security baseline
+- `security/03-data-protection` — PII in tokens
+- `ecommerce/02-checkout` — guest session merge
+- `backend/00-backend` — dependency injection patterns

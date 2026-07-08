@@ -1,0 +1,358 @@
+---
+description: Alembic migration standards for safe, reversible PostgreSQL schema evolution.
+alwaysApply: false
+---
+
+# Migration Standard (Alembic)
+
+## Purpose
+
+All PostgreSQL schema changes must flow through Alembic migrations.
+
+This ensures:
+
+- Version-controlled schema history
+- Reproducible environments
+- Reviewable DDL
+- Safe production deployments
+
+Never apply manual DDL to shared environments.
+
+---
+
+## Project Structure
+
+```
+apps/api/
+  alembic/
+    versions/          # migration revision files
+    env.py             # Alembic environment config
+    script.py.mako     # revision template
+  alembic.ini
+  app/
+    core/
+      database.py      # async engine, session factory, Base
+    features/
+      <feature>/
+        infrastructure/
+          persistence/
+            models/    # SQLAlchemy models per feature
+```
+
+Migrations live with the API application that owns the database.
+
+---
+
+## Workflow
+
+### Creating a Migration
+
+1. Modify SQLAlchemy models in `apps/api/app/features/<feature>/infrastructure/persistence/models/`
+2. Generate migration:
+
+```bash
+cd apps/api
+alembic revision --autogenerate -m "add_inventory_reservations_table"
+```
+
+3. Review generated file — autogenerate is never trusted blindly
+4. Edit migration for correctness, indexes, constraints, data backfills
+5. Test upgrade and downgrade locally
+6. Include migration in PR with model changes
+
+### Naming Conventions
+
+Revision message format:
+
+```
+{verb}_{entity}_{detail}
+```
+
+Examples:
+
+- `add_orders_table`
+- `add_index_orders_customer_id`
+- `alter_products_add_compare_at_price`
+- `backfill_order_numbers`
+
+File name is auto-generated with revision hash prefix.
+
+---
+
+## Migration File Standards
+
+Every migration must include:
+
+```python
+"""add inventory reservations table
+
+Revision ID: abc123
+Revises: def456
+Create Date: 2026-07-07
+"""
+
+from alembic import op
+import sqlalchemy as sa
+
+revision = "abc123"
+down_revision = "def456"
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    ...
+
+
+def downgrade() -> None:
+    ...
+```
+
+Rules:
+
+- `upgrade()` and `downgrade()` must both be implemented
+- Downgrade must reverse upgrade for reversible migrations
+- Document irreversible steps clearly
+
+---
+
+## Autogenerate Review Checklist
+
+Alembic autogenerate frequently misses or misdetects:
+
+- [ ] Index renames vs drops/recreates
+- [ ] Server defaults and sequences
+- [ ] CHECK constraints
+- [ ] Data migrations alongside DDL
+- [ ] FK `ON DELETE` behavior
+- [ ] Column type changes requiring USING clause
+
+Always manually verify generated SQL:
+
+```bash
+alembic upgrade head --sql > /tmp/migration_preview.sql
+```
+
+---
+
+## Safe Migration Patterns
+
+### Adding a Column (Nullable First)
+
+For large tables in production:
+
+```python
+def upgrade() -> None:
+    # Step 1: add nullable column
+    op.add_column("products", sa.Column("compare_at_price", sa.Numeric(19, 4), nullable=True))
+
+def downgrade() -> None:
+    op.drop_column("products", "compare_at_price")
+```
+
+Follow-up migration after backfill:
+
+```python
+def upgrade() -> None:
+    op.alter_column("products", "compare_at_price", nullable=False)
+```
+
+Ship as two migrations when table has millions of rows.
+
+### Adding NOT NULL to Existing Column
+
+1. Add column nullable
+2. Backfill data in migration or background job
+3. Add NOT NULL constraint in separate migration
+
+Never add NOT NULL without backfill on existing rows.
+
+### Adding Indexes Concurrently
+
+For production tables under load:
+
+```python
+def upgrade() -> None:
+    op.create_index(
+        "ix_orders_customer_id",
+        "orders",
+        ["customer_id"],
+        postgresql_concurrently=True,
+    )
+
+def downgrade() -> None:
+    op.drop_index("ix_orders_customer_id", table_name="orders", postgresql_concurrently=True)
+```
+
+Requirements for `CONCURRENTLY`:
+
+- Cannot run inside a transaction block
+- Set `transaction_per_migration = True` or use `op.execute("COMMIT")` pattern in env.py for that revision
+- Test in staging — concurrent index builds take longer but avoid locks
+
+### Renaming Columns/Tables
+
+Prefer multi-step rename for zero-downtime:
+
+1. Add new column, dual-write in application
+2. Backfill new column from old
+3. Switch reads to new column
+4. Drop old column in later migration
+
+Avoid `ALTER TABLE RENAME` on heavily used tables during peak traffic without coordination.
+
+### Dropping Columns
+
+1. Remove all application references first (deploy)
+2. Migration drops column in subsequent release
+
+Never drop columns still read by running application versions.
+
+---
+
+## Data Migrations
+
+When migration includes data transformation:
+
+```python
+from alembic import op
+from sqlalchemy import text
+
+def upgrade() -> None:
+    op.add_column("orders", sa.Column("order_number", sa.Text(), nullable=True))
+    conn = op.get_bind()
+    conn.execute(text("""
+        UPDATE orders
+        SET order_number = 'ORD-' || LPAD(id::text, 8, '0')
+        WHERE order_number IS NULL
+    """))
+    op.alter_column("orders", "order_number", nullable=False)
+    op.create_unique_constraint("uq_orders_order_number", "orders", ["order_number"])
+```
+
+Rules:
+
+- Batch large updates (`LIMIT` loops) to avoid long locks
+- Log progress for migrations affecting millions of rows
+- Idempotent backfills when possible (`WHERE column IS NULL`)
+
+---
+
+## Destructive Changes
+
+Require explicit PR review and ADR when:
+
+- Dropping tables or columns with production data
+- Changing column types with potential data loss
+- Removing constraints
+- Splitting or merging tables
+
+Include rollback plan in PR description.
+
+---
+
+## Environment Execution
+
+| Environment | Who Runs | When |
+|-------------|----------|------|
+| local | Developer | During development |
+| CI | Pipeline | On every PR (ephemeral DB) |
+| staging | CI/CD | After merge to main |
+| production | CI/CD | Controlled release window |
+
+Production migrations run as deployment step before new application code serves traffic (expand-contract pattern when needed).
+
+---
+
+## Expand-Contract Pattern
+
+For breaking schema changes:
+
+**Expand** (Migration 1 + Deploy 1):
+
+- Add new column/table
+- Application writes to both old and new
+
+**Migrate** (Migration 2):
+
+- Backfill data
+
+**Contract** (Migration 3 + Deploy 2):
+
+- Application reads/writes new only
+- Drop old column/table
+
+This enables zero-downtime deployments.
+
+---
+
+## Lock Awareness
+
+Operations that lock tables exclusively:
+
+- `ADD COLUMN ... DEFAULT` (PG 11+ is better but still caution)
+- `ALTER COLUMN TYPE`
+- Non-concurrent index creation on large tables
+- `VALIDATE CONSTRAINT` on large tables
+
+Mitigations:
+
+- `CREATE INDEX CONCURRENTLY`
+- `ADD CONSTRAINT ... NOT VALID` then `VALIDATE CONSTRAINT` separately
+- Schedule heavy migrations in maintenance windows
+
+---
+
+## Testing Migrations
+
+Every migration PR must verify:
+
+```bash
+# Fresh upgrade
+alembic upgrade head
+
+# Downgrade one step
+alembic downgrade -1
+
+# Re-upgrade
+alembic upgrade head
+```
+
+CI pipeline:
+
+1. Start PostgreSQL service container
+2. Run `alembic upgrade head`
+3. Run test suite against migrated schema
+4. Optionally run downgrade/upgrade cycle
+
+---
+
+## Seeding
+
+Seed data is separate from migrations:
+
+- `scripts/seed_dev.py` or fixture SQL for local/staging
+- Never embed production-specific data in migrations
+- Reference data (countries, tax codes) may use idempotent seed migrations with caution
+
+---
+
+## Anti-Patterns
+
+- Editing merged migration files that ran in production
+- Squashing migrations that exist in production history
+- Running `alembic stamp head` to skip failed migrations
+- Autogenerate without manual review
+- Data migration without batching on large tables
+- Missing downgrade entirely
+- DDL during peak traffic without concurrent options
+
+---
+
+## Related Rules
+
+- `database/00-database` — architecture
+- `database/01-schema` — schema design
+- `database/03-indexing` — index creation in migrations
+- `git/00-git` — PR and review process
+- `docker/00-docker` — CI database containers

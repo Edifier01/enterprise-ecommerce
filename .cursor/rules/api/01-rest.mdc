@@ -1,0 +1,346 @@
+---
+description: REST API design conventions, HTTP semantics, and resource patterns for FastAPI.
+alwaysApply: false
+globs: apps/api/src/api/**/*
+---
+
+# REST API Design Standard
+
+## Purpose
+
+This rule defines REST conventions for FastAPI endpoints consumed by the Next.js frontend.
+
+Resources must behave predictably: correct verbs, status codes, idempotency, and consistent JSON shapes across all modules.
+
+---
+
+# Scope
+
+Applies to all routers under `apps/api/src/api/`.
+
+Covers HTTP methods, status codes, resource modeling, filtering, and mutation patterns.
+
+Companion rules: `api/00-api`, `api/02-versioning`, `api/03-openapi`.
+
+---
+
+# REST Maturity
+
+Target Richardson Level 2:
+
+- Resources identified by URIs
+- HTTP verbs express actions
+- Status codes express outcomes
+
+Avoid RPC-style endpoints except for unavoidable actions:
+
+```
+# Acceptable action endpoint
+POST /api/v1/checkout/sessions/{id}/complete
+
+# Avoid when RESTful alternative exists
+POST /api/v1/getProductBySlug
+```
+
+When action endpoints are necessary, use verbs only as the final path segment under a resource namespace.
+
+---
+
+# HTTP Methods
+
+| Method | Usage | Idempotent | Safe |
+|--------|-------|------------|------|
+| GET | Read resource or collection | Yes | Yes |
+| POST | Create resource or trigger action | No | No |
+| PUT | Full replace (rare in this project) | Yes | No |
+| PATCH | Partial update | No* | No |
+| DELETE | Remove resource | Yes | No |
+
+*PATCH is not strictly idempotent in all cases; design PATCH handlers to be repeatable when possible.
+
+Never use GET for mutations.
+
+---
+
+# Status Codes
+
+Use precisely:
+
+| Code | When |
+|------|------|
+| 200 | Successful GET, PATCH, PUT with body |
+| 201 | Successful POST creating resource |
+| 204 | Successful DELETE or POST with no body |
+| 400 | Malformed request (bad syntax) |
+| 401 | Missing or invalid authentication |
+| 403 | Authenticated but not authorized |
+| 404 | Resource not found |
+| 409 | Conflict (duplicate slug, stale cart) |
+| 422 | Validation failed (Pydantic) |
+| 429 | Rate limit exceeded |
+| 500 | Unexpected server error only |
+
+Include `Location` header on 201 when applicable:
+
+```
+Location: /api/v1/products/550e8400-e29b-41d4-a716-446655440000
+```
+
+---
+
+# Resource Naming
+
+Rules:
+
+- Lowercase paths
+- Hyphens for multi-word segments (`/order-items` if not nested)
+- Plural collection names
+- UUID or slug path params — validate format in router
+
+```
+/api/v1/categories
+/api/v1/categories/{category_id}/products
+/api/v1/customers/me
+/api/v1/customers/me/addresses
+```
+
+Use `/me` for current authenticated principal instead of exposing internal user IDs in customer-facing flows.
+
+---
+
+# Query Parameters
+
+Standard patterns:
+
+```
+GET /api/v1/products?page=1&page_size=20&sort=price&order=asc
+GET /api/v1/products?category=shoes&min_price=50&max_price=200&q=running
+```
+
+Rules:
+
+- Document all query params in OpenAPI
+- Reject unknown params on strict endpoints (optional policy)
+- Validate enums (`order=asc|desc`) in Pydantic query models
+- Never use query params for sensitive identifiers in GET without auth
+
+Use FastAPI `Query()` with constraints:
+
+```python
+from fastapi import Query
+
+async def list_products(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    q: str | None = Query(None, max_length=200),
+):
+    ...
+```
+
+---
+
+# Request Bodies
+
+POST and PATCH bodies are JSON validated by Pydantic.
+
+```python
+class CartItemCreate(BaseModel):
+    product_id: UUID
+    variant_id: UUID | None = None
+    quantity: int = Field(ge=1, le=99)
+```
+
+Rules:
+
+- Required vs optional fields explicit
+- Use `Decimal` for money, never float
+- Use ISO 8601 strings for datetime in JSON
+- Empty body only when semantically valid
+
+---
+
+# Response Bodies
+
+Always return typed response models.
+
+List endpoints return envelope (see `api/00-api`).
+
+Single resource returns the resource object directly unless consistency policy requires wrapping:
+
+```json
+{ "id": "...", "name": "..." }
+```
+
+Error responses follow global handler format.
+
+Never leak stack traces in production responses.
+
+---
+
+# Idempotency
+
+Required for:
+
+- Payment initiation
+- Order placement
+- Webhook processing
+
+Accept `Idempotency-Key` header (UUID) on POST:
+
+```python
+@router.post("/orders", status_code=201)
+async def create_order(
+    body: OrderCreate,
+    idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
+    ...
+):
+```
+
+Store key + response hash; return cached response on replay within TTL.
+
+Document in OpenAPI.
+
+---
+
+# Concurrency and ETags
+
+For resources subject to concurrent edits (cart, inventory holds):
+
+- Support `If-Match` with ETag on PATCH when needed
+- Return 409 on version mismatch with current state in body
+
+Optional for MVP but required before multi-tab checkout optimization.
+
+---
+
+# Filtering Business Rules
+
+Business rules stay in domain/application layers.
+
+REST layer responsibilities:
+
+- Parse and validate transport
+- Map to use case input
+- Map domain result to response schema
+- Translate exceptions to HTTP
+
+Example flow:
+
+```
+POST /cart/items → CartRouter → AddCartItemUseCase → Cart aggregate
+```
+
+---
+
+# Bulk Operations
+
+Prefer limited bulk endpoints over chatty N+1 from frontend:
+
+```
+POST /api/v1/cart/items/bulk
+DELETE /api/v1/cart/items/bulk
+```
+
+Cap batch size (e.g., 50 items) and document limits.
+
+---
+
+# File Uploads
+
+Use multipart for admin image uploads:
+
+```
+POST /api/v1/admin/products/{id}/images
+```
+
+Return CDN URL in response. Validate MIME type and size server-side.
+
+Product images served to Next.js via CDN `remotePatterns`, not through API binary responses in listings.
+
+---
+
+# Webhooks (Inbound)
+
+Stripe and logistics webhooks:
+
+```
+POST /api/v1/webhooks/stripe
+```
+
+- Verify signature before parsing body
+- Return 200 quickly; process async if heavy
+- Idempotent by event ID
+
+Not consumed by Next.js directly.
+
+---
+
+# Next.js Consumer Expectations
+
+Design endpoints so Server Components can:
+
+- Fetch with single round trip per page section
+- Cache GET responses with clear cache keys
+- Map 404 to `notFound()` in Next.js
+- Map 422 to form field errors (see `frontend/04-forms`)
+
+Provide stable field names aligned with frontend Zod schemas.
+
+---
+
+# Anti-Patterns
+
+Never:
+
+- Use 200 with `{ "error": true }` in body
+- Return different shapes for the same resource type across endpoints
+- Expose database primary keys inconsistently (mix int and UUID without reason)
+- Implement pagination without total or cursor metadata
+- Create breaking field renames without version bump
+
+---
+
+# Validation Checklist
+
+- Correct HTTP verb and status code
+- Resource URI follows naming rules
+- List endpoints paginated
+- Mutations idempotent where required
+- Pydantic models for query, body, response
+- Errors use standard handler
+- Documented in OpenAPI
+
+---
+
+# Related Rules
+
+- api/00-api
+- api/02-versioning
+- api/03-openapi
+- api/04-auth-api
+- backend/00-backend
+
+---
+
+# Related Skills
+
+- fastapi-pro
+- openapi-spec-generation
+- implement-checkout-flow
+
+---
+
+# Related Agents
+
+- API Engineer
+- Backend Engineer
+
+---
+
+# Summary
+
+Resources are nouns; HTTP verbs and status codes carry meaning.
+
+Validate at the edge with Pydantic; enforce business rules in application services.
+
+Design list, error, and idempotency patterns so the Next.js client stays simple and robust.

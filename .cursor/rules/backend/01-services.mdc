@@ -1,0 +1,248 @@
+---
+description: Application and domain service design for FastAPI backend features.
+globs: apps/api/**/application/**/*.py
+alwaysApply: false
+---
+
+# Application and Domain Services
+
+## Purpose
+
+This rule defines how Application Services and Domain Services are designed, named, and composed within the FastAPI backend.
+
+Its purpose is to ensure that:
+
+- Business orchestration stays in Application Services
+- Business rules stay in Domain Services and entities
+- Each service has a single, clear responsibility
+- Dependencies remain explicit and testable
+- Feature modules under `apps/api/app/features/` remain cohesive
+
+Application Services coordinate use cases. Domain Services express domain logic that does not belong on a single entity.
+
+---
+
+## Scope
+
+Applies to:
+
+- Application Services in `apps/api/app/features/<feature>/application/`
+- Domain Services in `apps/api/app/features/<feature>/domain/services/`
+- Service interfaces (protocols/ABCs) consumed by presentation and application layers
+- Service composition via dependency injection
+
+Does not apply to:
+
+- FastAPI route handlers (see presentation layer in `00-backend`)
+- Repository implementations (see `07-repositories`)
+- Infrastructure adapters (email, payment, search)
+- Background job workers (see `09-background-jobs`)
+
+---
+
+## Core Principles
+
+Always:
+
+- One service, one responsibility
+- Inject dependencies through constructors or FastAPI `Depends`
+- Depend on abstractions (protocols), not concrete infrastructure
+- Keep Application Services free of HTTP, SQL, and framework details
+- Place cross-entity domain logic in Domain Services
+- Name services after business capabilities (`PlaceOrderService`, `ReserveInventoryService`)
+- Keep services stateless; pass context via method arguments
+
+Never:
+
+- Create God Services that handle unrelated workflows
+- Put business rules in Application Services when they belong in Domain
+- Access SQLAlchemy sessions directly from Domain Services
+- Instantiate repositories or clients inside service methods
+- Share mutable instance state across requests
+- Return ORM models from service public APIs
+
+---
+
+## Service Types
+
+### Application Services
+
+Location: `apps/api/app/features/<feature>/application/services/`
+
+Responsibilities:
+
+- Execute a use case end-to-end
+- Begin and commit unit-of-work boundaries
+- Load aggregates via repository interfaces
+- Invoke domain methods and Domain Services
+- Publish domain events after successful persistence
+- Map domain results to DTOs or application result objects
+
+Application Services orchestrate. They do not encode invariant rules.
+
+### Domain Services
+
+Location: `apps/api/app/features/<feature>/domain/services/`
+
+Responsibilities:
+
+- Implement domain logic spanning multiple entities or value objects
+- Enforce business rules that are not natural on a single aggregate root
+- Remain pure: no I/O, no framework imports, no database access
+
+Domain Services express business behavior. They do not coordinate persistence or HTTP.
+
+---
+
+## Decision Rules
+
+IF the code coordinates steps across repositories, external systems, or events
+THEN place it in an Application Service.
+
+IF the code enforces a business rule using domain concepts only
+THEN place it in a Domain Service or entity method.
+
+IF the logic needs database, cache, or HTTP
+THEN it is not a Domain Service — move orchestration to Application and I/O to Infrastructure.
+
+IF two features need the same behavior
+THEN extract a shared domain concept or application port, not a shared concrete service with hidden dependencies.
+
+IF a service exceeds ~200 lines or handles more than one use case
+THEN split by use case or extract Domain Services.
+
+IF a method accepts more than four unrelated parameters
+THEN introduce a command object or value object in the domain/application layer.
+
+---
+
+## Implementation Guidelines
+
+### Application Service Pattern
+
+```python
+class PlaceOrderService:
+    def __init__(
+        self,
+        order_repository: OrderRepository,
+        inventory_gateway: InventoryGateway,
+        unit_of_work: UnitOfWork,
+        event_publisher: DomainEventPublisher,
+    ) -> None:
+        self._orders = order_repository
+        self._inventory = inventory_gateway
+        self._uow = unit_of_work
+        self._events = event_publisher
+
+    async def execute(self, command: PlaceOrderCommand) -> PlaceOrderResult:
+        async with self._uow:
+            order = Order.create(command)
+            await self._inventory.reserve(order.lines)
+            await self._orders.add(order)
+            await self._uow.commit()
+            await self._events.publish(order.collect_events())
+        return PlaceOrderResult.from_order(order)
+```
+
+### Domain Service Pattern
+
+```python
+class PricingService:
+    def calculate_line_total(
+        self,
+        unit_price: Money,
+        quantity: Quantity,
+        discount: Discount | None,
+    ) -> Money:
+        ...
+```
+
+### FastAPI Integration
+
+- Register services in a composition root or dependency module
+- Expose services to routers via `Depends(get_place_order_service)`
+- Routers call a single `execute` or clearly named method; they do not chain multiple services inline
+
+---
+
+## Anti-Patterns
+
+Never create:
+
+- God Services (`OrderService` with 30 unrelated methods)
+- Anemic Application Services that only delegate to repositories without domain behavior
+- Static service classes with `@classmethod` business logic
+- Services that import from other features' infrastructure packages
+- Services that catch all exceptions and return `None`
+- Services that accept raw dicts instead of typed commands
+- Duplicate orchestration in both router and service
+- Business logic duplicated across Application and Domain layers
+
+---
+
+## Validation Checklist
+
+Before completing a service implementation verify:
+
+✓ Service has one clear business responsibility.
+
+✓ Application Service orchestrates; Domain Service encodes rules.
+
+✓ All dependencies are injected and typed.
+
+✓ No SQLAlchemy, FastAPI, or HTTP imports in domain services.
+
+✓ Public methods accept command/query objects, not loose primitives.
+
+✓ Service does not leak ORM entities to presentation layer.
+
+✓ Transactions are owned by Application Service or unit-of-work, not repository.
+
+✓ Domain events are collected and published after successful commit.
+
+✓ Service is covered by unit tests with mocked ports.
+
+✓ Naming reflects business language, not technology.
+
+---
+
+## Related Rules
+
+- backend/00-backend
+- backend/02-use-cases
+- backend/05-transactions
+- backend/07-repositories
+- architecture/01-ddd
+- architecture/03-dependency-rules
+- architecture/11-dependency-injection
+
+---
+
+## Related Skills
+
+- python-fastapi-development
+- fastapi-pro
+- backend-architect
+- software-architecture
+
+---
+
+## Related Agents
+
+- Backend Engineer
+- Backend Architect
+- Enterprise Architect
+
+---
+
+## Related MCP
+
+- Filesystem
+- PostgreSQL
+- Context7
+
+---
+
+## Summary
+
+Application Services orchestrate use cases and own workflow boundaries. Domain Services express business rules that span entities. Keep services focused, stateless, and dependency-injected. Business language drives naming; infrastructure stays at the edges.

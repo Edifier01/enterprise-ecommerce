@@ -1,0 +1,29 @@
+---
+description: Module boundary rules.
+alwaysApply: false
+---
+
+# Module Boundaries
+
+Modules communicate only through public interfaces.
+
+Never import internal implementation from another module.
+
+Each module owns:
+
+- Business logic
+- Database models
+- Internal services
+- Internal events
+
+Allowed communication:
+
+- Public API
+- Domain Events
+- Shared Contracts
+
+Forbidden:
+
+- Internal imports
+- Shared mutable state
+- Cross-module database access

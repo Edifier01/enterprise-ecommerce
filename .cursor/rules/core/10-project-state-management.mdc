@@ -1,0 +1,114 @@
+---
+description: Project state management — agents must read and update persistent coordination files before and after every task.
+alwaysApply: true
+---
+
+# Project State Management
+
+The `.cursor/project-management/` directory is the **operational source of truth** for agent coordination.
+
+---
+
+## State Files
+
+| File | Purpose |
+|------|---------|
+| `CURRENT_CONTEXT.md` | 30-second overview — read first |
+| `PROJECT_STATUS.md` | Current phase, progress, active/blocked work |
+| `TASKS.md` | Master task registry with statuses |
+| `DECISIONS.md` | Decision index (complements `docs/adr/`) |
+| `HANDOFF.md` | Agent-to-agent work transfer |
+
+Strategic phases remain in `PROJECT_ROADMAP.md`. Full ADRs remain in `docs/adr/`.
+
+---
+
+## Before Work (Mandatory)
+
+Every agent MUST read project state before starting any task:
+
+1. `CURRENT_CONTEXT.md`
+2. `PROJECT_STATUS.md`
+3. `TASKS.md`
+4. `DECISIONS.md`
+5. `HANDOFF.md`
+6. `PROJECT_ROADMAP.md`
+
+**Never continue without understanding current context.**
+
+Only after reading project state:
+
+- Select Rules
+- Select Skills
+- Select Agent
+- Select MCP
+
+See `core/05-context-loading.mdc` and skill `context-loading`.
+
+---
+
+## During Work
+
+Agents must:
+
+- Update `TASKS.md` when task status changes
+- Record important decisions in `DECISIONS.md`
+- Create full ADR in `docs/adr/` for architectural decisions (per `architecture/06-adr.mdc`)
+- Update `PROJECT_STATUS.md` when milestones or phase progress changes
+
+---
+
+## After Work (Mandatory)
+
+Before finishing a session, agents MUST update:
+
+| File | Required |
+|------|----------|
+| `PROJECT_STATUS.md` | Always |
+| `TASKS.md` | Always |
+| `HANDOFF.md` | Always |
+| `CURRENT_CONTEXT.md` | Always |
+| `DECISIONS.md` | When a decision was made |
+
+Include in `HANDOFF.md`:
+
+- What was completed
+- Files changed
+- Known issues
+- Next recommended action for the following agent
+
+---
+
+## Source of Truth Hierarchy
+
+When sources conflict, use this priority:
+
+1. User instructions
+2. Core Rules
+3. Architecture Rules and ADRs (`docs/adr/`) — canonical for architecture
+4. Project state files (`.cursor/project-management/`) — operational: tasks, handoffs, status
+5. Domain Rules
+6. Skills and Templates
+
+`DECISIONS.md` is an index with links to full ADRs — never override `docs/adr/` content.
+
+---
+
+## Do Not Duplicate
+
+| Existing System | Relationship |
+|-----------------|--------------|
+| `PROJECT_ROADMAP.md` | Strategic phases — do not merge into PROJECT_STATUS |
+| `docs/adr/` | Full ADR documents — DECISIONS.md is index only |
+| `docs/MEMORY.md` | Memory MCP conventions — not task tracking |
+| Simple TODO lists | Replaced by TASKS.md |
+
+---
+
+## Related
+
+- Skill: `context-loading`
+- Template: `.cursor/templates/project-management-template.md`
+- Rule: `core/05-context-loading.mdc`
+- Rule: `architecture/06-adr.mdc`
+- Rule: `workflow/00-workflow.mdc`

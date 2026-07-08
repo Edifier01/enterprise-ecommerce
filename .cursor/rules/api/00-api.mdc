@@ -1,0 +1,343 @@
+---
+description: API layer overview for FastAPI REST services consumed by the Next.js frontend.
+alwaysApply: false
+globs: apps/api/**/*
+---
+
+# API Architecture Standard
+
+## Purpose
+
+This rule defines the API layer standards for the enterprise e-commerce platform.
+
+The API is the contract between backend business capabilities and the Next.js frontend (and future consumers). Every endpoint must be secure, predictable, documented, and versioned.
+
+---
+
+# Scope
+
+Applies to all code under `apps/api/`.
+
+Covers:
+
+- FastAPI application structure
+- REST resource design
+- Request/response models
+- Error handling
+- Integration with domain/application layers
+- Consumer expectations for Next.js
+
+Does not define frontend fetch patterns in depth — see `frontend/00-frontend`.
+
+---
+
+# Technology Stack
+
+| Layer | Technology |
+|-------|------------|
+| Framework | FastAPI |
+| Validation | Pydantic v2 |
+| ORM | SQLAlchemy 2.0 (async) |
+| Auth | JWT / session cookies (see `api/04-auth-api`) |
+| Documentation | OpenAPI 3.1 auto-generated + curated |
+| ASGI server | Uvicorn / Gunicorn |
+
+---
+
+# Architectural Position
+
+The API is the Presentation layer in Clean Architecture.
+
+```
+HTTP Request
+    ↓
+Router (FastAPI)
+    ↓
+Dependencies (auth, db session)
+    ↓
+Application Service (use case)
+    ↓
+Domain
+    ↓
+Infrastructure (repository)
+    ↓
+HTTP Response
+```
+
+Routers never contain business logic.
+
+Routers never access repositories directly.
+
+---
+
+# Project Structure
+
+```
+apps/api/
+├── src/
+│   ├── main.py                 # FastAPI app factory
+│   ├── api/
+│   │   ├── v1/
+│   │   │   ├── router.py       # Aggregates v1 routers
+│   │   │   ├── catalog.py
+│   │   │   ├── cart.py
+│   │   │   ├── checkout.py
+│   │   │   └── orders.py
+│   │   └── deps.py             # Shared dependencies
+│   ├── schemas/                # Pydantic request/response models
+│   ├── services/               # Application services
+│   ├── domain/                 # Entities, value objects
+│   └── infrastructure/         # Repositories, external clients
+├── tests/
+└── pyproject.toml
+```
+
+Organize routers by business capability, not by HTTP method.
+
+---
+
+# Design Principles
+
+- RESTful resources with consistent naming
+- JSON request and response bodies
+- Explicit HTTP status codes
+- Idempotent mutations where required (checkout, payments)
+- Pagination for all list endpoints
+- Filtering and sorting via query parameters
+- No business logic in Pydantic models beyond field validation
+
+---
+
+# Endpoint Naming
+
+Collection and resource pattern:
+
+```
+GET    /api/v1/products              # List products
+POST   /api/v1/products              # Create product (admin)
+GET    /api/v1/products/{product_id} # Get product
+PATCH  /api/v1/products/{product_id} # Partial update
+DELETE /api/v1/products/{product_id} # Delete (admin)
+
+POST   /api/v1/cart/items            # Add cart item
+POST   /api/v1/checkout/sessions     # Start checkout
+POST   /api/v1/orders                # Place order
+```
+
+Rules:
+
+- Plural nouns for collections
+- kebab-case in URL paths
+- snake_case in JSON field names (Python convention)
+- Nested routes only when resource is truly subordinate (`/orders/{id}/items`)
+
+---
+
+# Request and Response Models
+
+Use Pydantic v2 models in `schemas/`:
+
+```python
+from pydantic import BaseModel, Field
+from uuid import UUID
+from decimal import Decimal
+
+class ProductResponse(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: UUID
+    name: str
+    slug: str
+    price: Decimal
+    currency: str = "USD"
+    in_stock: bool
+
+class ProductListResponse(BaseModel):
+    items: list[ProductResponse]
+    total: int
+    page: int
+    page_size: int
+```
+
+Separate Create, Update, and Response schemas.
+
+Never expose internal entity fields (password hashes, internal flags).
+
+---
+
+# Dependency Injection
+
+Use FastAPI `Depends()` for:
+
+- Database session
+- Current user
+- Permission checks
+- Application service instances
+
+Centralize in `api/deps.py`. Follow `architecture/11-dependency-injection`.
+
+---
+
+# Error Handling
+
+Standard error response shape:
+
+```json
+{
+  "detail": "Human-readable message",
+  "code": "PRODUCT_NOT_FOUND",
+  "request_id": "uuid"
+}
+```
+
+Validation errors (422) use FastAPI default `detail` array with `loc` and `msg`.
+
+Map domain exceptions to HTTP status in exception handlers:
+
+| Domain error | HTTP status |
+|--------------|-------------|
+| Not found | 404 |
+| Validation / rule violation | 422 or 400 |
+| Unauthorized | 401 |
+| Forbidden | 403 |
+| Conflict (duplicate, stale) | 409 |
+| Rate limited | 429 |
+
+Never return 500 for expected business failures.
+
+---
+
+# Pagination
+
+Standard query params:
+
+- `page` (1-based, default 1)
+- `page_size` (default 20, max 100)
+
+Response envelope:
+
+```json
+{
+  "items": [],
+  "total": 150,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+Support cursor pagination for high-volume feeds when offset pagination is insufficient.
+
+---
+
+# CORS and Frontend Consumer
+
+Configure CORS for Next.js origin only in production.
+
+Allowed methods: GET, POST, PATCH, DELETE, OPTIONS.
+
+Expose headers needed by frontend: `X-Request-ID`, pagination headers if used.
+
+Next.js Server Components call FastAPI server-to-server; browser calls should go through Server Actions or BFF when credentials are required.
+
+---
+
+# Health and Observability
+
+Required endpoints:
+
+```
+GET /health        # Liveness
+GET /health/ready  # Readiness (DB connected)
+```
+
+Every request should propagate or generate `X-Request-ID` for tracing.
+
+Structured logging at application service boundaries.
+
+---
+
+# Security Baseline
+
+- HTTPS only in production
+- Validate all input via Pydantic
+- Authorize every mutating endpoint
+- Rate limit auth and checkout endpoints
+- No sensitive data in URLs
+- PCI: never log card numbers; use Stripe tokens only
+
+See `api/04-auth-api` and security skills.
+
+---
+
+# Testing
+
+- Unit tests for application services
+- Integration tests for routers with TestClient
+- Contract tests against OpenAPI spec
+- E2E tests through Next.js for critical flows
+
+---
+
+# Anti-Patterns
+
+Never:
+
+- Put SQL in route handlers
+- Return ORM models directly without response schema
+- Create god routers with unrelated endpoints
+- Expose internal admin operations on public routes without auth
+- Break versioning rules for convenience
+- Duplicate DTOs with divergent field names from OpenAPI
+
+---
+
+# Validation Checklist
+
+- Router delegates to application service
+- Pydantic schemas for request and response
+- Correct HTTP status codes
+- Pagination on list endpoints
+- Auth enforced on protected routes
+- OpenAPI docs accurate
+- Error format consistent
+- No business logic in router
+
+---
+
+# Related Rules
+
+- api/01-rest
+- api/02-versioning
+- api/03-openapi
+- api/04-auth-api
+- backend/00-backend
+- architecture/00-architecture
+- architecture/03-dependency-rules
+
+---
+
+# Related Skills
+
+- fastapi-pro
+- python-fastapi-development
+- openapi-spec-generation
+- implement-catalog-feature
+- implement-checkout-flow
+
+---
+
+# Related Agents
+
+- API Engineer
+- Backend Engineer
+- Enterprise Architect
+
+---
+
+# Summary
+
+FastAPI exposes business capabilities as versioned REST JSON APIs.
+
+Routers stay thin; Pydantic validates transport; application services orchestrate domain logic.
+
+The OpenAPI contract is the shared truth with the Next.js consumer.

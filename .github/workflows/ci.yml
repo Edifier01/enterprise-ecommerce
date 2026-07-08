@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (Python 3.13)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r apps/api/requirements.txt
+
+      - name: Lint with ruff
+        run: ruff check apps/api/app/ apps/api/tests/
+
+      - name: Run tests
+        working-directory: apps/api
+        run: pytest tests/ -v
+
+  frontend:
+    name: Frontend (Node 24)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: apps/web
+        run: npx playwright install chromium --with-deps
+
+      - name: TypeScript type check
+        working-directory: apps/web
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: apps/web
+        run: npm run build
+
+      - name: Check API availability
+        id: check-api
+        run: curl --fail --silent http://localhost:8000/health
+        continue-on-error: true
+
+      - name: Run Playwright E2E tests
+        if: steps.check-api.outcome == 'success'
+        working-directory: apps/web
+        run: npx playwright test

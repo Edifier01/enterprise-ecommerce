@@ -1,0 +1,32 @@
+---
+description: Naming conventions.
+alwaysApply: false
+---
+
+# Naming
+
+Use consistent naming.
+
+Business names take precedence over technical names.
+
+Prefer:
+
+Order
+
+OrderItem
+
+CheckoutSession
+
+ProductVariant
+
+Avoid:
+
+Manager
+
+Helper
+
+Processor
+
+Utility
+
+Names must describe responsibility.

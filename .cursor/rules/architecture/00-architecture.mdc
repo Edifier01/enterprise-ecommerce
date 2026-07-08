@@ -1,0 +1,102 @@
+---
+description: Defines the overall architecture of the project.
+alwaysApply: false
+---
+
+# Enterprise Architecture
+
+This project follows Enterprise Architecture principles.
+
+Architecture is the highest priority after business requirements.
+
+Never introduce architectural inconsistencies.
+
+---
+
+# Architecture Style
+
+The project follows:
+
+- Modular Monolith
+- Domain Driven Design
+- Clean Architecture
+- Feature-first organization
+- SOLID
+- DRY
+- KISS
+- YAGNI
+
+---
+
+# Layer Separation
+
+Every feature is divided into:
+
+Presentation
+
+↓
+
+Application
+
+↓
+
+Domain
+
+↓
+
+Infrastructure
+
+Dependencies always point inward.
+
+---
+
+# Module Independence
+
+Business modules should remain independent.
+
+Communication occurs only through well-defined interfaces.
+
+Avoid tight coupling.
+
+---
+
+# Composition
+
+Prefer composition over inheritance.
+
+Favor explicit dependencies.
+
+Avoid hidden behavior.
+
+---
+
+# Public Contracts
+
+Modules communicate only through public contracts.
+
+Never bypass boundaries.
+
+---
+
+# Architecture Goals
+
+Prioritize:
+
+- Maintainability
+- Scalability
+- Testability
+- Extensibility
+- Reliability
+- Simplicity
+
+---
+
+# Forbidden
+
+Never:
+
+- Mix business logic with infrastructure.
+- Create circular dependencies.
+- Couple unrelated modules.
+- Duplicate business rules.
+- Leak implementation details.

@@ -1,0 +1,63 @@
+---
+description: Domain Driven Design standards.
+alwaysApply: false
+---
+
+# Domain Driven Design
+
+Every business concept belongs to a bounded context.
+
+Always identify:
+
+- Entities
+- Value Objects
+- Aggregates
+- Domain Services
+- Domain Events
+- Repositories
+
+---
+
+# Entities
+
+Entities own identity.
+
+Never compare entities only by value.
+
+---
+
+# Value Objects
+
+Value Objects are immutable.
+
+Prefer Value Objects whenever identity is unnecessary.
+
+---
+
+# Aggregates
+
+Protect business consistency.
+
+Only Aggregate Roots may be modified externally.
+
+---
+
+# Domain Services
+
+Use only when business logic cannot naturally belong to an Entity or Value Object.
+
+---
+
+# Domain Events
+
+Use events to communicate between bounded contexts.
+
+Avoid direct coupling.
+
+---
+
+# Repository
+
+Repositories expose aggregate persistence.
+
+Business logic never belongs inside repositories.

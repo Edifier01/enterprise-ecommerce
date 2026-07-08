@@ -1,0 +1,221 @@
+---
+description: Use case design, commands, queries, and application workflow patterns.
+globs: apps/api/**/application/**/*.py
+alwaysApply: false
+---
+
+# Use Cases
+
+## Purpose
+
+This rule defines how use cases are modeled, named, and implemented in the FastAPI backend.
+
+A use case represents one business operation the system performs for an actor. Explicit use case modeling keeps Application Services predictable, testable, and aligned with Domain Driven Design.
+
+---
+
+## Scope
+
+Applies to:
+
+- Use case classes and handlers in `apps/api/app/features/<feature>/application/use_cases/`
+- Command and query objects in `apps/api/app/features/<feature>/application/commands/` and `queries/`
+- Application result types and mappers
+- One-use-case-per-file convention where practical
+
+Does not apply to:
+
+- HTTP route definitions
+- Domain entity behavior
+- Repository query implementation details
+- Read-model projection infrastructure (unless defining the query contract)
+
+---
+
+## Core Principles
+
+Always:
+
+- One use case equals one business operation
+- Name use cases with verbs: `PlaceOrder`, `CancelSubscription`, `GetProductBySlug`
+- Separate commands (writes) from queries (reads) when behavior diverges
+- Accept typed input objects; return typed result objects
+- Keep use cases idempotent when the business operation is idempotent
+- Document preconditions, postconditions, and failure modes in docstrings or ADRs for complex flows
+- Invoke use cases from thin FastAPI routers through Application Services or dedicated use case handlers
+
+Never:
+
+- Combine unrelated operations in one use case "for convenience"
+- Accept FastAPI `Request` objects inside use cases
+- Perform authorization inside domain entities without an explicit policy port
+- Return SQLAlchemy models from use case public APIs
+- Mix read and write concerns in a single class when CQRS separation adds clarity
+
+---
+
+## Use Case Structure
+
+Recommended layout per feature:
+
+```
+apps/api/app/features/checkout/
+  application/
+    commands/
+      place_order_command.py
+    queries/
+      get_order_summary_query.py
+    use_cases/
+      place_order.py
+      get_order_summary.py
+    services/
+      place_order_service.py   # optional orchestrator wrapper
+```
+
+### Command (Write)
+
+```python
+@dataclass(frozen=True, slots=True)
+class PlaceOrderCommand:
+    customer_id: CustomerId
+    cart_id: CartId
+    payment_method_id: PaymentMethodId
+    idempotency_key: IdempotencyKey
+```
+
+### Query (Read)
+
+```python
+@dataclass(frozen=True, slots=True)
+class GetOrderSummaryQuery:
+    order_id: OrderId
+    requester_id: UserId
+```
+
+### Use Case Handler
+
+```python
+class PlaceOrderUseCase:
+    async def execute(self, command: PlaceOrderCommand) -> PlaceOrderResult:
+        ...
+```
+
+---
+
+## Decision Rules
+
+IF the operation mutates business state
+THEN model it as a command use case with explicit transaction boundaries.
+
+IF the operation only reads data and has no side effects
+THEN model it as a query use case; prefer read-optimized paths when justified.
+
+IF the operation must survive retries (payments, webhooks)
+THEN require an idempotency key and enforce deduplication in Application layer.
+
+IF authorization depends on resource ownership
+THEN check policy in Application layer before loading sensitive aggregates.
+
+IF a use case exceeds three external collaborators
+THEN review boundaries; consider a facade Application Service or domain event choreography.
+
+IF multiple endpoints perform the same business operation
+THEN reuse one use case; do not duplicate orchestration in routers.
+
+---
+
+## Workflow Responsibilities
+
+Each use case must define:
+
+1. **Input validation** — structural checks on command/query (Pydantic at boundary; invariants in domain)
+2. **Authorization** — permission check via policy port
+3. **Loading** — fetch aggregates through repository interfaces
+4. **Domain execution** — invoke entity methods and Domain Services
+5. **Persistence** — commit through unit-of-work
+6. **Integration** — publish events, enqueue jobs, call external gateways
+7. **Result mapping** — return application result or raise domain exception
+
+---
+
+## Anti-Patterns
+
+Never create:
+
+- Generic `ProcessRequestUseCase` with stringly typed actions
+- Use cases that call other use cases in long chains without clear boundaries
+- Fat use cases with HTML/email templating inline
+- Use cases that bypass repositories and execute raw SQL
+- Copy-pasted use cases across features instead of shared domain concepts
+- Use cases that swallow domain exceptions and return boolean flags
+- "Manager" classes that replace named use cases
+
+---
+
+## Validation Checklist
+
+Before completing a use case verify:
+
+✓ Use case name reflects a single business operation.
+
+✓ Input is a typed command or query object.
+
+✓ Output is a typed result or void; errors use domain/application exceptions.
+
+✓ Authorization occurs before sensitive data access.
+
+✓ Transaction scope matches the business operation.
+
+✓ Idempotency is enforced where required.
+
+✓ No FastAPI, SQLAlchemy, or HTTP types appear in command/query definitions.
+
+✓ Router delegates to one use case entry point.
+
+✓ Unit tests cover success, validation failure, and domain failure paths.
+
+✓ Complex flows are documented when non-obvious.
+
+---
+
+## Related Rules
+
+- backend/00-backend
+- backend/01-services
+- backend/03-validation
+- backend/04-error-handling
+- backend/05-transactions
+- architecture/01-ddd
+- architecture/05-domain-modeling
+
+---
+
+## Related Skills
+
+- python-fastapi-development
+- ddd-context-mapping
+- implement-checkout-flow
+- implement-catalog-feature
+
+---
+
+## Related Agents
+
+- Backend Engineer
+- Backend Architect
+- Checkout Specialist
+- Catalog Specialist
+
+---
+
+## Related MCP
+
+- Filesystem
+- PostgreSQL
+- Context7
+
+---
+
+## Summary
+
+Use cases model single business operations with typed commands, queries, and results. Application layer owns orchestration, authorization, and transaction boundaries. Keep use cases explicit, testable, and free of transport and persistence details.

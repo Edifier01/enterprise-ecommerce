@@ -1,0 +1,413 @@
+---
+description: SQL and SQLAlchemy query standards, optimization, and repository patterns for PostgreSQL.
+alwaysApply: false
+---
+
+# Query Standard
+
+## Purpose
+
+Define how queries are written, reviewed, and optimized against PostgreSQL for the enterprise e-commerce platform.
+
+Queries must be correct, efficient, and maintainable.
+
+---
+
+## Layer Responsibilities
+
+| Layer | Responsibility |
+|-------|----------------|
+| Domain | Business invariants, no SQL |
+| Repository | Query composition, persistence mapping |
+| Infrastructure | SQLAlchemy models, session management |
+
+SQL never appears in domain or application service layers.
+
+---
+
+## SQLAlchemy 2.0 Patterns
+
+### Async Session
+
+```python
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+async def get_order_with_lines(session: AsyncSession, order_id: int) -> Order | None:
+    stmt = (
+        select(Order)
+        .options(selectinload(Order.lines))
+        .where(Order.id == order_id)
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+```
+
+### Explicit Column Selection
+
+Prefer:
+
+```python
+select(Order.id, Order.order_number, Order.total_amount, Order.status)
+```
+
+Over `select(Order)` when full entity hydration is unnecessary (list views, DTOs).
+
+Never use raw `SELECT *` in application code.
+
+---
+
+## N+1 Prevention
+
+### Eager Loading Strategies
+
+| Relationship | Strategy | When |
+|--------------|----------|------|
+| One-to-many (order → lines) | `selectinload` | Loading collections |
+| Many-to-one (line → product) | `joinedload` | Single parent, few joins |
+| Many-to-many | `selectinload` | Collections |
+
+```python
+stmt = (
+    select(Order)
+    .options(
+        selectinload(Order.lines).selectinload(OrderLine.variant),
+    )
+    .where(Order.customer_id == customer_id)
+    .order_by(Order.placed_at.desc())
+    .limit(20)
+)
+```
+
+### Batch Loading
+
+For list endpoints, load IDs first then batch-fetch related entities:
+
+```python
+product_ids = {line.variant.product_id for order in orders for line in order.lines}
+products = await product_repo.get_by_ids(session, product_ids)
+```
+
+---
+
+## Pagination
+
+### Offset Pagination (Simple Lists)
+
+```python
+stmt = (
+    select(Product)
+    .where(Product.status == "active", Product.deleted_at.is_(None))
+    .order_by(Product.created_at.desc())
+    .offset(offset)
+    .limit(page_size)
+)
+```
+
+Acceptable for admin UI with moderate datasets.
+
+Avoid deep offsets (`OFFSET 100000`) on large tables — use keyset pagination.
+
+### Keyset (Cursor) Pagination
+
+```python
+stmt = (
+    select(Product)
+    .where(
+        Product.status == "active",
+        Product.deleted_at.is_(None),
+        Product.id < cursor_id,  # cursor from previous page
+    )
+    .order_by(Product.id.desc())
+    .limit(page_size)
+)
+```
+
+Required for:
+
+- Product catalog infinite scroll at scale
+- Order history for high-volume customers
+- Admin exports
+
+Return `next_cursor` in API response.
+
+---
+
+## Filtering and Search
+
+### Parameterized Queries Only
+
+Always bind parameters — never interpolate user input:
+
+```python
+# CORRECT
+stmt = select(Product).where(Product.slug == slug)
+
+# WRONG — SQL injection
+stmt = text(f"SELECT * FROM products WHERE slug = '{slug}'")
+```
+
+### Full-Text Search
+
+```python
+from sqlalchemy import func
+
+search_vector = func.to_tsvector("english", Product.title + " " + func.coalesce(Product.description, ""))
+search_query = func.plainto_tsquery("english", query)
+
+stmt = select(Product).where(search_vector.op("@@")(search_query))
+```
+
+### JSONB Filters
+
+```python
+stmt = select(Product).where(Product.attributes["brand"].astext == brand)
+```
+
+Ensure GIN or expression index exists (`database/03-indexing`).
+
+---
+
+## Transactions and Locking
+
+### Pessimistic Lock (Inventory)
+
+```python
+stmt = (
+    select(InventoryItem)
+    .where(InventoryItem.variant_id == variant_id)
+    .with_for_update()
+)
+```
+
+Use `with_for_update()` when:
+
+- Decrementing inventory during checkout
+- Preventing double reservation
+- Updating contested aggregate version
+
+### Optimistic Lock
+
+```python
+stmt = (
+    update(InventoryItem)
+    .where(
+        InventoryItem.variant_id == variant_id,
+        InventoryItem.version == expected_version,
+    )
+    .values(
+        quantity_on_hand=InventoryItem.quantity_on_hand - quantity,
+        version=InventoryItem.version + 1,
+    )
+    .returning(InventoryItem)
+)
+```
+
+Check rowcount / returned row — zero rows means concurrent modification.
+
+### Skip Locked (Queue Workers)
+
+```python
+stmt = (
+    select(OutboxEvent)
+    .where(OutboxEvent.processed_at.is_(None))
+    .order_by(OutboxEvent.created_at)
+    .limit(10)
+    .with_for_update(skip_locked=True)
+)
+```
+
+For job queue patterns without worker contention.
+
+---
+
+## Aggregations
+
+### Order Totals
+
+Compute in domain layer; persist validated totals on order.
+
+Database aggregation for reporting only:
+
+```python
+stmt = (
+    select(
+        func.date_trunc("day", Order.placed_at).label("day"),
+        func.count(Order.id).label("order_count"),
+        func.sum(Order.total_amount).label("revenue"),
+    )
+    .where(Order.status.not_in(["cancelled", "refunded"]))
+    .group_by("day")
+    .order_by("day")
+)
+```
+
+### Avoid N+1 Aggregates
+
+Use subqueries or JOIN aggregates instead of per-row COUNT in loops:
+
+```python
+line_count_subq = (
+    select(OrderLine.order_id, func.count().label("line_count"))
+    .group_by(OrderLine.order_id)
+    .subquery()
+)
+```
+
+---
+
+## Bulk Operations
+
+### Batch Insert
+
+```python
+await session.execute(insert(OrderLine), line_dicts)
+```
+
+### Batch Update
+
+Use `UPDATE ... FROM` for large backfills in migrations, not runtime API paths.
+
+### COPY
+
+Use PostgreSQL COPY for bulk import/export scripts only — not in request handlers.
+
+---
+
+## Query Performance Standards
+
+| Metric | Target |
+|--------|--------|
+| API read queries (p95) | < 50ms |
+| API write queries (p95) | < 100ms |
+| Catalog listing (p95) | < 100ms |
+| Admin reports | < 2s (with pagination) |
+
+Investigate any query exceeding 500ms.
+
+### EXPLAIN Workflow
+
+```sql
+EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
+SELECT ...
+```
+
+Look for:
+
+- Sequential scans on large tables → add index
+- High `rows removed by filter` → index or rewrite query
+- Nested loop with high row counts → join order or index
+- Sort operations on large sets → index matching ORDER BY
+
+---
+
+## Read Replicas
+
+Route to replica:
+
+- Analytics dashboards
+- Search indexing exports
+- Historical report generation
+
+Route to primary:
+
+- All writes
+- Read-after-write (order placed → order detail)
+- Payment status checks
+- Inventory availability during checkout
+
+---
+
+## Caching Interaction
+
+Cache keys must include entity version or updated_at:
+
+```
+product:{id}:v{updated_at_timestamp}
+```
+
+Invalidate cache on write — do not rely on TTL alone for price/inventory.
+
+PostgreSQL remains source of truth; cache is advisory for reads.
+
+---
+
+## Common E-Commerce Queries
+
+### Available Inventory
+
+```python
+available = InventoryItem.quantity_on_hand - InventoryItem.quantity_reserved
+stmt = select(InventoryItem).where(
+    InventoryItem.variant_id == variant_id,
+    (InventoryItem.quantity_on_hand - InventoryItem.quantity_reserved) >= requested_qty,
+)
+```
+
+### Active Cart
+
+```python
+stmt = (
+    select(Cart)
+    .options(selectinload(Cart.lines))
+    .where(
+        Cart.status == "active",
+        or_(Cart.customer_id == customer_id, Cart.session_token == session_token),
+    )
+)
+```
+
+### Order History
+
+```python
+stmt = (
+    select(Order)
+    .where(Order.customer_id == customer_id)
+    .order_by(Order.placed_at.desc())
+    .limit(limit)
+)
+```
+
+---
+
+## Error Handling
+
+| Error | Handling |
+|-------|----------|
+| Unique violation | Map to domain conflict (duplicate SKU) |
+| FK violation | Map to not-found or invalid reference |
+| Serialization failure | Retry transaction (up to 3 attempts) |
+| Deadlock | Retry with backoff |
+| Query timeout | Log, return 503, alert |
+
+---
+
+## Testing Queries
+
+- Unit tests mock repositories — no SQL
+- Integration tests hit real PostgreSQL (CI container)
+- Verify query count in integration tests for N+1 regressions
+- Snapshot EXPLAIN plans for critical queries in performance test suite
+
+---
+
+## Anti-Patterns
+
+- Loading entire object graphs with unbounded `selectinload`
+- Offset pagination on million-row tables
+- Correlated subqueries in hot paths
+- String concatenation for SQL
+- Business logic in SQL views replacing domain layer
+- `ILIKE '%term%'` on unindexed columns at scale
+- Holding database connections during Stripe API calls
+- SELECT in loops (N+1)
+
+---
+
+## Related Rules
+
+- `database/00-database` — connection and transactions
+- `database/03-indexing` — index strategy
+- `backend/00-backend` — repository pattern
+- `performance/00-performance` — SLA targets
+- `ecommerce/05-inventory` — inventory locking

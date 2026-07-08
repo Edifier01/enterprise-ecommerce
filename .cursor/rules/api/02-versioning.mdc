@@ -1,0 +1,286 @@
+---
+description: API versioning strategy, deprecation policy, and backward compatibility for FastAPI.
+alwaysApply: false
+globs: apps/api/src/api/**/*
+---
+
+# API Versioning Standard
+
+## Purpose
+
+This rule defines how the FastAPI REST API is versioned, deprecated, and evolved without breaking the Next.js frontend or external integrators.
+
+Versioning is a contract promise. Breaking changes require a new major version, never silent mutation.
+
+---
+
+# Scope
+
+Applies to all public API routes under `apps/api/src/api/`.
+
+Covers URL versioning, compatibility rules, deprecation workflow, and coordination with OpenAPI documentation.
+
+---
+
+# Versioning Strategy
+
+Primary method: URL path prefix.
+
+```
+/api/v1/products
+/api/v2/products   # Future breaking release
+```
+
+All public routes must include the version prefix. Unversioned routes are allowed only for:
+
+- `/health`
+- `/health/ready`
+- OpenAPI docs (`/docs`, `/redoc`) — may default to latest stable
+
+Current stable version: `v1`.
+
+---
+
+# Router Organization
+
+```python
+# api/v1/router.py
+from fastapi import APIRouter
+from . import catalog, cart, checkout, orders
+
+api_router = APIRouter(prefix="/api/v1")
+api_router.include_router(catalog.router, prefix="/products", tags=["catalog"])
+api_router.include_router(cart.router, prefix="/cart", tags=["cart"])
+```
+
+When `v2` is introduced:
+
+```
+api/
+├── v1/
+│   └── router.py
+└── v2/
+    └── router.py
+```
+
+Both versions may run simultaneously during migration.
+
+Never modify published `v1` behavior in breaking ways.
+
+---
+
+# What Constitutes a Breaking Change
+
+Breaking (requires new version):
+
+- Removing an endpoint or HTTP method
+- Renaming or removing JSON fields consumers rely on
+- Changing field types (`string` → `number`, `id` int → UUID)
+- Changing authentication requirements
+- Changing default behavior of query parameters
+- Tightening validation that rejects previously valid requests
+- Changing error response shape
+- Changing pagination defaults in a way that breaks clients
+
+Non-breaking (same version):
+
+- Adding optional JSON fields to responses
+- Adding optional query parameters
+- Adding new endpoints
+- Adding new enum values if clients tolerate unknowns
+- Performance improvements with identical contracts
+
+When uncertain, treat as breaking.
+
+---
+
+# Backward Compatibility Rules
+
+Within a major version:
+
+- Response fields may only be added, not removed or renamed
+- Required request fields may not be added without default handling during transition
+- Enum values may be extended, not removed
+- Nullability may not become stricter without migration period
+
+Use feature flags in application layer for behavior changes, not hidden API drift.
+
+---
+
+# Deprecation Policy
+
+When deprecating an endpoint or field in `v1`:
+
+1. Mark deprecated in OpenAPI (`deprecated: true`)
+2. Add `Deprecation` HTTP header on responses:
+
+```
+Deprecation: true
+Sunset: Sat, 01 Jan 2028 00:00:00 GMT
+Link: </api/v2/products>; rel="successor-version"
+```
+
+3. Log usage metrics per deprecated route
+4. Notify frontend team via changelog
+5. Maintain deprecated surface minimum 6 months (or two frontend release cycles)
+
+Never remove until usage is zero and sunset date passed.
+
+---
+
+# Field-Level Evolution
+
+Prefer additive response fields:
+
+```json
+{
+  "price": "29.99",
+  "price_cents": 2999
+}
+```
+
+If renaming is required, return both during transition:
+
+```json
+{
+  "slug": "running-shoes",
+  "product_slug": "running-shoes"
+}
+```
+
+Document `product_slug` as deprecated in OpenAPI.
+
+Frontend migrates; backend removes in v2.
+
+---
+
+# Version Negotiation (Secondary)
+
+URL prefix is authoritative. Do not rely on:
+
+- `Accept-Version` headers alone
+- Custom `API-Version` headers without URL prefix
+
+Optional `Accept` header versioning is supplementary documentation only.
+
+---
+
+# OpenAPI and Versioning
+
+Each major version produces distinct OpenAPI document or tagged sections:
+
+- `/openapi/v1.json`
+- `/openapi/v2.json` (future)
+
+Next.js typed clients generate from the version they target.
+
+Never regenerate client types from a mixed undifferentiated spec.
+
+See `api/03-openapi`.
+
+---
+
+# Internal vs Public API
+
+Admin and internal routes still use version prefix:
+
+```
+/api/v1/admin/products
+```
+
+Internal consumers (background jobs) follow the same deprecation rules as Next.js.
+
+---
+
+# Database and API Version Decoupling
+
+API version is independent of database schema migrations.
+
+Schema changes must not leak breaking transport changes without version bump.
+
+Use application layer mapping to preserve v1 contract while domain evolves.
+
+---
+
+# Migration Workflow
+
+When introducing v2:
+
+1. Publish v2 OpenAPI draft
+2. Implement v2 routers alongside v1
+3. Update Next.js to consume v2 per feature flag or route module
+4. Monitor v1 traffic decline
+5. Announce v1 sunset date
+6. Remove v1 routers after sunset
+
+Document migration in ADR (see `architecture/06-adr`).
+
+---
+
+# Changelog
+
+Maintain `apps/api/CHANGELOG.md` with:
+
+- Version number
+- Date
+- Added / Changed / Deprecated / Removed / Fixed
+- Migration notes for frontend
+
+Every PR that touches public API surface updates the changelog.
+
+---
+
+# Anti-Patterns
+
+Never:
+
+- Ship breaking changes under the same `/v1` path
+- Change response shape without OpenAPI update
+- Remove fields used by Next.js without deprecation window
+- Version individual endpoints differently within the same API (`/v1/` and `/v2/` mixed arbitrarily)
+- Use query param `?api_version=2` as sole version mechanism
+
+---
+
+# Validation Checklist
+
+- All public routes under `/api/v1/` (or current version)
+- Change classified as breaking or non-breaking
+- OpenAPI updated and deprecated flags set
+- Changelog entry added
+- Sunset headers planned for deprecations
+- Frontend types regeneration planned
+
+---
+
+# Related Rules
+
+- api/00-api
+- api/01-rest
+- api/03-openapi
+- architecture/06-adr
+
+---
+
+# Related Skills
+
+- openapi-spec-generation
+- git-pr-review
+
+---
+
+# Related Agents
+
+- API Engineer
+- Enterprise Architect
+- Frontend Engineer
+
+---
+
+# Summary
+
+Version in the URL path; never break v1 silently.
+
+Add fields instead of renaming; deprecate with headers, OpenAPI flags, and a published sunset date.
+
+Coordinate every public change with the Next.js consumer and OpenAPI contract.

@@ -1,0 +1,318 @@
+---
+description: React component standards, composition patterns, and shadcn/ui conventions.
+alwaysApply: false
+globs: "**/*.tsx"
+---
+
+# Component Standards
+
+## Purpose
+
+This rule defines how React components are structured, composed, and maintained across the Next.js frontend.
+
+Components must be readable, reusable, accessible, and correctly split between Server and Client boundaries.
+
+---
+
+# Scope
+
+Applies to all `.tsx` files in `apps/web/`.
+
+Covers:
+
+- Component file structure
+- Naming and exports
+- Props and typing
+- shadcn/ui composition
+- Server vs Client directives
+
+Does not cover routing, state management, or forms in depth — see dedicated rules.
+
+---
+
+# Component Categories
+
+| Category | Location | Server/Client |
+|----------|----------|---------------|
+| UI primitives | `components/ui/` | Usually Client (Radix) |
+| Shared components | `components/` | Prefer Server |
+| Feature components | `features/*/components/` | Mixed |
+| Page components | `app/**/page.tsx` | Server |
+| Layout components | `app/**/layout.tsx` | Server |
+
+---
+
+# File Structure
+
+Each component file should follow this order:
+
+1. `"use client"` directive (only if required)
+2. Imports (React, Next, local, external)
+3. Types and interfaces
+4. Component function
+5. Subcomponents (if small and private)
+6. Named export (prefer named over default)
+
+Example skeleton:
+
+```tsx
+import { cn } from "@/lib/utils";
+
+interface ProductCardProps {
+  title: string;
+  price: number;
+  className?: string;
+}
+
+export function ProductCard({ title, price, className }: ProductCardProps) {
+  return (
+    <article className={cn("rounded-lg border p-4", className)}>
+      <h2 className="text-lg font-semibold">{title}</h2>
+      <p className="text-muted-foreground">{price}</p>
+    </article>
+  );
+}
+```
+
+---
+
+# Naming Conventions
+
+- Components: PascalCase (`ProductCard`, `CheckoutSummary`)
+- Files: match component name (`ProductCard.tsx`)
+- Props interface: `{ComponentName}Props`
+- Event handlers: `on{Event}` prop, `handle{Event}` internal function
+- Boolean props: affirmative names (`disabled`, `isLoading`, not `notEnabled`)
+
+One primary component per file unless subcomponents are truly private implementation details.
+
+---
+
+# Props Design
+
+Rules:
+
+- Prefer explicit props over spreading unknown objects
+- Always type props with TypeScript interfaces
+- Use `className?: string` for style extension points
+- Use `children: React.ReactNode` for composition slots
+- Avoid optional props when a sensible default exists
+- Document non-obvious props with JSDoc
+
+Forbidden:
+
+- `any` for props
+- Prop drilling more than two levels without context or composition
+- Passing entire API response objects when only two fields are needed
+
+Prefer picking fields at the data boundary:
+
+```tsx
+// Good
+<ProductCard title={product.name} price={product.price} />
+
+// Avoid
+<ProductCard product={fullProductResponse} />
+```
+
+---
+
+# Composition Patterns
+
+Prefer composition over configuration flags.
+
+Good — slot composition:
+
+```tsx
+<Card>
+  <CardHeader>
+    <CardTitle>Order Summary</CardTitle>
+  </CardHeader>
+  <CardContent>{children}</CardContent>
+</Card>
+```
+
+Avoid — boolean soup:
+
+```tsx
+<Card showHeader showFooter variant="order" isCompact />
+```
+
+Use compound components from shadcn where available (`Dialog`, `DropdownMenu`, `Form`).
+
+---
+
+# shadcn/ui Integration
+
+Rules:
+
+- Import from `@/components/ui/*`
+- Wrap shadcn primitives in feature components; do not re-style primitives globally
+- Use `cn()` for merging Tailwind classes
+- Use `cva` (class-variance-authority) for variant-heavy custom components
+- Keep Radix behavior intact; do not remove focus traps or aria attributes
+
+When adding a new primitive:
+
+```bash
+npx shadcn@latest add button
+```
+
+Customize via `components.json` theme tokens, not hardcoded hex values in every file.
+
+---
+
+# Server Components
+
+Default for all new components.
+
+Server Components may:
+
+- `async` fetch from FastAPI
+- Import server-only modules
+- Access cookies and headers via `next/headers`
+- Render static HTML without JavaScript cost
+
+Server Components must not:
+
+- Use hooks
+- Attach event handlers
+- Import client-only libraries
+
+---
+
+# Client Components
+
+Add `"use client"` at the top of the file when required.
+
+Client Components may:
+
+- Use state, effects, and event handlers
+- Subscribe to Zustand stores
+- Use browser APIs
+
+Keep client components small. Extract static markup into Server Component children where possible:
+
+```tsx
+"use client";
+
+export function AddToCartButton({ productId }: { productId: string }) {
+  // interactive logic only
+}
+```
+
+---
+
+# Lists and Keys
+
+- Use stable unique keys (`id` from API), never array index for dynamic lists
+- Extract list items into components when rows are non-trivial
+- Virtualize long product lists (see `frontend/05-performance-frontend`)
+
+---
+
+# Conditional Rendering
+
+Prefer early returns for loading and error states in Client Components.
+
+In Server Components, use dedicated `loading.tsx` and `error.tsx` at route level when possible.
+
+Avoid nested ternaries beyond one level; extract to named subcomponents or variables.
+
+---
+
+# Accessibility
+
+Every component must:
+
+- Use semantic elements (`button` not `div` for clicks)
+- Include `alt` text for images
+- Associate labels with inputs
+- Preserve shadcn/Radix keyboard behavior
+- Not rely on color alone for state
+
+For icon-only buttons:
+
+```tsx
+<Button size="icon" aria-label="Remove item">
+  <TrashIcon className="h-4 w-4" />
+</Button>
+```
+
+---
+
+# Performance
+
+- Avoid anonymous inline functions passed to memoized children when measurable
+- Use `React.memo` sparingly and only with evidence
+- Lazy-load heavy Client Components with `next/dynamic` and a skeleton fallback
+- Do not import large libraries in Server Component files that get bundled into client children
+
+---
+
+# Testing Components
+
+- Test behavior and accessibility, not implementation details
+- Use Testing Library queries by role and label
+- Mock API modules, not fetch globally, in unit tests
+- Storybook optional for design system primitives only
+
+---
+
+# Anti-Patterns
+
+Never:
+
+- Create components named `Manager`, `Helper`, or `Wrapper` without clear domain meaning
+- Mix data fetching and complex UI in one 500-line file
+- Export default and named exports from the same file
+- Use `React.FC` with implicit children (prefer explicit props)
+- Copy-paste shadcn source instead of installing via CLI
+- Put `"use client"` on layout files unnecessarily
+
+---
+
+# Validation Checklist
+
+Before merging component work:
+
+- Correct Server/Client boundary
+- Props fully typed, no `any`
+- shadcn patterns preserved
+- Semantic HTML and aria where needed
+- File name matches export
+- No unnecessary client JavaScript
+- Feature vs shared placement is correct
+
+---
+
+# Related Rules
+
+- frontend/00-frontend
+- frontend/02-state
+- frontend/03-routing
+- frontend/04-forms
+- frontend/05-performance-frontend
+- architecture/08-naming
+
+---
+
+# Related Skills
+
+- shadcn
+- react-nextjs-development
+- cc-skill-coding-standards
+
+---
+
+# Related Agents
+
+- Frontend Engineer
+
+---
+
+# Summary
+
+Components are the building blocks of the UI.
+
+Default to Server Components, compose with shadcn/ui, type all props, and keep client boundaries small and intentional.

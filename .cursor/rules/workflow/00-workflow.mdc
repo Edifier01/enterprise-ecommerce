@@ -1,0 +1,79 @@
+---
+description: Development workflow standards — analysis through review for every task.
+alwaysApply: false
+---
+
+# Development Workflow
+
+## Purpose
+
+Standardize how every task flows from request to completion in the AI development platform.
+
+## Workflow
+
+```
+Analysis → Planning → Architecture Review → Implementation → Validation → Documentation → Review → Completion
+```
+
+## Phase Rules
+
+### Analysis
+
+- Read user goal and affected code
+- Load project state: `.cursor/project-management/` + `PROJECT_ROADMAP.md` (see `core/10-project-state-management`)
+- Run `/context-loading` for rules, skills, MCP
+- Run `/model-routing` for model selection
+
+### Planning
+
+- Break work into reviewable units
+- Identify agents and skills needed
+- Escalate to Opus for architecture or security changes
+
+### Architecture Review
+
+- Required when: new module, API contract change, payment flow, schema migration
+- Output: ADR or explicit "no ADR needed" with reason
+
+### Implementation
+
+- Composer 2.5 for bulk code; follow domain rules
+- Apply `09-implementation-efficiency` for minimal diffs
+- One feature at a time
+
+### Validation
+
+- Tests for non-trivial logic
+- `/verifier` or qa-engineer for features marked done
+- Security-auditor for auth/payments
+
+### Documentation
+
+- Update OpenAPI, README, ADR as needed
+- Follow `documentation/00-documentation`
+
+### Review
+
+- code-review-checklist before merge
+- No merge with failing CI
+
+### Completion
+
+- Update `.cursor/project-management/`: `PROJECT_STATUS.md`, `TASKS.md`, `HANDOFF.md`, `CURRENT_CONTEXT.md`
+- Update `DECISIONS.md` if a decision was made
+- See `core/10-project-state-management.mdc`
+
+## Related Rules
+
+- core/03-workflow
+- core/05-context-loading
+- core/08-model-routing
+- core/10-project-state-management
+
+## Related Skills
+
+- context-loading, model-routing, subagent-orchestrator
+
+## Summary
+
+Never skip analysis or validation. Escalate early when scope grows.

@@ -1,0 +1,294 @@
+---
+description: Frontend performance standards for Core Web Vitals, bundle size, caching, and rendering optimization.
+alwaysApply: false
+globs: apps/web/**/*
+---
+
+# Frontend Performance Standard
+
+## Purpose
+
+This rule defines performance requirements and optimization patterns for the Next.js e-commerce frontend.
+
+Performance directly impacts conversion, SEO rankings, and user trust. Optimize deliberately after measurement, not prematurely.
+
+---
+
+# Scope
+
+Covers:
+
+- Core Web Vitals (LCP, INP, CLS)
+- Bundle size and code splitting
+- Image and font optimization
+- Caching and revalidation
+- List virtualization
+- Server vs Client rendering tradeoffs
+
+Does not cover backend API latency (see backend and API rules).
+
+---
+
+# Performance Targets
+
+| Metric | Target (mobile) |
+|--------|-----------------|
+| LCP | < 2.5s |
+| INP | < 200ms |
+| CLS | < 0.1 |
+| TTFB | < 800ms (document) |
+
+Measure with Lighthouse, Web Vitals extension, and RUM in production.
+
+Prioritize catalog, product detail, and checkout paths.
+
+---
+
+# Rendering Strategy
+
+Default: Server Components for static and fetched content.
+
+Client Components only for interactivity.
+
+Patterns:
+
+- Stream slow sections with `<Suspense>` instead of blocking full page
+- Statically generate marketing pages where content is stable
+- Use `dynamic = 'force-static'` or ISR for product pages when appropriate
+- Avoid layout shifts by reserving space for images and skeletons
+
+---
+
+# Images
+
+Always use `next/image`:
+
+```tsx
+import Image from "next/image";
+
+<Image
+  src={product.imageUrl}
+  alt={product.name}
+  width={640}
+  height={640}
+  sizes="(max-width: 768px) 100vw, 50vw"
+  priority={isAboveFold}
+/>
+```
+
+Rules:
+
+- Explicit `width` and `height` or `fill` with sized container
+- `sizes` attribute required for responsive layouts
+- `priority` only for LCP candidate (hero, main product image)
+- Configure `remotePatterns` in `next.config.ts` for CDN domains
+- Use WebP/AVIF via Next.js optimizer; do not ship unoptimized multi-MB assets
+
+---
+
+# Fonts
+
+Use `next/font`:
+
+```tsx
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"], display: "swap" });
+```
+
+Rules:
+
+- Self-host via next/font; avoid external CSS `@import` chains
+- Subset to required character sets
+- Limit font weight variants loaded
+
+---
+
+# JavaScript Bundle
+
+Minimize client JavaScript:
+
+- Audit with `@next/bundle-analyzer` periodically
+- Dynamic import heavy Client Components:
+
+```tsx
+import dynamic from "next/dynamic";
+
+const ProductReviews = dynamic(
+  () => import("@/features/product/ProductReviews"),
+  { loading: () => <ReviewsSkeleton /> }
+);
+```
+
+- Tree-shake lodash and icon libraries — import individual icons from `lucide-react`
+- Do not import server-only code into client bundles
+
+Target: keep initial client JS on product pages under team budget (define in CI).
+
+---
+
+# Data Fetching Performance
+
+Server Component patterns:
+
+```tsx
+const [product, recommendations] = await Promise.all([
+  getProduct(slug),
+  getRecommendations(slug),
+]);
+```
+
+Caching:
+
+- Use `fetch` cache with explicit `revalidate` seconds or tags
+- Tag product caches: `{ next: { tags: [`product-${id}`] } }`
+- Invalidate surgically after admin updates via `revalidateTag`
+
+Avoid:
+
+- Sequential awaits for independent resources
+- Fetching full catalog when paginated slice suffices
+- N+1 fetches in loops — batch API endpoints on FastAPI side
+
+---
+
+# List Virtualization
+
+Product grids with 100+ DOM nodes should virtualize:
+
+- Use `@tanstack/react-virtual` or similar in Client Components
+- Server-render first page; virtualize "load more" or infinite scroll client-side
+- Preserve scroll position on back navigation where possible
+
+---
+
+# Third-Party Scripts
+
+Load analytics and chat widgets after interaction or via `next/script`:
+
+```tsx
+import Script from "next/script";
+
+<Script src="https://..." strategy="lazyOnload" />
+```
+
+Never block LCP with synchronous third-party scripts on checkout.
+
+---
+
+# State and Re-Renders
+
+- Zustand atomic selectors (see `frontend/02-state`)
+- Avoid lifting state that causes full tree re-renders
+- Memoize expensive derived lists in Client Components when profiled
+- Do not `React.memo` everything by default
+
+---
+
+# CSS and Tailwind
+
+- Purge unused styles via Tailwind content paths
+- Avoid `@apply` abuse that duplicates large class blocks
+- Critical above-fold styles should not depend on lazy-loaded CSS chunks failing
+
+---
+
+# Prefetching and Navigation
+
+- Default Link prefetch is beneficial for shop navigation
+- Disable prefetch on rarely visited admin pages
+- Use `loading.tsx` so navigations feel instant even when data is slow
+
+---
+
+# Checkout Performance
+
+Checkout is revenue-critical:
+
+- Minimize client JS on payment step
+- Load Stripe.js asynchronously
+- Do not re-fetch entire cart on every keystroke — debounce address validation
+- Server-render order summary; client-only for payment element
+
+---
+
+# Monitoring
+
+Implement:
+
+- `web-vitals` reporting to analytics endpoint
+- Error tracking for client exceptions (Sentry or equivalent)
+- API latency logging server-side in Route Handlers / Server Actions
+
+Set performance budgets in CI:
+
+- Lighthouse CI on key URLs
+- Fail build on significant LCP regression
+
+---
+
+# Anti-Patterns
+
+Never:
+
+- Load entire product catalog into client memory
+- Use unoptimized `<img>` for product photos
+- Block render on client-only data fetches in `useEffect`
+- Import full `@mui` or `moment` for one function
+- Disable Next.js image optimization in production without CDN replacement
+- Optimize before measuring
+
+---
+
+# Optimization Workflow
+
+1. Measure baseline (Lighthouse, Web Vitals)
+2. Identify largest bottleneck (usually LCP image, TTFB, or client JS)
+3. Apply targeted fix
+4. Re-measure
+5. Document in PR if change is architectural
+
+---
+
+# Validation Checklist
+
+- LCP element uses `next/image` with dimensions
+- Fonts loaded via `next/font`
+- Independent fetches parallelized
+- Client bundle reviewed for new dependencies
+- Suspense/loading for slow segments
+- Third-party scripts deferred
+- Cache tags and revalidation documented
+
+---
+
+# Related Rules
+
+- frontend/00-frontend
+- frontend/01-components
+- frontend/02-state
+- frontend/03-routing
+- api/01-rest
+
+---
+
+# Related Skills
+
+- nextjs-best-practices
+- seo-technical
+- frontend-seo
+
+---
+
+# Related Agents
+
+- Frontend Engineer
+- QA Engineer
+
+---
+
+# Summary
+
+Measure Core Web Vitals, default to Server Components, optimize images and fonts with Next.js built-ins, and split client code aggressively.
+
+Checkout and product pages get the highest scrutiny.

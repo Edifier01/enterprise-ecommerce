@@ -1,0 +1,243 @@
+---
+description: Domain, application, and HTTP error mapping for FastAPI backends.
+globs: apps/api/**/*.py
+alwaysApply: false
+---
+
+# Error Handling
+
+## Purpose
+
+This rule defines how errors are classified, raised, propagated, and mapped to HTTP responses in the FastAPI backend.
+
+Consistent error handling protects security, improves client integration, and keeps domain logic free of transport concerns.
+
+---
+
+## Scope
+
+Applies to:
+
+- Domain exceptions in `apps/api/app/features/<feature>/domain/exceptions/`
+- Application exceptions in `apps/api/app/features/<feature>/application/exceptions/`
+- Infrastructure exception translation
+- FastAPI exception handlers in `apps/api/core/exceptions/` or feature routers
+- Error response schemas and stable error codes
+
+Does not apply to:
+
+- Frontend error display
+- Logging configuration (see `11-logging`)
+- Retry policies for external systems (see infrastructure patterns)
+- Validation field errors (see `03-validation`)
+
+---
+
+## Core Principles
+
+Always:
+
+- Raise domain-specific exceptions from domain and application layers
+- Map exceptions to HTTP responses only at the presentation boundary
+- Use stable machine-readable error codes (`ORDER_NOT_FOUND`, `INSUFFICIENT_STOCK`)
+- Include safe, user-facing messages; log detailed context server-side
+- Preserve exception cause chains when translating (`raise ... from e`)
+- Fail closed on authorization errors
+- Use typed exception hierarchies per bounded context
+
+Never:
+
+- Return HTTP status codes from domain or application layers
+- Catch bare `Exception` in business code unless re-raising at boundary
+- Expose stack traces, SQL, or internal IDs in production responses
+- Use exceptions for normal control flow
+- Mix infrastructure errors with business errors without translation
+- Return generic 500 for predictable business failures
+
+---
+
+## Error Categories
+
+### Domain Errors
+
+Business rule violations. Examples: `InsufficientStockError`, `InvalidOrderStateError`.
+
+- Raised inside entities, value objects, domain services
+- Contain no HTTP semantics
+- Carry domain context (order id, sku) for logging and mapping
+
+### Application Errors
+
+Orchestration failures: `ResourceNotFoundError`, `UnauthorizedOperationError`, `ConflictError`.
+
+- Raised when use case preconditions fail after loading data
+- May wrap domain errors with use-case context
+
+### Infrastructure Errors
+
+Database connectivity, timeout, external API failure.
+
+- Caught in infrastructure adapters
+- Translated to application or generic service-unavailable responses
+- Never leak raw driver exceptions to clients
+
+### Transport Errors
+
+Malformed JSON, invalid query params.
+
+- Handled by FastAPI/Pydantic automatically (422)
+- Custom handlers only when standard shape insufficient
+
+---
+
+## Exception Hierarchy Pattern
+
+```python
+class CheckoutDomainError(Exception):
+    code: str = "CHECKOUT_DOMAIN_ERROR"
+
+class InsufficientStockError(CheckoutDomainError):
+    code = "INSUFFICIENT_STOCK"
+
+    def __init__(self, sku: str, requested: int, available: int) -> None:
+        self.sku = sku
+        self.requested = requested
+        self.available = available
+        super().__init__(f"Insufficient stock for {sku}")
+```
+
+---
+
+## HTTP Mapping Guidelines
+
+| Category | Typical HTTP Status | Notes |
+|----------|--------------------|-------|
+| Validation (Pydantic) | 422 | Standard field errors |
+| Resource not found | 404 | Do not reveal existence when forbidden |
+| Authorization | 403 | Fail closed |
+| Authentication | 401 | Missing/invalid credentials |
+| Conflict / duplicate | 409 | Idempotency replay, version conflict |
+| Business rule violation | 422 or 409 | Choose based on REST semantics |
+| Rate limit | 429 | Include retry guidance in logs |
+| Infrastructure | 503 | Retry-safe operations only |
+
+Use 404 vs 403 deliberately: when hiding resource existence, return 404 for unauthorized access.
+
+---
+
+## FastAPI Handler Pattern
+
+Centralize handlers in `apps/api/core/exceptions/handlers.py`:
+
+```python
+async def checkout_domain_error_handler(
+    request: Request, exc: CheckoutDomainError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={
+            "error": {
+                "code": exc.code,
+                "message": str(exc),
+            }
+        },
+    )
+```
+
+Register once on app startup. Feature modules define exception types; core maps them.
+
+---
+
+## Decision Rules
+
+IF a rule reflects business language ("cannot cancel shipped order")
+THEN raise a domain exception with a stable code.
+
+IF a resource may or may not exist and caller lacks permission
+THEN raise authorization/forbidden policy result; map to 404 if hiding existence.
+
+IF an external call fails transiently
+THEN log, optionally retry in infrastructure, map to 503 if unrecoverable in request path.
+
+IF an error is expected and part of API contract
+THEN document it in OpenAPI responses with example payload.
+
+IF catching in Application Service
+THEN re-raise domain errors; translate only infrastructure failures.
+
+---
+
+## Anti-Patterns
+
+Never create:
+
+- `if error: return {"success": False}` instead of exceptions for failure paths
+- Exception classes named `CustomError`, `GenericException`
+- Per-router copy-pasted try/except blocks
+- Logging and swallowing exceptions without re-raise
+- Returning 200 OK with error payload
+- Domain code importing `fastapi.HTTPException`
+- Leaking PostgreSQL unique constraint messages verbatim to clients
+
+---
+
+## Validation Checklist
+
+Before completing error handling verify:
+
+✓ Domain exceptions have stable `code` values.
+
+✓ No HTTP imports in domain or application modules.
+
+✓ Central exception handlers map all public API errors.
+
+✓ OpenAPI documents expected error responses.
+
+✓ Production responses omit stack traces and SQL.
+
+✓ Authorization failures handled consistently (403 vs 404 policy documented).
+
+✓ Infrastructure errors translated before reaching clients.
+
+✓ Logs include correlation/request id and exception context.
+
+✓ Tests assert exception → HTTP mapping for each public endpoint failure mode.
+
+---
+
+## Related Rules
+
+- backend/00-backend
+- backend/03-validation
+- backend/11-logging
+- backend/12-security-backend
+- architecture/02-module-boundaries
+
+---
+
+## Related Skills
+
+- python-fastapi-development
+- cc-skill-security-review
+- security-auditor
+
+---
+
+## Related Agents
+
+- Backend Engineer
+- Security Auditor
+- API Engineer
+
+---
+
+## Related MCP
+
+- Filesystem
+- Context7
+
+---
+
+## Summary
+
+Domain and application layers raise typed exceptions with stable codes. Presentation layer maps them to HTTP once. Keep transport out of the domain, fail closed on auth, and never expose internal failure details to clients.

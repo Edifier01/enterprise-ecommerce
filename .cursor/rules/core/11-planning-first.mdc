@@ -1,0 +1,38 @@
+---
+description: Mandatory planning gate before any implementation. Agent must produce a plan before modifying files.
+alwaysApply: false
+---
+
+# Planning Before Code
+
+Before modifying any files, the agent MUST produce and present a plan:
+
+## Required Plan Structure
+
+1. **Goal** — one sentence: what is being built and why
+2. **Affected files** — explicit list of files to create or modify
+3. **Architecture** — how this fits the existing DDD structure (domain/application/infrastructure/presentation)
+4. **Agents** — which specialists are needed (only necessary ones)
+5. **Risks** — potential breaking changes, migration impact, security considerations
+
+## When Plan is NOT required
+
+- Typo or comment fix
+- Change under 10 lines with no logic impact
+- PM state file updates (TASKS, HANDOFF, STATUS, CONTEXT, DECISIONS)
+- Isolated test addition with no production code change
+
+## Enforcement
+
+Implementation begins only after the plan is presented and the user
+proceeds (explicitly or by providing the next instruction).
+
+Do not start writing code while still in the planning phase.
+
+## Related
+
+- Skill: `context-loading` — always run before planning
+- Skill: `model-routing` — select model before planning
+- Rule: `workflow/00-workflow.mdc` — full development workflow
+- Rule: `core/02-ai-behavior.mdc` — AI behavior standards
+- Agent: `project-orchestrator` — automated planning for features

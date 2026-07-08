@@ -1,0 +1,282 @@
+---
+description: Performance standards including SLAs, caching, load testing, and optimization guidelines.
+alwaysApply: false
+---
+
+# Performance Standard
+
+## Purpose
+
+Define performance targets, monitoring, and optimization standards for the enterprise e-commerce platform.
+
+Performance directly impacts conversion — slow checkout loses sales.
+
+---
+
+## Service Level Objectives (SLOs)
+
+### API Response Times (p95)
+
+| Endpoint Category | Target | Alert Threshold |
+|-------------------|--------|-----------------|
+| Catalog read (product list) | < 100ms | > 200ms |
+| Product detail | < 50ms | > 150ms |
+| Cart operations | < 100ms | > 250ms |
+| Checkout session | < 200ms | > 500ms |
+| Order history | < 150ms | > 400ms |
+| Admin list views | < 500ms | > 1s |
+| Health check | < 10ms | > 50ms |
+
+### Frontend (Core Web Vitals)
+
+| Metric | Target |
+|--------|--------|
+| LCP (Largest Contentful Paint) | < 2.5s |
+| INP (Interaction to Next Paint) | < 200ms |
+| CLS (Cumulative Layout Shift) | < 0.1 |
+| TTFB (Time to First Byte) | < 800ms |
+
+### Availability
+
+- 99.9% uptime (8.7 hours downtime/year max)
+- Payment webhook processing: 99.99%
+
+---
+
+## Frontend Performance
+
+### Next.js App Router
+
+- Server Components for catalog pages (no client JS for static content)
+- Dynamic imports for checkout Stripe components
+- Image optimization via `next/image` with CDN
+- Font optimization via `next/font`
+
+### Bundle Size
+
+- Monitor bundle with `@next/bundle-analyzer`
+- Lazy load admin dashboard
+- Tree-shake unused shadcn components
+
+### Caching
+
+| Resource | Strategy |
+|----------|----------|
+| Product pages | ISR revalidate 60s or on-demand revalidation |
+| Static assets | Cache-Control: immutable, 1 year |
+| API catalog | CDN edge cache 30s with stale-while-revalidate |
+| Cart/checkout | No cache — private, no-store |
+
+### Data Fetching
+
+- Parallel fetch independent resources
+- Avoid waterfall: don't fetch product then variant sequentially if combinable
+- Prefetch product links on hover (optional, measure impact)
+
+---
+
+## Backend Performance
+
+### Database
+
+Primary optimization lever — see `database/04-queries` and `database/03-indexing`.
+
+- Connection pooling (no connection per request without pool)
+- Query timeout: 30s default, 5s for catalog reads
+- N+1 query detection in integration tests
+- Keyset pagination for large lists
+
+### Async I/O
+
+- FastAPI async endpoints for I/O-bound operations
+- Async SQLAlchemy sessions
+- Do not block event loop with synchronous CPU-heavy work — use thread pool
+
+### External API Calls
+
+- Stripe calls outside database transactions
+- Timeout on all external calls (10s default)
+- Circuit breaker for degraded external service
+
+---
+
+## Caching Architecture
+
+```
+Client → CDN → API → Redis (optional) → PostgreSQL
+```
+
+### Redis Use Cases (Optional)
+
+| Data | TTL | Invalidation |
+|------|-----|--------------|
+| Product detail | 5 min | On product update event |
+| Category tree | 15 min | On category update |
+| Session cart (alternative) | 30 min | On cart mutation |
+
+Redis is cache — PostgreSQL is source of truth.
+
+Never cache:
+
+- Checkout session totals without invalidation on change
+- Inventory counts during flash sales (or TTL < 5s)
+- Payment status
+
+### Cache Key Design
+
+```
+catalog:product:{id}:v{updated_at_unix}
+catalog:category-tree:v{max_updated_at}
+```
+
+Include version in key to prevent stale reads without explicit invalidation.
+
+---
+
+## Inventory and Checkout Under Load
+
+Flash sale patterns:
+
+1. Pessimistic locking on inventory row (correctness over speed)
+2. Queue excess requests rather than fail silently
+3. Rate limit checkout initiation per IP/session
+4. Pre-warm cache for featured products
+5. Load test before event
+
+Acceptable degradation:
+
+- Catalog may serve slightly stale stock display for 5s
+- Checkout must never oversell regardless of load
+
+---
+
+## Load Testing
+
+### Tools
+
+- k6 or Locust for API load tests
+- Playwright for concurrent browser checkout
+
+### Scenarios
+
+| Scenario | Target | Duration |
+|----------|--------|----------|
+| Catalog browse | 500 RPS | 10 min |
+| Add to cart | 100 RPS | 5 min |
+| Checkout flow | 50 concurrent | 5 min |
+| Webhook burst | 200 events/min | 2 min |
+
+Run before:
+
+- Major marketing campaigns
+- Architecture changes to checkout/inventory
+- Database migration affecting hot tables
+
+### Baseline
+
+Maintain performance baseline in CI or weekly scheduled job. Alert on regression > 20%.
+
+---
+
+## Monitoring and Observability
+
+### Metrics (Prometheus/Datadog)
+
+- Request latency histogram by endpoint
+- Error rate by endpoint and status code
+- Database query duration
+- Connection pool utilization
+- Stripe API latency
+- Cache hit/miss ratio
+
+### Tracing (OpenTelemetry)
+
+Trace full checkout path:
+
+```
+HTTP → CheckoutService → InventoryService → DB → Stripe API → Webhook
+```
+
+Identify bottlenecks in production traces.
+
+### Dashboards
+
+- Real-time: error rate, p95 latency, active checkouts
+- Business: orders/minute, conversion funnel timing
+- Infrastructure: CPU, memory, DB connections
+
+### Alerting
+
+| Condition | Severity |
+|-----------|----------|
+| p95 latency > 2x SLO for 5 min | Warning |
+| Error rate > 1% for 5 min | Critical |
+| DB connection pool exhausted | Critical |
+| Webhook processing lag > 5 min | Critical |
+
+---
+
+## Database Performance
+
+- Autovacuum tuned for write-heavy tables (orders, inventory)
+- Monitor table bloat quarterly
+- Partition large append-only tables (audit_log) by month
+- Read replicas for reporting queries
+
+See `database/03-indexing` and `database/04-queries`.
+
+---
+
+## Image and Asset Delivery
+
+- CDN for all product images
+- WebP/AVIF with fallback
+- Responsive srcset
+- Lazy load below-fold images
+- Max upload size enforced (5MB default)
+
+---
+
+## Performance Budget
+
+| Page | Max JS (gzip) | Max Requests |
+|------|---------------|--------------|
+| Product listing | 150 KB | 30 |
+| Product detail | 180 KB | 35 |
+| Checkout | 250 KB | 40 (includes Stripe) |
+
+Review budget on every major frontend PR.
+
+---
+
+## Optimization Process
+
+1. **Measure** — identify bottleneck with profiling/tracing
+2. **Hypothesize** — root cause analysis
+3. **Fix** — smallest change addressing root cause
+4. **Verify** — compare before/after metrics
+5. **Document** — if architectural change, write ADR
+
+Never optimize without measurement.
+
+---
+
+## Anti-Patterns
+
+- Premature caching before identifying actual bottleneck
+- Caching inventory during checkout without TTL
+- Synchronous external API calls in hot path
+- Unbounded queries (no LIMIT)
+- Loading full object graphs for list views
+- CDN caching authenticated API responses
+- Optimizing frontend before fixing N+1 database queries
+
+---
+
+## Related Rules
+
+- `database/03-indexing` — index strategy
+- `database/04-queries` — query patterns
+- `ecommerce/05-inventory` — concurrency under load
+- `testing/00-testing` — load test requirements
+- `docker/00-docker` — resource limits

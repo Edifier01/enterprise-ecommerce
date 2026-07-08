@@ -1,0 +1,290 @@
+---
+description: PCI DSS compliance standards for Stripe-integrated e-commerce with SAQ A scope reduction.
+globs: apps/api/app/features/**
+alwaysApply: false
+---
+
+# PCI Compliance Standard
+
+## Purpose
+
+Define Payment Card Industry Data Security Standard (PCI DSS) requirements for the enterprise e-commerce platform using Stripe.
+
+Goal: maintain **SAQ A** (Self-Assessment Questionnaire A) eligibility — the lowest PCI scope for merchants who outsource card processing.
+
+---
+
+## PCI Scope
+
+### In Scope (Managed by Stripe)
+
+- Card number collection
+- Card storage (tokenization)
+- Card transmission to payment networks
+- 3D Secure authentication
+
+### Out of Scope (Our Responsibility)
+
+- Application security protecting checkout page
+- HTTPS on checkout pages
+- Not handling card data on our servers
+- Secure webhook handling
+- Access control to systems near checkout
+
+### Never in Our Environment
+
+- Primary Account Number (PAN)
+- Card Verification Value (CVV/CVC/CVC2/CVV2)
+- Full magnetic stripe data
+- PIN blocks
+
+If any of these touch our servers, SAQ A is lost and full PCI DSS applies.
+
+---
+
+## SAQ A Requirements
+
+SAQ A applies when:
+
+- All payment processing outsourced to Stripe
+- Only Stripe JavaScript (Elements) collects card data
+- Card data goes directly from browser to Stripe
+- Our servers never see, store, or transmit PAN
+
+Our checkout page loads Stripe.js and Payment Element — card fields are Stripe-hosted iframes.
+
+---
+
+## Implementation Requirements
+
+### Frontend
+
+```typescript
+// CORRECT: Stripe Payment Element
+const stripe = await loadStripe(publishableKey);
+const elements = stripe.elements({ clientSecret });
+const paymentElement = elements.create("payment");
+paymentElement.mount("#payment-element");
+
+// WRONG: Custom card input
+<input name="cardNumber" />  // NEVER DO THIS
+```
+
+Rules:
+
+- Use `@stripe/stripe-js` and `@stripe/react-stripe-js`
+- Use Payment Element or Checkout — not deprecated Card Element for new integrations
+- Load Stripe.js from `https://js.stripe.com` only — never self-host
+- Publishable key (`pk_`) only in frontend — safe to expose
+
+### Backend
+
+```python
+# CORRECT: Create PaymentIntent, return client_secret
+intent = stripe.PaymentIntent.create(amount=amount, currency="usd", ...)
+return {"client_secret": intent.client_secret}
+
+# WRONG: Accept card number in API
+class PaymentRequest(BaseModel):
+    card_number: str  # NEVER
+    cvv: str          # NEVER
+```
+
+Rules:
+
+- Secret key (`sk_`) only on server
+- Never log PaymentIntent responses containing sensitive fields
+- Webhook signature verification mandatory
+
+---
+
+## Allowed Payment Data Storage
+
+May store after successful payment (from Stripe API response):
+
+| Field | Storage | Example |
+|-------|---------|---------|
+| payment_intent_id | Yes | `pi_3abc123` |
+| charge_id | Yes | `ch_3abc123` |
+| last4 | Yes | `4242` |
+| brand | Yes | `visa` |
+| exp_month | Yes | `12` |
+| exp_year | Yes | `2027` |
+| fingerprint | Yes | For fraud detection |
+| stripe_customer_id | Yes | `cus_abc123` |
+
+Store in `payment_records.payment_method_summary` JSONB.
+
+---
+
+## Checkout Page Security
+
+### HTTPS
+
+- TLS 1.2+ on all pages
+- Valid certificate, no mixed content
+- HSTS enabled
+
+### Content Security Policy
+
+```
+script-src 'self' https://js.stripe.com;
+frame-src https://js.stripe.com https://hooks.stripe.com;
+connect-src 'self' https://api.stripe.com;
+```
+
+Restrict script sources to prevent XSS from injecting fake payment forms.
+
+### XSS Prevention
+
+Cross-site scripting on checkout page is a PCI concern — attacker could inject fake card form.
+
+- React auto-escaping
+- CSP headers
+- No `dangerouslySetInnerHTML` on checkout
+- Sanitize any user-generated content displayed near checkout
+
+---
+
+## Webhook Security
+
+Stripe webhooks confirm payment status — compromise enables fake order confirmation.
+
+Requirements:
+
+1. Verify `Stripe-Signature` header on every request
+2. Use raw request body for verification
+3. Reject replayed events (timestamp tolerance: 5 minutes)
+4. Idempotent processing (dedup by event ID)
+5. HTTPS endpoint only
+6. Separate webhook secret per environment
+
+See `ecommerce/03-payments`.
+
+---
+
+## Access Control
+
+Systems affecting checkout integrity:
+
+- Production database access — restricted, audited
+- Application deployment — CI/CD only, no manual SSH file edits
+- Admin access to order/payment data — RBAC + MFA
+- Developer access to production — break-glass only, logged
+
+---
+
+## Network Segmentation
+
+- Application servers in private subnet
+- Database not publicly accessible
+- Stripe API calls outbound HTTPS only
+- No direct customer access to internal services
+
+---
+
+## Vulnerability Management
+
+PCI requires:
+
+- Quarterly vulnerability scans (ASV) for external-facing systems
+- Patch critical vulnerabilities within 30 days
+- Dependency scanning in CI
+- Penetration test annually or after significant changes
+
+---
+
+## Logging and Monitoring
+
+### Allowed in Logs
+
+- PaymentIntent ID
+- Payment status transitions
+- Error codes (not full Stripe error with sensitive data)
+- Order ID correlation
+
+### Forbidden in Logs
+
+- Full Stripe API responses (may contain sensitive fields)
+- Card numbers, CVV
+- Client secrets in access logs
+
+Monitor for:
+
+- Webhook signature failures (potential attack)
+- Unusual payment failure patterns
+- Checkout page tampering (integrity monitoring)
+
+---
+
+## Third-Party Compliance
+
+Stripe maintains PCI Level 1 Service Provider certification.
+
+Verify:
+
+- Using Stripe official SDKs (kept updated)
+- Stripe account in good standing
+- Agreement covers payment processing scope
+
+Do not route card data through additional third parties.
+
+---
+
+## Employee Training
+
+Team members with production access:
+
+- Understand PCI scope boundaries
+- Know what data must never be captured
+- Report suspected card data exposure immediately
+- No copying production payment data to local machines
+
+---
+
+## Incident Response (Card Data)
+
+If PAN accidentally logged, stored, or exposed:
+
+1. **Contain** — stop logging, rotate keys, isolate affected systems
+2. **Assess** — determine scope of exposure
+3. **Notify** — payment brand and acquirer per PCI requirements
+4. **Remediate** — remove stored PAN, fix root cause
+5. **Re-assess SAQ** — scope may change to SAQ D
+
+Treat as SEV-1 incident.
+
+---
+
+## Annual Compliance Checklist
+
+- [ ] SAQ A completed and submitted (if required by acquirer)
+- [ ] Attestation of Compliance (AOC) current
+- [ ] ASV scan passed
+- [ ] Stripe integration uses Elements/Payment Element only
+- [ ] No PAN in database, logs, or backups (verify with scan)
+- [ ] Webhook signature verification enabled
+- [ ] HTTPS on all checkout pages
+- [ ] CSP configured for Stripe domains
+- [ ] Team trained on PCI scope boundaries
+
+---
+
+## Anti-Patterns
+
+- Custom credit card form fields
+- Sending card data to our API "just for validation"
+- Logging Stripe webhook full payload in production
+- Storing client_secret in database long-term
+- Testing with real card numbers in development
+- Screenshots of checkout with test card numbers in public docs
+- Admin panel displaying full card numbers (Stripe Dashboard handles this)
+
+---
+
+## Related Rules
+
+- `ecommerce/03-payments` — Stripe integration
+- `security/00-security` — general security
+- `security/03-data-protection` — customer PII
+- `testing/00-testing` — Stripe test mode cards

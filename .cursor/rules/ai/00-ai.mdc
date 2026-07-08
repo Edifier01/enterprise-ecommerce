@@ -1,0 +1,83 @@
+---
+description: AI agent behavior, model routing, skills, and subagent usage for this platform.
+alwaysApply: false
+---
+
+# AI Development Rules
+
+## Purpose
+
+Govern how Cursor agents operate in this repository.
+
+## Model Routing
+
+Follow `core/08-model-routing.mdc`:
+
+| Task | Model |
+|------|-------|
+| Implementation | Composer 2.5 |
+| Research / planning | GPT-5.5 |
+| Architecture / security | Opus 4.7 |
+
+See `docs/MODEL-ROUTING.md`.
+
+## Skills
+
+- Load one primary domain skill per task
+- Use `skill-router` when unsure
+- Native skills: model-routing, context-loading, implement-checkout-flow, implement-catalog-feature, playwright-e2e-checkout
+
+## Subagents
+
+Use `.cursor/agents/` specialists (11 total):
+
+| Agent | Domain |
+|-------|--------|
+| enterprise-architect | Architecture, ADRs |
+| backend-engineer | FastAPI features |
+| frontend-engineer | Next.js, shadcn |
+| database-engineer | PostgreSQL, migrations |
+| api-engineer | OpenAPI, REST |
+| catalog-specialist | Product catalog |
+| checkout-specialist | Checkout, Stripe |
+| security-auditor | Security, PCI (readonly) |
+| qa-engineer | E2E, Playwright |
+| devops-engineer | Docker, CI |
+| verifier | Validation (readonly) |
+
+Use `subagent-orchestrator` for 3+ file parallel work.
+
+## Context Budget
+
+- Max 4 always-on rules: `core/00-core`, `01-project`, `02-ai-behavior`, `10-project-state-management`
+- Load domain rules via globs only
+- Enable MCP servers on demand only
+
+## Project State
+
+Before any task, read `.cursor/project-management/` per `core/10-project-state-management.mdc` and skill `context-loading`.
+
+After any session, update `PROJECT_STATUS.md`, `TASKS.md`, `HANDOFF.md`, and `CURRENT_CONTEXT.md`.
+
+## Memory MCP
+
+Before new conventions or patterns, check Memory MCP for existing decisions. Memory MCP stores conventions — not task tracking (use `TASKS.md`).
+
+## Anti-Patterns
+
+- Using Opus for CRUD boilerplate
+- Loading all 46 skills at once
+- Ignoring architecture rules for "speed"
+- Skipping verifier on payment features
+
+## Related Rules
+
+- core/02-ai-behavior, core/07-tool-selection, core/08-model-routing
+
+## Related Skills
+
+- model-routing, context-loading, skill-router, subagent-orchestrator
+
+## Summary
+
+Intentional model, skill, and agent selection beats default auto mode.

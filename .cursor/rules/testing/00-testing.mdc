@@ -1,0 +1,291 @@
+---
+description: Testing standards including unit, integration, E2E, and commerce-specific test requirements.
+alwaysApply: false
+---
+
+# Testing Standard
+
+## Purpose
+
+Define testing strategy and standards for the enterprise e-commerce platform.
+
+Tests provide confidence that commerce invariants — pricing, inventory, payments, orders — are never broken in production.
+
+---
+
+## Testing Pyramid
+
+```
+        ┌─────────┐
+        │   E2E   │  Few — critical user journeys
+        ├─────────┤
+        │ Integr. │  Moderate — API + database
+        ├─────────┤
+        │  Unit   │  Many — domain logic, services
+        └─────────┘
+```
+
+| Layer | Scope | Speed | Tools |
+|-------|-------|-------|-------|
+| Unit | Domain, pure functions | < 1s each | pytest, vitest |
+| Integration | API + PostgreSQL | < 5s each | pytest + httpx, testcontainers |
+| E2E | Full browser flow | < 60s each | Playwright |
+
+Target coverage: 80%+ on domain and application layers. Coverage is a guide, not a goal — prioritize critical paths.
+
+---
+
+## Unit Tests
+
+### What to Test
+
+- Domain entity behavior and invariants
+- State machine transitions (order status)
+- Price/total calculations
+- Promotion validation logic
+- Input validation schemas (Pydantic, Zod)
+
+### What Not to Test
+
+- Framework internals
+- Third-party SDK behavior (mock Stripe)
+- Trivial getters/setters
+
+### Location
+
+```
+apps/api/tests/unit/
+apps/web/src/**/*.test.ts
+```
+
+### Pattern
+
+```python
+def test_order_total_must_reconcile():
+    order = OrderFactory.build(
+        subtotal=Decimal("100.00"),
+        discount_amount=Decimal("10.00"),
+        shipping_amount=Decimal("5.00"),
+        tax_amount=Decimal("8.50"),
+    )
+    assert order.total_amount == Decimal("103.50")
+
+def test_cannot_transition_shipped_to_pending():
+    order = OrderFactory.build(status="shipped")
+    with pytest.raises(InvalidStatusTransition):
+        order.transition_to("pending")
+```
+
+Mock repositories at application service boundary — domain tests use no mocks.
+
+---
+
+## Integration Tests
+
+### Setup
+
+- PostgreSQL via testcontainers or CI service container
+- Run Alembic migrations before test suite
+- Transaction rollback or truncate between tests
+- Separate test database — never run against development DB
+
+```python
+@pytest.fixture
+async def client(db_session):
+    app.dependency_overrides[get_session] = lambda: db_session
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        yield ac
+```
+
+### What to Test
+
+- API endpoints return correct status codes and response shapes
+- Database persistence and constraints
+- Authentication and authorization enforcement
+- Inventory reservation concurrency
+- Idempotency key behavior
+- Webhook signature verification
+
+### Commerce Critical Integration Tests
+
+| Test | Validates |
+|------|-----------|
+| Add to cart → checkout → payment webhook → order | Full happy path |
+| Two concurrent reservations, one unit | No overselling |
+| Duplicate idempotency key | Same response, no double charge |
+| Invalid webhook signature | 400, no state change |
+| Customer cannot access other order | 403 |
+| Price change during checkout | 409 with diff |
+
+---
+
+## End-to-End Tests
+
+### Tool
+
+Playwright for browser automation.
+
+### Location
+
+```
+apps/web/e2e/
+  checkout.spec.ts
+  catalog.spec.ts
+  auth.spec.ts
+```
+
+### Critical E2E Flows
+
+1. **Guest checkout** — browse → add to cart → checkout → Stripe test card → confirmation
+2. **Registered checkout** — login → cart → checkout → confirmation
+3. **Cart merge** — guest cart → login → cart preserved
+4. **Out of stock** — cannot checkout unavailable item
+
+### Stripe Test Mode
+
+Use test card `4242424244244242` with any future expiry and CVC.
+
+Run E2E against staging with Stripe test keys — never live keys.
+
+### E2E Rules
+
+- Use data-testid attributes for stable selectors
+- No hardcoded waits — use Playwright auto-wait
+- Seed test data before suite
+- Run in CI on PR for critical paths only (cost/time)
+- Screenshot on failure
+
+---
+
+## Test Data
+
+### Factories
+
+Use factory pattern for test entities:
+
+```python
+class ProductFactory:
+    @staticmethod
+    def build(**kwargs) -> Product:
+        defaults = {"sku": "TEST-SKU", "title": "Test Product", "status": "active"}
+        return Product(**{**defaults, **kwargs})
+```
+
+### Fixtures
+
+Shared fixtures in `conftest.py`:
+
+- `customer`, `admin_user`
+- `product_with_variant`
+- `cart_with_items`
+- `authenticated_client`
+
+Never use production data in tests.
+
+---
+
+## Mocking External Services
+
+### Stripe
+
+Mock at SDK boundary in unit tests:
+
+```python
+@patch("stripe.PaymentIntent.create")
+def test_create_payment_intent(mock_create, client):
+    mock_create.return_value = MagicMock(id="pi_test", client_secret="secret")
+    response = client.post("/api/v1/checkout/sessions/1/payment-intent")
+    assert response.status_code == 200
+```
+
+Use Stripe test mode in integration tests — mock in unit only.
+
+### Email
+
+Capture emails in test buffer — never send real emails from tests.
+
+---
+
+## CI Pipeline
+
+Every PR:
+
+```yaml
+- Run lint (ruff, eslint)
+- Run unit tests
+- Run integration tests (PostgreSQL container)
+- Run migration upgrade/downgrade cycle
+- Run E2E (main branch or nightly for cost)
+```
+
+Block merge on test failure.
+
+---
+
+## Performance Tests
+
+Load test critical paths before major releases:
+
+- Catalog listing under 100 RPS
+- Concurrent checkout on limited inventory
+- Webhook processing throughput
+
+See `performance/00-performance`.
+
+---
+
+## Security Tests
+
+Include in integration/E2E:
+
+- Auth bypass attempts (no token, expired token)
+- Horizontal privilege escalation (access other user's order)
+- SQL injection in search parameters
+- Webhook without valid signature
+- Rate limit enforcement on login
+
+Run security-auditor subagent on auth and payment changes.
+
+---
+
+## Test Naming
+
+```python
+def test_{action}_{condition}_{expected}():
+    ...
+
+# Examples:
+def test_reserve_inventory_insufficient_stock_raises_error():
+def test_place_order_duplicate_session_returns_existing_order():
+def test_login_invalid_password_returns_401():
+```
+
+---
+
+## Flaky Test Policy
+
+- Flaky tests fixed within 48 hours or quarantined
+- No `@pytest.mark.skip` without linked issue
+- No retry loops masking failures (except explicit transient external service retry tests)
+
+---
+
+## Anti-Patterns
+
+- Testing implementation details (mocking every repository method in domain tests)
+- Shared mutable state between tests
+- Tests depending on execution order
+- E2E testing every edge case (use integration instead)
+- No tests on payment or inventory paths
+- Using `sleep()` in tests instead of proper waits
+- Committing `.only` or focused tests
+
+---
+
+## Related Rules
+
+- `ecommerce/02-checkout` — checkout test scenarios
+- `ecommerce/03-payments` — Stripe test cards
+- `ecommerce/05-inventory` — concurrency tests
+- `performance/00-performance` — load testing
+- `git/00-git` — CI requirements on PR

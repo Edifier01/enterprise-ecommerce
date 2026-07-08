@@ -1,0 +1,23 @@
+---
+description: Standard development workflow (summary). See workflow/00-workflow for full process.
+alwaysApply: false
+---
+
+# Development Workflow
+
+Every task follows the same workflow. For the full platform workflow including model routing and agents, see `workflow/00-workflow.mdc`.
+
+## Steps
+
+0. Load project state — read `.cursor/project-management/` and `PROJECT_ROADMAP.md`
+1. Understand the request
+2. Analyze the project — run `/context-loading`
+3. Locate existing implementation
+4. Identify reusable components
+5. Create a plan — run `/model-routing` for model selection
+6. Implement
+7. Validate — run `/verifier` for significant features
+8. Run required checks
+9. Update documentation if necessary
+10. Update project management state — `PROJECT_STATUS`, `TASKS`, `HANDOFF`, `CURRENT_CONTEXT`
+11. Summarize: what changed, why, risks, next steps

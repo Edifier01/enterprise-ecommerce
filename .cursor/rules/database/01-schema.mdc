@@ -1,0 +1,390 @@
+---
+description: PostgreSQL schema design standards for tables, constraints, relationships, and e-commerce domain modeling.
+alwaysApply: false
+---
+
+# Schema Design Standard
+
+## Purpose
+
+Define how tables, relationships, and constraints are designed in PostgreSQL for the enterprise e-commerce platform.
+
+Schemas must enforce invariants at the database level while keeping business rules in the domain layer.
+
+---
+
+## Design Process
+
+Before creating or modifying tables:
+
+1. Identify the bounded context and aggregate root
+2. Document access patterns (reads, writes, filters, sorts)
+3. Normalize to 3NF unless denormalization is measured and justified
+4. Define constraints that protect data integrity
+5. Plan indexes (`database/03-indexing`)
+6. Ship via Alembic (`database/02-migrations`)
+
+---
+
+## Normalization Policy
+
+### Default: Third Normal Form
+
+- Eliminate redundant data
+- Separate entities into distinct tables
+- Use foreign keys for relationships
+
+### Allowed Denormalization
+
+Denormalize only when:
+
+- `EXPLAIN ANALYZE` proves join cost is unacceptable at expected scale
+- Update frequency is low relative to read frequency
+- Denormalized fields have a documented refresh strategy
+
+Common approved denormalizations:
+
+- `product_snapshot` JSONB on `order_lines` (price, title at purchase time)
+- `category_path` materialized path for breadcrumb reads
+- Cached `review_count` / `average_rating` on `products` with event-driven refresh
+
+Every denormalized column must document its source of truth and sync mechanism.
+
+---
+
+## Primary Keys
+
+### Default
+
+```sql
+id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY
+```
+
+### UUID
+
+Use `UUID` when:
+
+- IDs are exposed externally and enumeration must be prevented
+- Merging data from external systems
+- Distributed ID generation is required
+
+Prefer UUIDv7 (time-ordered) when available for better index locality.
+
+```sql
+id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+```
+
+Never use UUID solely for aesthetic reasons on internal-only tables.
+
+---
+
+## Foreign Keys
+
+Always define foreign keys for referential integrity.
+
+```sql
+product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE RESTRICT
+```
+
+### ON DELETE Policies
+
+| Relationship | Policy | Example |
+|--------------|--------|---------|
+| Order → Customer | RESTRICT | Cannot delete customer with orders |
+| Order Line → Product | RESTRICT | Preserve product reference |
+| Cart Line → Product | CASCADE or SET NULL | Depends on product archival policy |
+| Optional metadata | SET NULL | Nullable FK |
+
+Never use `ON DELETE CASCADE` on financial or order tables without explicit ADR approval.
+
+### Index FK Columns
+
+PostgreSQL does not auto-index foreign keys. Always add:
+
+```sql
+CREATE INDEX ix_order_lines_product_id ON order_lines (product_id);
+```
+
+---
+
+## Constraints
+
+### NOT NULL
+
+Apply NOT NULL to every column that is semantically required.
+
+Use NULL only for genuinely optional data.
+
+### CHECK Constraints
+
+```sql
+CONSTRAINT ck_order_lines_quantity_positive CHECK (quantity > 0),
+CONSTRAINT ck_products_price_non_negative CHECK (unit_price >= 0),
+CONSTRAINT ck_orders_total_matches CHECK (total_amount >= 0)
+```
+
+### UNIQUE Constraints
+
+```sql
+CONSTRAINT uq_products_sku UNIQUE (sku),
+CONSTRAINT uq_customers_email UNIQUE (email)
+```
+
+For nullable unique columns where only one NULL is allowed (PG 15+):
+
+```sql
+CONSTRAINT uq_carts_guest_token UNIQUE (guest_token) NULLS NOT DISTINCT
+```
+
+### Composite Uniqueness
+
+```sql
+CONSTRAINT uq_cart_lines_cart_product UNIQUE (cart_id, product_id, variant_id)
+```
+
+---
+
+## E-Commerce Core Entities
+
+### Catalog Context
+
+**products**
+
+- `id`, `sku` (unique), `slug` (unique), `title`, `description`
+- `status` (draft, active, archived)
+- `created_at`, `updated_at`, `deleted_at`
+
+**product_variants**
+
+- `id`, `product_id`, `sku` (unique), `attributes` (JSONB)
+- `unit_price`, `compare_at_price`, `currency`
+- Variant-level pricing when options differ (size, color)
+
+**categories**
+
+- Self-referential: `parent_id` nullable
+- `slug`, `name`, `sort_order`, `is_active`
+
+**product_categories** (junction)
+
+- `product_id`, `category_id`, composite PK or surrogate id
+
+### Inventory Context
+
+**inventory_items**
+
+- `id`, `variant_id` (unique), `quantity_on_hand`, `quantity_reserved`
+- `version` for optimistic locking
+
+**inventory_reservations**
+
+- `id`, `variant_id`, `quantity`, `expires_at`, `reference_type`, `reference_id`
+- TTL-based cleanup for abandoned checkout reservations
+
+Invariant: `quantity_on_hand >= quantity_reserved` always.
+
+### Checkout Context
+
+**carts**
+
+- `id`, `customer_id` (nullable), `session_token` (unique for guests)
+- `currency`, `status` (active, converted, abandoned)
+
+**cart_lines**
+
+- `cart_id`, `variant_id`, `quantity`, `unit_price_snapshot`
+
+### Orders Context
+
+**orders**
+
+- `id`, `order_number` (unique, human-readable)
+- `customer_id`, `status` (pending, confirmed, processing, shipped, delivered, cancelled, refunded)
+- `subtotal`, `tax_amount`, `shipping_amount`, `discount_amount`, `total_amount`, `currency`
+- `shipping_address_id`, `billing_address_id`
+- `placed_at`, `version`
+
+**order_lines**
+
+- `order_id`, `variant_id`, `quantity`, `unit_price`, `line_total`
+- `product_snapshot` JSONB (title, sku, attributes at purchase)
+
+**order_status_history**
+
+- `order_id`, `from_status`, `to_status`, `changed_at`, `changed_by`, `reason`
+
+### Payments Context
+
+**payment_records**
+
+- `id`, `order_id`, `stripe_payment_intent_id` (unique)
+- `amount`, `currency`, `status` (pending, succeeded, failed, refunded)
+- `idempotency_key` (unique)
+- Never store PAN, CVV, or full card numbers
+
+### Customers Context
+
+**customers**
+
+- `id`, `email` (unique), `password_hash`, `status`
+- `email_verified_at`, `last_login_at`
+
+**addresses**
+
+- `customer_id`, `type` (shipping, billing), structured address fields
+- `is_default`
+
+---
+
+## Money and Pricing
+
+All monetary values:
+
+```sql
+unit_price NUMERIC(19, 4) NOT NULL,
+currency CHAR(3) NOT NULL DEFAULT 'USD'
+```
+
+Rules:
+
+- Store amounts in the order's transaction currency
+- Never use `DOUBLE PRECISION` or `REAL` for money
+- Tax and discount amounts stored separately for audit
+- Historical prices captured in snapshots on order lines
+
+---
+
+## Status Fields
+
+Use TEXT with CHECK constraint or lookup table:
+
+```sql
+status TEXT NOT NULL DEFAULT 'pending'
+  CONSTRAINT ck_orders_status CHECK (status IN (
+    'pending', 'confirmed', 'processing', 'shipped',
+    'delivered', 'cancelled', 'refunded'
+  ))
+```
+
+Avoid PostgreSQL ENUM types for business statuses that evolve frequently.
+
+Document valid transitions in domain layer state machines (`ecommerce/04-orders`).
+
+---
+
+## JSONB Usage
+
+Use JSONB for:
+
+- Product attributes that vary by category
+- `product_snapshot` on immutable order records
+- Stripe webhook payload archives (redacted)
+- Feature flags or A/B metadata
+
+Do not use JSONB for:
+
+- Fields that need FK integrity
+- Fields used in every query filter (promote to column)
+- Replacing normalized relational design without justification
+
+Index JSONB with GIN when querying containment:
+
+```sql
+CREATE INDEX ix_products_attributes ON products USING GIN (attributes);
+```
+
+---
+
+## Soft Delete
+
+Apply to entities that must remain referentially intact:
+
+- `products`, `categories`, `customers`
+
+```sql
+deleted_at TIMESTAMPTZ NULL
+```
+
+Queries default to `WHERE deleted_at IS NULL`.
+
+Hard delete only for:
+
+- Expired sessions
+- GDPR erasure after retention policy
+- Transient data (reservations, idempotency records past TTL)
+
+---
+
+## Temporal and Audit Tables
+
+For compliance-sensitive changes:
+
+**order_status_history** — state transitions
+**price_history** — optional audit of price changes
+**audit_log** — generic append-only log
+
+```sql
+CREATE TABLE audit_log (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  entity_type TEXT NOT NULL,
+  entity_id BIGINT NOT NULL,
+  action TEXT NOT NULL,
+  actor_id UUID NULL,
+  payload JSONB NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+---
+
+## Multi-Tenancy (If Applicable)
+
+When supporting multiple stores/tenants:
+
+```sql
+tenant_id UUID NOT NULL REFERENCES tenants(id)
+```
+
+- Include `tenant_id` in every tenant-scoped table
+- Composite unique constraints include `tenant_id`
+- Enable RLS policies filtering by `tenant_id`
+- Index `(tenant_id, ...)` for all tenant-scoped queries
+
+---
+
+## Schema Review Checklist
+
+Before merging schema changes:
+
+- [ ] Every table has a primary key
+- [ ] FK columns are indexed
+- [ ] NOT NULL applied where required
+- [ ] Money uses NUMERIC, timestamps use TIMESTAMPTZ
+- [ ] Status values documented with valid transitions
+- [ ] Soft delete strategy defined
+- [ ] No sensitive PCI data in schema
+- [ ] Migration is reversible or downgrade documented
+- [ ] Access patterns have planned indexes
+
+---
+
+## Anti-Patterns
+
+- Storing comma-separated values in TEXT columns
+- Polymorphic associations without discipline (`reference_type` + `reference_id` overused)
+- Missing FK on `customer_id`, `order_id`, `variant_id`
+- Calculated totals without CHECK or application validation
+- ENUM types for order/payment statuses that change quarterly
+- JSONB blob replacing entire normalized product model
+
+---
+
+## Related Rules
+
+- `database/00-database` — architecture
+- `database/02-migrations` — Alembic
+- `database/03-indexing` — indexes
+- `architecture/05-domain-modeling` — aggregates
+- `ecommerce/01-catalog` — catalog domain
+- `ecommerce/04-orders` — order domain
+- `ecommerce/05-inventory` — inventory domain

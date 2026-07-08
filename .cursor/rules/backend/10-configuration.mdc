@@ -1,0 +1,209 @@
+---
+description: Environment configuration, settings management, and secrets handling.
+globs: apps/api/**/core/config/**/*.py,apps/api/**/settings*.py,apps/api/.env*
+alwaysApply: false
+---
+
+# Configuration
+
+## Purpose
+
+This rule defines how environment-specific settings, secrets, and feature flags are loaded and accessed in the FastAPI backend.
+
+Centralized, typed configuration prevents drift between environments and keeps secrets out of source control.
+
+---
+
+## Scope
+
+Applies to:
+
+- Settings modules in `apps/api/core/config/`
+- Pydantic v2 `BaseSettings` models
+- Environment variable naming and `.env` loading (local dev only)
+- Feature flags and runtime toggles
+- Dependency injection of settings into services
+
+Does not apply to:
+
+- Frontend environment variables
+- Infrastructure Terraform variables
+- Database migration content
+- User-configurable merchant settings (domain data)
+
+---
+
+## Core Principles
+
+Always:
+
+- Use Pydantic v2 `BaseSettings` (via `pydantic-settings`) for all config
+- Load config once at startup; inject settings object where needed
+- Separate settings classes by concern: `DatabaseSettings`, `RedisSettings`, `AuthSettings`, `AppSettings`
+- Validate config at startup; fail fast on missing required values in production
+- Use explicit types and constraints (`PostgresDsn`, `SecretStr`, `PositiveInt`)
+- Document each setting with `Field(description=...)`
+- Keep secrets in environment or secret manager; never commit secrets
+
+Never:
+
+- Read `os.environ` scattered across modules
+- Hardcode secrets, API keys, or environment URLs in Python files
+- Use mutable global settings modified at runtime without audit
+- Log secret values or connection strings with passwords
+- Commit `.env` files with real credentials to git
+- Create different undocumented env var names for same value across modules
+
+---
+
+## Settings Structure
+
+```python
+class DatabaseSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="DB_", env_file=".env", extra="ignore")
+
+    url: PostgresDsn
+    pool_size: PositiveInt = 10
+    echo: bool = False
+
+
+class AppSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="APP_", env_file=".env", extra="ignore")
+
+    environment: Literal["local", "staging", "production"] = "local"
+    debug: bool = False
+    api_prefix: str = "/api/v1"
+
+
+def get_settings() -> AppSettings:
+    return AppSettings()
+```
+
+Composition root wires nested settings or single aggregated `Settings` object.
+
+---
+
+## Environment Conventions
+
+| Variable Prefix | Concern |
+|----------------|---------|
+| `APP_` | Application general |
+| `DB_` | PostgreSQL |
+| `REDIS_` | Cache and queues |
+| `AUTH_` | JWT, OAuth, session |
+| `STRIPE_` | Payment provider |
+| `LOG_` | Logging levels and format |
+
+Production:
+
+- Required vars must fail startup if missing
+- `debug=False` enforced
+- `.env` file optional; prefer platform secret injection
+
+Local:
+
+- `.env.example` committed with dummy values
+- `.env` gitignored
+
+---
+
+## Feature Flags
+
+Location: `apps/api/core/config/feature_flags.py`
+
+- Typed flag definitions with safe defaults
+- Flags read at startup or via injected provider; avoid mid-request env reads
+- Document flag lifecycle; remove dead flags promptly
+
+Never implement business rules solely as env flags without domain clarity.
+
+---
+
+## Decision Rules
+
+IF a value changes per environment (DB URL)
+THEN environment variable via settings model.
+
+IF a value is business data (tax rate for country)
+THEN database configuration table, not env var.
+
+IF a secret rotates independently
+THEN secret manager reference or dedicated env var with `SecretStr`.
+
+IF tests need config overrides
+THEN fixture replaces settings provider; do not mutate global env in parallel tests.
+
+IF adding third-party integration
+THEN dedicated settings group with prefix (`STRIPE_`, `SENDGRID_`).
+
+---
+
+## Anti-Patterns
+
+Never create:
+
+- `config.py` with 200 module-level constants
+- Settings imported and instantiated in every file at import time (hard to test)
+- Boolean env parsed manually (`os.getenv("X") == "true"`)
+- Production credentials in `docker-compose.yml` committed to repo
+- Dynamic `getattr(settings, "some_" + name)` lookup
+- Mixing Docker build args and runtime secrets interchangeably without documentation
+
+---
+
+## Validation Checklist
+
+Before adding configuration verify:
+
+✓ Pydantic settings model with types and descriptions.
+
+✓ Env prefix documented in `.env.example`.
+
+✓ Secrets use `SecretStr` and never logged.
+
+✓ Startup fails loudly when required production vars missing.
+
+✓ Settings injected via DI, not read ad hoc.
+
+✓ No secrets in source control.
+
+✓ Tests override settings through fixtures/fakes.
+
+✓ Feature flags typed and defaulted safely.
+
+---
+
+## Related Rules
+
+- backend/00-backend
+- backend/11-logging
+- backend/12-security-backend
+- architecture/11-dependency-injection
+
+---
+
+## Related Skills
+
+- python-fastapi-development
+- docker-expert
+- ci-cd-and-automation
+
+---
+
+## Related Agents
+
+- Backend Engineer
+- DevOps Engineer
+- Security Auditor
+
+---
+
+## Related MCP
+
+- Filesystem
+
+---
+
+## Summary
+
+Use typed Pydantic settings loaded at startup. Prefix environment variables by concern, keep secrets out of code, fail fast in production, and inject configuration through the composition root.

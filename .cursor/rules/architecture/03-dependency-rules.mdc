@@ -1,0 +1,38 @@
+---
+description: Dependency direction rules.
+alwaysApply: false
+---
+
+# Dependency Rules
+
+Allowed direction:
+
+Presentation
+
+↓
+
+Application
+
+↓
+
+Domain
+
+↓
+
+Infrastructure
+
+Never reverse dependency flow.
+
+Domain must not depend on:
+
+- Database
+- Framework
+- UI
+- HTTP
+- External APIs
+
+Infrastructure depends on Domain.
+
+Presentation depends on Application.
+
+No circular dependencies.

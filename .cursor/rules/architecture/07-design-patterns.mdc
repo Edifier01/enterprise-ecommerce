@@ -1,0 +1,22 @@
+---
+description: Approved design patterns.
+alwaysApply: false
+---
+
+# Design Patterns
+
+Preferred:
+
+- Repository
+- Factory
+- Strategy
+- Specification
+- Adapter
+- Facade
+- Dependency Injection
+
+Use patterns only when they reduce complexity.
+
+Avoid unnecessary abstraction.
+
+Never introduce a pattern solely because it is popular.

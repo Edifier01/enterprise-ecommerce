@@ -1,0 +1,57 @@
+---
+description: External system integration — Stripe, ERP, webhooks, third-party APIs.
+globs: apps/api/**/infrastructure/**/*.py
+alwaysApply: false
+---
+
+# Integration Rules
+
+## Purpose
+
+Standardize how the platform integrates with external systems without leaking infrastructure into domain.
+
+## Principles
+
+- Domain defines ports (interfaces); infrastructure implements adapters
+- All external calls are async with timeouts
+- Webhooks: verify signatures, idempotent handlers, replay-safe
+- Never trust webhook payload for amounts — reconcile with provider API
+
+## Stripe (Payments)
+
+- Use official Stripe SDK in infrastructure layer only
+- Skills: stripe-integration, pci-compliance
+- Webhook events processed in dedicated handler → application service
+- Store `stripe_event_id` for idempotency
+
+## Future Integrations
+
+- ERP / CRM: anti-corruption layer per `ddd-context-mapping`
+- Marketplace APIs: separate bounded context
+- Logistics providers: async status updates via events
+
+## Configuration
+
+- Secrets via environment variables only
+- Feature flags for enabling integrations per environment
+
+## Error Handling
+
+- Transient failures: retry with backoff (infrastructure)
+- Permanent failures: domain exception → user-safe message
+
+## Related Rules
+
+- ecommerce/03-payments, security/02-pci, architecture/02-module-boundaries
+
+## Related Skills
+
+- stripe-integration, payment-integration, ddd-context-mapping
+
+## Related MCP
+
+- Sentry, GitHub, Fetch, Context7
+
+## Summary
+
+Integrations live in infrastructure; domain speaks in business terms only.

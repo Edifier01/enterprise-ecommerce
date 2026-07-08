@@ -1,0 +1,255 @@
+---
+description: Python and FastAPI code style for backend features — naming, typing, and layout.
+globs: apps/api/**/*.py
+alwaysApply: false
+---
+
+# Backend Code Style
+
+## Purpose
+
+This rule defines Python and FastAPI code style conventions for the backend monolith at `apps/api/`.
+
+Consistent style improves readability, review speed, and alignment with Clean Architecture boundaries across features.
+
+---
+
+## Scope
+
+Applies to:
+
+- All Python source under `apps/api/`
+- Feature modules: `apps/api/app/features/<feature>/`
+- Core shared modules: `apps/api/core/`
+- Type hints, naming, imports, formatting, and docstrings
+
+Does not apply to:
+
+- Frontend TypeScript conventions
+- Generated code (Alembic autogenerate blocks may differ)
+- Third-party vendored libraries
+
+---
+
+## Core Principles
+
+Always:
+
+- Follow PEP 8 with `ruff` or `black` + `isort` as project formatters
+- Use type hints on all public functions, methods, and module-level constants where meaningful
+- Prefer `from __future__ import annotations` in new modules for forward references
+- Use `snake_case` for functions/variables, `PascalCase` for classes, `SCREAMING_SNAKE_CASE` for module constants
+- Keep modules focused; one primary concept per file
+- Order imports: stdlib → third party → local (isort sections)
+- Use explicit imports; avoid `from module import *`
+- Write docstrings for public modules and non-obvious business functions
+- Match existing feature patterns before inventing new layout
+
+Never:
+
+- Use mutable default arguments
+- Leave `# type: ignore` without comment justification
+- Use `Any` to bypass typing without reason
+- Commit commented-out code blocks
+- Mix tabs and spaces
+- Use Hungarian notation or abbreviated cryptic names (`proc_ord`, `x1`)
+
+---
+
+## Feature Layout Standard
+
+```
+apps/api/app/features/catalog/
+  presentation/
+    routers/
+    schemas/
+    dependencies.py
+  application/
+    commands/
+    queries/
+    use_cases/
+    services/
+    event_handlers/
+  domain/
+    entities/
+    value_objects/
+    events/
+    exceptions/
+    repositories/        # protocols only
+    services/
+  infrastructure/
+    persistence/
+      models/
+      mappers/
+      repositories/
+    messaging/
+    cache/
+    gateways/
+```
+
+Presentation never imports infrastructure implementations directly — only via DI.
+
+---
+
+## Naming Conventions
+
+| Element | Convention | Example |
+|---------|------------|---------|
+| Feature package | singular business noun | `checkout`, `catalog` |
+| Use case class | verb phrase | `PlaceOrderUseCase` |
+| Command | noun + Command | `PlaceOrderCommand` |
+| Repository protocol | aggregate + Repository | `OrderRepository` |
+| SQLAlchemy model | aggregate + Model | `OrderModel` |
+| Mapper functions | `to_domain`, `to_orm` | `order_mapper.to_domain` |
+| Router file | resource | `orders_router.py` |
+| Pydantic schema | purpose + Request/Response | `PlaceOrderRequest` |
+| Exception | descriptive + Error | `InsufficientStockError` |
+| Domain event | past tense | `OrderPlaced` |
+
+---
+
+## Typing Standards
+
+Always:
+
+- Use modern builtins: `list[str]`, `dict[str, int]`, `str | None`
+- Use `Protocol` for structural interfaces
+- Use `NewType` or value objects for domain ids (`OrderId = NewType("OrderId", UUID)`)
+- Annotate `AsyncSession`, return types on async functions
+- Use `Sequence`, `Mapping` for read-only collections in interfaces
+
+Avoid:
+
+- Untyped `dict` for public APIs
+- Overuse of `TypedDict` where Pydantic or dataclass fits better at boundary
+
+---
+
+## FastAPI Conventions
+
+- Routers: `APIRouter(prefix="/orders", tags=["orders"])`
+- Route functions named by action: `create_order`, `get_order`, `list_orders`
+- Response models explicit on every route
+- Status codes explicit for creates (`201`) and deletes (`204`)
+- Dependencies in `dependencies.py` or feature `presentation/dependencies.py`
+
+```python
+@router.post("", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+async def create_order(
+    body: PlaceOrderRequest,
+    use_case: PlaceOrderUseCase = Depends(get_place_order_use_case),
+    current_user: User = Depends(get_current_user),
+) -> OrderResponse:
+    result = await use_case.execute(body.to_command(current_user.id))
+    return OrderResponse.from_result(result)
+```
+
+---
+
+## Domain and Application Style
+
+- Prefer `@dataclass(frozen=True, slots=True)` for value objects and commands
+- Aggregates mutate through methods, not public field assignment from outside
+- No FastAPI/Pydantic/SQLAlchemy imports in domain layer
+- Application services/use cases expose `async def execute(...)` as primary entry
+
+---
+
+## Comments and Docstrings
+
+- Comments explain **why**, not **what**
+- Docstrings on use cases: brief purpose, raises, side effects
+- No redundant docstrings on obvious `get_by_id` if protocol is clear
+- TODO comments forbidden — create tracked issue or implement
+
+---
+
+## Decision Rules
+
+IF file exceeds ~300 lines
+THEN split by responsibility (mapper vs repository vs handler).
+
+IF unsure where code belongs
+THEN apply `00-backend` decision rules before picking folder.
+
+IF adding shared utility used by one feature
+THEN keep inside feature until second consumer exists.
+
+IF generic helper used across features
+THEN move to `apps/api/core/` with minimal surface and no feature imports upward.
+
+IF naming conflicts with Python builtin
+THEN suffix with domain term (`OrderStatus`, not `Status` alone in global scope).
+
+---
+
+## Anti-Patterns
+
+Never create:
+
+- `utils.py` dumping ground in every feature
+- Circular imports between presentation and infrastructure
+- Class-per-file explosion (empty classes) or god-file with twenty classes
+- Inconsistent async/sync method naming (`get_order` async vs `fetch_order_sync`)
+- Domain logic in `if __name__ == "__main__"` blocks
+- Star imports in production modules
+
+---
+
+## Validation Checklist
+
+Before opening PR verify:
+
+✓ Formatter and linter pass (`ruff`, `mypy` if configured).
+
+✓ Public APIs fully typed.
+
+✓ Names follow domain language and table above.
+
+✓ Imports sorted and no unused imports.
+
+✓ Files placed in correct architectural layer.
+
+✓ No commented-out code or unjustified `# noqa`.
+
+✓ Router delegates; no business logic in presentation.
+
+✓ New modules match feature folder structure.
+
+---
+
+## Related Rules
+
+- backend/00-backend
+- architecture/04-folder-structure
+- architecture/08-naming
+- architecture/03-dependency-rules
+- core/04-quality
+
+---
+
+## Related Skills
+
+- python-fastapi-development
+- cc-skill-coding-standards
+- fastapi-pro
+
+---
+
+## Related Agents
+
+- Backend Engineer
+- API Engineer
+
+---
+
+## Related MCP
+
+- Filesystem
+- Context7
+
+---
+
+## Summary
+
+Use strict typing, domain-driven naming, and feature-first layout under `apps/api/app/features/`. Keep layers clean, format consistently, and split modules before they become dumping grounds. Presentation stays thin; domain stays framework-free.

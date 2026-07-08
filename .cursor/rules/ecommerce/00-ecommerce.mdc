@@ -1,0 +1,258 @@
+---
+description: Enterprise e-commerce domain overview, bounded contexts, and cross-cutting commerce standards.
+globs: apps/api/app/features/**
+alwaysApply: false
+---
+
+# E-Commerce Domain Standard
+
+## Purpose
+
+Define the e-commerce domain architecture for the enterprise platform.
+
+This rule establishes bounded contexts, integration patterns, and commerce-wide invariants that all feature rules inherit.
+
+---
+
+## Business Scope
+
+The platform supports:
+
+- B2C online retail (primary)
+- Multi-currency transactions
+- Guest and registered checkout
+- Product catalog with variants and categories
+- Real-time inventory management
+- Stripe payment processing
+- Order lifecycle and fulfillment tracking
+- Promotional discounts (extensible)
+
+Out of scope unless explicitly requested:
+
+- Marketplace multi-vendor splits
+- Subscription billing (requires ADR)
+- Physical POS integration
+
+---
+
+## Bounded Contexts
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Catalog   │────▶│  Inventory  │◀────│   Checkout  │
+└─────────────┘     └─────────────┘     └──────┬──────┘
+       │                    │                   │
+       │              ┌─────▼─────┐       ┌─────▼─────┐
+       │              │  Orders   │◀──────│ Payments  │
+       │              └───────────┘       └───────────┘
+       │                    │
+┌──────▼──────┐      ┌──────▼──────┐
+│  Customers  │      │ Fulfillment │
+└─────────────┘      └─────────────┘
+```
+
+| Context | Aggregate Roots | Responsibility |
+|---------|-------------------|----------------|
+| Catalog | Product, Category | Merchandising, pricing display |
+| Inventory | InventoryItem, Reservation | Stock levels, holds |
+| Checkout | Cart, CheckoutSession | Pre-purchase flow |
+| Orders | Order | Post-purchase lifecycle |
+| Payments | PaymentRecord | Stripe integration, reconciliation |
+| Customers | Customer, Address | Identity, shipping/billing |
+
+Each context owns its data and business rules. Cross-context communication uses application services, domain events, or anti-corruption layers — never direct table access across modules.
+
+---
+
+## Context Integration Map
+
+| Upstream | Downstream | Pattern | Contract |
+|----------|------------|---------|----------|
+| Catalog | Checkout | Published language | Product/variant ID + price snapshot |
+| Inventory | Checkout | Customer/supplier | Reserve/release API |
+| Checkout | Orders | Process manager | Place order command |
+| Checkout | Payments | Process manager | Create payment intent |
+| Payments | Orders | Event | Payment succeeded → confirm order |
+| Orders | Inventory | Event | Confirm → deduct reserved stock |
+| Customers | Checkout | Shared kernel | Customer ID, addresses |
+
+Document new integrations with context mapping (`architecture/01-ddd`).
+
+---
+
+## Core Domain Invariants
+
+### Pricing
+
+- Display price comes from catalog at render time
+- Checkout captures price snapshot on cart line — never trust client-submitted prices
+- Order lines store immutable price at purchase
+- Discounts validated server-side against promotion rules
+
+### Inventory
+
+- Available = on_hand - reserved
+- Cannot sell below zero available (unless backorder explicitly enabled)
+- Reservations expire after configurable TTL (default: 15 minutes)
+- Order confirmation converts reservation to deduction
+
+### Orders
+
+- Order number is unique and human-readable
+- Status transitions follow defined state machine
+- Cancelled orders release inventory and trigger refund flow if paid
+- Totals must reconcile: subtotal + tax + shipping - discounts = total
+
+### Payments
+
+- One successful payment per order (unless partial payments explicitly supported)
+- Idempotency on all payment creation
+- Webhook is source of truth for async payment status
+- Never store card data — Stripe handles PCI scope
+
+---
+
+## Guest vs Registered Customers
+
+| Feature | Guest | Registered |
+|---------|-------|------------|
+| Browse catalog | Yes | Yes |
+| Add to cart | Session token | Account + session merge |
+| Checkout | Email required | Authenticated |
+| Order history | Email lookup link | Account dashboard |
+| Saved addresses | No | Yes |
+
+On login/register during checkout: merge guest cart into customer cart (higher quantity wins per line).
+
+---
+
+## Multi-Currency
+
+- Each cart/order has single currency — no mixed-currency carts
+- Prices stored per currency on variants or via exchange at display
+- Stripe PaymentIntent uses order currency
+- Rounding: banker's rounding to 4 decimal places internally, 2 for display
+
+---
+
+## Idempotency
+
+All mutating commerce operations accept idempotency keys:
+
+| Operation | Key Scope | Storage TTL |
+|-----------|-----------|-------------|
+| Create payment intent | Client-provided header | 24 hours |
+| Place order | Checkout session ID | Session lifetime |
+| Webhook processing | Stripe event ID | Permanent dedup |
+| Inventory reservation | Cart line + session | Reservation TTL |
+
+Return same response for duplicate idempotency key within TTL.
+
+---
+
+## Event-Driven Patterns
+
+Domain events (internal):
+
+- `CartUpdated`
+- `InventoryReserved`
+- `OrderPlaced`
+- `PaymentSucceeded`
+- `PaymentFailed`
+- `OrderShipped`
+- `OrderCancelled`
+
+Events enable:
+
+- Email notifications
+- Analytics
+- Search index updates
+- Inventory sync
+
+Prefer outbox pattern for reliable delivery (`database/00-database`).
+
+---
+
+## API Surface
+
+| Domain | Base Path | Auth |
+|--------|-----------|------|
+| Catalog | `/api/v1/products`, `/api/v1/categories` | Public read |
+| Cart | `/api/v1/cart` | Session or JWT |
+| Checkout | `/api/v1/checkout` | Session or JWT |
+| Orders | `/api/v1/orders` | JWT |
+| Payments | `/api/v1/webhooks/stripe` | Stripe signature |
+| Admin | `/api/v1/admin/*` | Admin JWT + RBAC |
+
+Version in URL path. Breaking changes require new version.
+
+---
+
+## Error Model
+
+Commerce errors return structured responses:
+
+```json
+{
+  "error": {
+    "code": "INSUFFICIENT_INVENTORY",
+    "message": "Not enough stock for variant SKU-123",
+    "details": { "variant_id": 456, "requested": 2, "available": 1 }
+  }
+}
+```
+
+Standard codes:
+
+- `PRODUCT_NOT_FOUND`
+- `INSUFFICIENT_INVENTORY`
+- `CART_EMPTY`
+- `INVALID_PROMOTION`
+- `PAYMENT_FAILED`
+- `ORDER_NOT_FOUND`
+- `INVALID_STATUS_TRANSITION`
+
+---
+
+## Feature Flags
+
+Commerce-critical paths support feature flags:
+
+- New checkout flow rollout
+- Backorder enablement
+- Promotion engine changes
+
+Flags evaluated server-side. Never gate payment security checks behind flags.
+
+---
+
+## Dedicated Rules
+
+| Rule | Domain |
+|------|--------|
+| `ecommerce/01-catalog` | Products, categories, search |
+| `ecommerce/02-checkout` | Cart, checkout session |
+| `ecommerce/03-payments` | Stripe integration |
+| `ecommerce/04-orders` | Order lifecycle |
+| `ecommerce/05-inventory` | Stock and reservations |
+
+---
+
+## Anti-Patterns
+
+- Monolithic "OrderService" that owns catalog, inventory, and payments
+- Client-side price calculation trusted at payment
+- Direct SQL joins across bounded context modules
+- Synchronous Stripe calls inside database transactions
+- Inventory decrement without prior reservation
+- Order creation before payment confirmation (unless invoice flow approved)
+
+---
+
+## Related Rules
+
+- `architecture/01-ddd` — DDD standards
+- `architecture/02-module-boundaries` — module boundaries
+- `database/01-schema` — entity schemas
+- `security/02-pci` — payment security
+- `backend/00-backend` — implementation patterns
