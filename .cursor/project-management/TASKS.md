@@ -216,28 +216,31 @@
 - [x] `tests/test_variants.py`: 11 tests (variant ordering/shape, sale vs no-sale, category filter, domain invariant)
 - [x] Full backend suite: 35/35 pytest green; TypeScript 0 errors
 
-### Feature: Checkout Foundation
+### Sprint 9 — Checkout Foundation
 
-**Status:** COMPLETED
+**Status:** CLOSED (2026-07-09)
 
-- [x] ADR-003 — Stripe checkout foundation, payment/order lifecycle, and order creation
+**Scope:** Cart, checkout sessions, payment records, Stripe PaymentIntent prototype, webhooks, order creation, storefront checkout UX. Final provider (YooKassa) deferred per ADR-004.
+
+- [x] ADR-003 — Stripe checkout foundation, payment/order lifecycle, order creation invariant
+- [x] ADR-004 — YooKassa selected as final provider; Stripe validation not a release blocker
 - [x] Cart session management (guest/auth cart model, server-side line snapshots)
 - [x] Stripe PaymentIntent integration (Payment Element flow, idempotency key)
 - [x] Webhook handler with signature verification + event idempotency
 - [x] Order confirmation flow (order created only from `payment_intent.succeeded`)
 - [x] Frontend cart, checkout, and confirmation pages
-- [x] Wire guest-cart merge into auth login flow
-- [x] Browser-auth checkout support (`access_token` cookie recognized by checkout API)
+- [x] Guest-cart merge into auth login flow
+- [x] Browser-auth checkout (`access_token` cookie recognized by checkout API)
 - [x] Checkout price revalidation refreshes stale server-side cart snapshots
 - [x] Checkout security hardening (Stripe CSP/security headers + checkout/webhook rate limiting)
 - [x] Captured-payment anomaly paths emit critical manual-review logs
-- [x] Backend tests: 48/48 pytest green
-- [x] Frontend TypeScript: `tsc --noEmit` clean
-- [x] Run PostgreSQL `alembic upgrade head` through migration 006 (environment validation)
-- [x] Run browser checkout foundation smoke with API (release validation)
-  - [x] Browser shell smoke: PDP -> cart -> checkout works against local API on `localhost:3000`
-- [x] ADR-004 — YooKassa selected as final payment provider; Stripe validation skipped by decision
-- [x] Inventory reservation/deduction sprint (deferred per ADR-003) — see Sprint 10 below
+- [x] Migration `006_add_checkout_payments_orders` validated at PostgreSQL head
+- [x] Backend tests: 48/48 pytest green at formal closeout
+- [x] Frontend TypeScript: `tsc --noEmit` clean at formal closeout
+- [x] Browser shell smoke: PDP → cart → checkout against local API (`localhost:3000`)
+- [x] PM state synced; inventory reservation/deduction deferred to Sprint 10 (ADR-003)
+
+**Formal closeout quality gate (2026-07-09):** 48/48 pytest, ruff clean, tsc clean, migration 006 at head, browser shell smoke passed.
 
 ### Sprint 10 — Inventory Reservation and Deduction
 
@@ -255,17 +258,20 @@
 - [x] Backend tests: 51/51 pytest green (inventory reserve/deduct/release/idempotency)
 - [x] Backend lint: ruff clean; Frontend TypeScript: tsc clean
 
-### Sprint 9 — Formal Closeout
+### Feature: Dev Payment Stub (no real provider)
 
 **Status:** COMPLETED (2026-07-09)
 
-- [x] Quality gate re-run: 48/48 pytest green (`DATABASE_URL=sqlite+aiosqlite:///:memory:`)
-- [x] Quality gate re-run: `ruff check app tests` clean (fixed unused import in catalog repository)
-- [x] Quality gate re-run: `tsc --noEmit` clean
-- [x] Confirm PostgreSQL migration 006 validated at head (prior session)
-- [x] Confirm browser checkout foundation smoke passed (prior session)
-- [x] PM state synced: Sprint 9 marked CLOSED; YooKassa deferred to final project gate
-- [x] Handoff written with next sprint recommendation (inventory reservation/deduction)
+- [x] ADR-006 — dev payment stub pattern, webhook simulation, production guardrails
+- [x] `StubPaymentGateway` behind `IStripeGateway` (`infrastructure/stub/gateway.py`)
+- [x] `payment_provider=auto|stub|stripe` config with production fail-fast for stub
+- [x] `POST /api/v1/dev/payments/{id}/simulate-success` — routes through `WebhookService`
+- [x] Frontend stub mode (`NEXT_PUBLIC_PAYMENT_MODE=auto|stub|stripe`) + test payment button
+- [x] Stripe Payment Element extracted to `checkout-stripe-payment-form.tsx` (lazy load)
+- [x] Backend tests: stub PI creation, simulate-success order, production guard (54/54 pytest)
+- [x] Playwright E2E `checkout-stub-smoke.spec.ts` — full stub checkout flow
+- [x] E2E bootstrap (`scripts/start-e2e-api.mjs`) + `reset_e2e_checkout.py` for isolated DB state
+- [x] `.env.example` updated with payment provider env vars
 
 ### Final Project Gate — YooKassa Payment Integration
 

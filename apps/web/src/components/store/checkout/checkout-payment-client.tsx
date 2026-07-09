@@ -1,35 +1,47 @@
 "use client";
 
-import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StripePaymentForm } from "@/components/store/checkout/checkout-stripe-payment-form";
 import {
   createCheckoutSession,
   createPaymentIntent,
   getCheckoutErrorMessage,
   getCart,
+  simulateStubPaymentSuccess,
   type Cart,
 } from "@/lib/checkout/api";
 import { formatPrice } from "@/lib/store/format";
 
 const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
+const paymentMode = process.env.NEXT_PUBLIC_PAYMENT_MODE ?? "auto";
+
+function resolvePaymentMode(): "stub" | "stripe" {
+  if (paymentMode === "stub") return "stub";
+  if (paymentMode === "stripe") return "stripe";
+  return publishableKey ? "stripe" : "stub";
+}
 
 type PaymentState = {
   sessionId: string;
   clientSecret: string;
+  paymentIntentId: string;
 };
 
 export function CheckoutPaymentClient() {
+  const resolvedMode = resolvePaymentMode();
   const [cart, setCart] = useState<Cart | null>(null);
   const [payment, setPayment] = useState<PaymentState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [stripeModule, setStripeModule] = useState<{
+    loadStripe: typeof import("@stripe/stripe-js").loadStripe;
+  } | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     let mounted = true;
@@ -47,6 +59,22 @@ export function CheckoutPaymentClient() {
     };
   }, []);
 
+  useEffect(() => {
+    if (resolvedMode !== "stripe" || !publishableKey) return;
+    let mounted = true;
+    import("@stripe/stripe-js").then((mod) => {
+      if (mounted) setStripeModule({ loadStripe: mod.loadStripe });
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [resolvedMode]);
+
+  const stripePromise = useMemo(() => {
+    if (resolvedMode !== "stripe" || !publishableKey || !stripeModule) return null;
+    return stripeModule.loadStripe(publishableKey);
+  }, [resolvedMode, stripeModule]);
+
   const currency = cart?.currency ?? cart?.lines[0]?.currency ?? "USD";
 
   function preparePayment() {
@@ -55,9 +83,26 @@ export function CheckoutPaymentClient() {
       try {
         const session = await createCheckoutSession();
         const intent = await createPaymentIntent(session.id);
-        setPayment({ sessionId: session.id, clientSecret: intent.client_secret });
+        setPayment({
+          sessionId: session.id,
+          clientSecret: intent.client_secret,
+          paymentIntentId: intent.payment_intent_id,
+        });
       } catch (err) {
         setError(getCheckoutErrorMessage(err, "Не удалось начать оплату"));
+      }
+    });
+  }
+
+  function completeStubPayment() {
+    if (!payment) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        await simulateStubPaymentSuccess(payment.paymentIntentId);
+        router.push(`/checkout/confirmation?session_id=${payment.sessionId}`);
+      } catch (err) {
+        setError(getCheckoutErrorMessage(err, "Не удалось выполнить тестовую оплату"));
       }
     });
   }
@@ -104,27 +149,53 @@ export function CheckoutPaymentClient() {
           <CardTitle>Оплата</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          {!publishableKey ? (
-            <p className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
-              Не задан `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`. Оплата недоступна.
+          {resolvedMode === "stub" ? (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              Тестовый режим оплаты: реальный платёжный провайдер не используется.
             </p>
           ) : null}
 
-          {payment && stripePromise && elementsOptions ? (
-            <Elements stripe={stripePromise} options={elementsOptions}>
-              <PaymentForm sessionId={payment.sessionId} />
-            </Elements>
-          ) : (
+          {payment && resolvedMode === "stripe" && stripePromise && elementsOptions ? (
+            <StripePaymentForm
+              sessionId={payment.sessionId}
+              stripePromise={stripePromise}
+              elementsOptions={elementsOptions}
+            />
+          ) : payment && resolvedMode === "stub" ? (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                На следующем шаге откроется защищённая Stripe Payment Element форма.
-                Данные карты не проходят через сервер магазина.
+                Нажмите кнопку ниже, чтобы симулировать успешную оплату и создать заказ.
               </p>
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
               <Button
                 type="button"
                 size="lg"
-                disabled={!publishableKey || isPending}
+                disabled={isPending}
+                className="bg-store-cta text-store-cta-foreground hover:bg-store-cta/90"
+                onClick={completeStubPayment}
+              >
+                {isPending ? "Подтверждаем..." : "Оплатить (тест)"}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {resolvedMode === "stripe"
+                  ? "На следующем шаге откроется защищённая Stripe Payment Element форма. Данные карты не проходят через сервер магазина."
+                  : "На следующем шаге откроется тестовая форма оплаты без реального провайдера."}
+              </p>
+              {resolvedMode === "stripe" && !publishableKey ? (
+                <p className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+                  Не задан `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`. Оплата недоступна.
+                </p>
+              ) : null}
+              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              <Button
+                type="button"
+                size="lg"
+                disabled={
+                  isPending || (resolvedMode === "stripe" && !publishableKey)
+                }
                 className="bg-store-cta text-store-cta-foreground hover:bg-store-cta/90"
                 onClick={preparePayment}
               >
@@ -162,51 +233,5 @@ export function CheckoutPaymentClient() {
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function PaymentForm({ sessionId }: { sessionId: string }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!stripe || !elements) return;
-
-    setIsSubmitting(true);
-    setError(null);
-
-    const returnUrl = `${window.location.origin}/checkout/confirmation?session_id=${sessionId}`;
-    const result = await stripe.confirmPayment({
-      elements,
-      confirmParams: { return_url: returnUrl },
-      redirect: "if_required",
-    });
-
-    if (result.error) {
-      setError(result.error.message ?? "Платёж не выполнен");
-      setIsSubmitting(false);
-      return;
-    }
-
-    router.push(`/checkout/confirmation?session_id=${sessionId}`);
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement />
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <Button
-        type="submit"
-        size="lg"
-        disabled={!stripe || !elements || isSubmitting}
-        className="bg-store-cta text-store-cta-foreground hover:bg-store-cta/90"
-      >
-        {isSubmitting ? "Подтверждаем..." : "Оплатить"}
-      </Button>
-    </form>
   );
 }

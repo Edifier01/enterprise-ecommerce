@@ -15,6 +15,7 @@ from app.features.checkout.application.checkout_service import CheckoutService
 from app.features.checkout.application.webhook_service import WebhookService
 from app.features.checkout.domain.ports import ICheckoutRepository, IStripeGateway
 from app.features.checkout.infrastructure.persistence.repository import CheckoutRepository
+from app.features.checkout.infrastructure.stub.gateway import StubPaymentGateway
 from app.features.checkout.infrastructure.stripe.gateway import StripeGateway
 from app.features.inventory.application.inventory_service import InventoryService
 from app.features.inventory.domain.ports import IInventoryRepository
@@ -45,6 +46,8 @@ def get_inventory_service(
 
 
 def get_stripe_gateway() -> IStripeGateway:
+    if settings.get_payment_provider() == "stub":
+        return StubPaymentGateway()
     return StripeGateway()
 
 

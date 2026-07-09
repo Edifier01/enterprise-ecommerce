@@ -22,6 +22,7 @@ from app.core.middleware import CheckoutRateLimitMiddleware, RequestIdMiddleware
 from app.features.auth.presentation.router import router as auth_router
 from app.features.catalog.presentation.categories_router import router as categories_router
 from app.features.catalog.presentation.router import router as catalog_router
+from app.features.checkout.presentation.dev_router import router as checkout_dev_router
 from app.features.checkout.presentation.router import router as checkout_router
 
 _LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] [request_id=%(request_id)s] %(message)s"
@@ -100,3 +101,4 @@ app.include_router(catalog_router, prefix="/api/v1")
 app.include_router(categories_router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(checkout_router, prefix="/api/v1")
+app.include_router(checkout_dev_router, prefix="/api/v1")

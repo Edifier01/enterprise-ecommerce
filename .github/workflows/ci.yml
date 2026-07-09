@@ -31,6 +31,27 @@ jobs:
   frontend:
     name: Frontend (Node 24)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ecommerce
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready -U postgres -d ecommerce
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/ecommerce
+      E2E_API_PORT: "8001"
+      E2E_WEB_PORT: "3002"
+      PAYMENT_PROVIDER: stub
+      ENVIRONMENT: development
+      CORS_ORIGINS: '["http://localhost:3002"]'
     steps:
       - uses: actions/checkout@v4
 
@@ -40,6 +61,14 @@ jobs:
           node-version: "24"
           cache: "npm"
           cache-dependency-path: apps/web/package-lock.json
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install API dependencies
+        run: pip install -r apps/api/requirements.txt
 
       - name: Install dependencies
         working-directory: apps/web
@@ -57,12 +86,6 @@ jobs:
         working-directory: apps/web
         run: npm run build
 
-      - name: Check API availability
-        id: check-api
-        run: curl --fail --silent http://localhost:8000/health
-        continue-on-error: true
-
       - name: Run Playwright E2E tests
-        if: steps.check-api.outcome == 'success'
         working-directory: apps/web
         run: npx playwright test

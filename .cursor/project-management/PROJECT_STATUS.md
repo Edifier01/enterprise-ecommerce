@@ -9,21 +9,23 @@
 
 **Phase 24 — Internet Store Design**
 
-Platform phases 0–23 and Phase 25 complete. Sprints 1–10 complete. Sprint 10 formally closed 2026-07-09. Final YooKassa payment integration deferred to final project gate per ADR-004.
+Platform phases 0–23 and Phase 25 complete. Sprints 1–10 closed. Sprint 9 checkout foundation formally closed and PM-synced 2026-07-09. Post-sprint: dev payment stub (ADR-006) + Playwright checkout E2E complete. Final YooKassa payment integration deferred to final project gate per ADR-004.
 
 ---
 
 ## Current Objective
 
-Start next Phase 24 epic. Recommended: search API or order history UI per product priority.
+Sprint 9 PM sync complete. Pick next Phase 24 epic: search API or order history UI per product priority.
 
 ---
 
 ## Current Sprint
 
-**Sprint 10 — Inventory Reservation/Deduction** ✅ **CLOSED** (2026-07-09)
+**Sprint 9 — Checkout Foundation** ✅ **CLOSED** (2026-07-09, PM sync)
 
-Delivered: inventory bounded context, migration 007, checkout reservation/deduction/release integration, cart availability checks, frontend stock error messaging, seed inventory quantities. Quality gate: 51/51 pytest, ruff clean, tsc clean.
+Delivered: cart/checkout bounded context, migration 006, Stripe PaymentIntent prototype, webhook order creation, storefront cart/checkout/confirmation UX, ADR-003/ADR-004. Quality gate at closeout: 48/48 pytest, ruff clean, tsc clean, browser shell smoke passed.
+
+**Also closed:** Sprint 10 (inventory), dev payment stub (ADR-006), Playwright `checkout-stub-smoke.spec.ts`.
 
 ---
 
@@ -31,9 +33,9 @@ Delivered: inventory bounded context, migration 007, checkout reservation/deduct
 
 **AI Development Platform (Phases 0–23, 25):** ✅ 100% complete
 
-**Overall roadmap:** ~96% (25/26 phases — Phase 24 application in progress)
+**Overall roadmap:** ~97% (25/26 phases — Phase 24 application in progress)
 
-**Phase 24 (application):** ~96% (catalog + categories + variants/pricing + auth + checkout + inventory + storefront UX + CI + E2E smoke; final YooKassa payment gate pending)
+**Phase 24 (application):** ~97% (catalog + categories + variants/pricing + auth + checkout + inventory + dev payment stub + storefront UX + CI + E2E checkout smoke; final YooKassa payment gate pending)
 
 ---
 
@@ -47,8 +49,10 @@ Delivered: inventory bounded context, migration 007, checkout reservation/deduct
 - [x] Sprint 6 — JWT Verification & Auth Foundation + storefront design
 - [x] Sprint 7 — Category domain
 - [x] Sprint 8 — Product variants & pricing display
-- [x] Sprint 9 — Checkout foundation (formally closed 2026-07-09)
+- [x] Sprint 9 — Checkout foundation (formally closed + PM sync 2026-07-09)
 - [x] Sprint 10 — Inventory reservation/deduction (formally closed 2026-07-09)
+- [x] Dev payment stub — checkout without real provider (ADR-006, 2026-07-09)
+- [x] Playwright checkout stub E2E smoke (2026-07-09)
 
 ---
 
@@ -70,7 +74,7 @@ None.
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | Empty product list without migration/seed | Medium | Run `alembic upgrade head` + seed data |
-| E2E tests skipped in CI (no API server) | Medium | Add `webServer` to Playwright config or CI service containers |
+| E2E login shell test selector drift | Low | `storefront-smoke` login uses `heading`; `CardTitle` is not a heading role |
 | Architecture drift | High | Read `DECISIONS.md` and ADRs before structural changes |
 | Stripe-specific code remains temporarily | Medium | Final payment sprint migrates to YooKassa per ADR-004 |
 | Reservation TTL sweep not automated | Medium | `expire_active_reservations` exists; add background job in ops sprint |
@@ -86,10 +90,10 @@ None.
 
 ## Last Updated
 
-2026-07-09 (Sprint 10 formally closed — quality gate passed: 51/51 pytest, ruff, tsc)
+2026-07-09 (Sprint 9 PM sync complete)
 
 ---
 
 ## Last Agent
 
-Implementation Agent (Sprint 10 formal closeout)
+PM sync (Sprint 9 formal closeout)

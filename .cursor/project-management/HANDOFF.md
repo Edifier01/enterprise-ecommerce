@@ -2,79 +2,64 @@
 
 ## Current Agent
 
-Implementation Agent (Sprint 10 formal closeout complete)
+PM sync (Sprint 9 formal closeout complete)
 
 ## Previous Agent
 
-Implementation Agent (Sprint 9 formal closeout)
+Implementation Agent (payment stub + Playwright checkout E2E)
 
 ## Completed Work
 
-**Sprint 10 — Inventory Reservation/Deduction (2026-07-09):**
+**Sprint 9 — Checkout Foundation PM Sync (2026-07-09):**
 
-Formally closed Sprint 10 per approved Feature Plan and ADR-005.
+Formally closed and synced across all PM state files. Sprint 9 deliverables consolidated in `TASKS.md`; duplicate "Formal Closeout" section merged into single Sprint 9 epic.
 
-**Delivered:**
+**Sprint 9 delivered (closed):**
 
-- Inventory bounded context: `apps/api/app/features/inventory/` (domain, application, infrastructure)
-- Migration `007_add_inventory_reservations.py` — `inventory_items`, `inventory_reservations` with CHECK constraints and variant backfill
-- Checkout integration:
-  - Reserve at `CheckoutService.create_checkout_session`
-  - Re-affirm at `create_payment_intent`
-  - Deduct in `WebhookService._handle_payment_succeeded` (same transaction as order creation)
-  - Release on payment failed/canceled webhooks
-- Cart availability checks via `InventoryService.ensure_available` (HTTP 409)
-- Frontend: `getCheckoutErrorMessage` RU messaging in cart/checkout clients
-- `seed_dev.py`: seeds `inventory_items` with default quantities (50 in-stock / 0 out-of-stock)
+- ADR-003 checkout/payment/order lifecycle; ADR-004 YooKassa as final provider (Stripe = prototype)
+- Cart, checkout session, payment record, order persistence (migration 006)
+- Stripe PaymentIntent + webhook order creation invariant
+- Storefront cart, checkout, confirmation pages
+- Guest-cart merge, cookie auth for checkout, price revalidation, security hardening
+- Quality gate at closeout: **48/48 pytest**, ruff clean, tsc clean, migration 006 at head, browser shell smoke
 
-**Quality gate (this session):**
+**Post-Sprint 9 (separate features, also complete):**
 
-- Backend: `python -m pytest tests/ -q` with `DATABASE_URL=sqlite+aiosqlite:///:memory:` — **51/51 passed**
-- Backend lint: `python -m ruff check app tests` — **passed**
-- Frontend TypeScript: `npx tsc --noEmit` — **passed**
+- Sprint 10 — inventory reservation/deduction (ADR-005)
+- Dev payment stub (ADR-006) — stub gateway, simulate-webhook, Playwright `checkout-stub-smoke.spec.ts`
 
-**Architectural decisions:**
+**PM files updated:**
 
-- ADR-005: inventory reservation lifecycle, concurrency (row lock + version + DB CHECK), idempotency boundaries
-
-**PM state updated:**
-
-- `CURRENT_CONTEXT.md` — Sprint 10 CLOSED
-- `PROJECT_STATUS.md` — Sprint 10 closed; next actions updated
-- `TASKS.md` — Sprint 10 section marked COMPLETED
+- `TASKS.md` — Sprint 9 unified as CLOSED epic
+- `PROJECT_STATUS.md` — Sprint 9 closeout reflected
+- `CURRENT_CONTEXT.md` — progress snapshot refreshed
 - `HANDOFF.md` — this handoff
+- `DECISIONS.md` — unchanged (ADR-003/004 already indexed)
 
-## Files Changed
+## Files Changed (Sprint 9 scope — reference)
 
-| File | Change |
-|------|--------|
-| `apps/api/app/features/inventory/` | Inventory bounded context (entities, ports, service, models, repository) |
-| `apps/api/alembic/versions/007_add_inventory_reservations.py` | Migration for inventory tables |
-| `apps/api/app/features/checkout/application/checkout_service.py` | Reserve/re-affirm inventory on checkout |
-| `apps/api/app/features/checkout/application/webhook_service.py` | Deduct/release inventory on payment events |
-| `apps/api/app/features/checkout/application/cart_service.py` | Availability checks on cart mutations |
-| `apps/api/app/features/checkout/presentation/router.py` | 409 handling for insufficient stock |
-| `apps/api/app/features/checkout/presentation/dependencies.py` | Inventory DI wiring |
-| `apps/api/tests/test_checkout.py` | Inventory reservation/deduction/release tests |
-| `apps/web/src/lib/checkout/api.ts` | RU out-of-stock error helper |
-| `apps/web/src/components/store/checkout/cart-client.tsx` | Stock error display |
-| `apps/web/src/components/store/checkout/checkout-payment-client.tsx` | Stock error display |
-| `apps/api/scripts/seed_dev.py` | Seed inventory quantities for variants |
-| `docs/adr/ADR-005-inventory-reservation-and-deduction.md` | Inventory ADR |
-| `.cursor/project-management/*` | Sprint 10 closeout PM sync |
+| Area | Key paths |
+|------|-----------|
+| Backend checkout | `apps/api/app/features/checkout/` |
+| Migration | `apps/api/alembic/versions/006_add_checkout_payments_orders.py` |
+| Frontend checkout | `apps/web/src/app/cart/`, `checkout/`, `components/store/checkout/` |
+| ADRs | `docs/adr/ADR-003-*.md`, `docs/adr/ADR-004-*.md` |
+| Tests | `apps/api/tests/test_checkout.py` (48 tests at Sprint 9 closeout) |
 
 ## Known Issues
 
-- Stripe-specific checkout code remains as Sprint 9 foundation/prototype; YooKassa migration is final project gate work per ADR-004.
-- TTL expiry sweep (`expire_active_reservations`) is implemented but not yet scheduled as a background job.
+- Stripe-specific naming persists until YooKassa sprint per ADR-004.
+- Sprint 9 browser smoke was shell-only (PDP → cart → checkout); full payment E2E added later via ADR-006 stub.
+- TTL expiry sweep not yet scheduled as background job.
 - Search remains a UI placeholder — no backend search API yet.
-- `localhost:3001` is outside current API CORS origins; use `localhost:3000` for local smoke.
 
-## Verification Results
+## Verification Results (Sprint 9 closeout)
 
-- Backend pytest: **51/51 green**
+- Backend pytest: **48/48 green**
 - Backend ruff: **passed**
 - Frontend tsc: **passed**
+- Migration 006: **at head**
+- Browser shell smoke: **passed**
 - Quality gate: **✅ PASSED**
 
 ## Next Recommended Action
@@ -86,3 +71,10 @@ Pick next Phase 24 epic per product priority:
 - Background job for inventory reservation TTL expiry
 
 Final project gate (later): YooKassa payment integration + full browser payment smoke per ADR-004.
+
+## How to Run Checkout E2E (post-Sprint 9 / ADR-006)
+
+```bash
+cd apps/web
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/ecommerce CI=true npm run test:e2e:checkout
+```

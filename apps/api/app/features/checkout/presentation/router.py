@@ -44,6 +44,12 @@ router = APIRouter(tags=["checkout"])
 CART_COOKIE_MAX_AGE = 60 * 60 * 24 * 30  # 30 days
 
 
+def _is_payment_available() -> bool:
+    if settings.get_payment_provider() == "stub":
+        return True
+    return bool(settings.stripe_secret_key.get_secret_value())
+
+
 def _cart_to_response(cart: Cart) -> CartResponse:
     subtotal = cart.subtotal_cents
     return CartResponse(
@@ -230,7 +236,7 @@ async def create_payment_intent(
     checkout_service: CheckoutService = Depends(get_checkout_service),
     repo: ICheckoutRepository = Depends(get_checkout_repository),
 ) -> PaymentIntentResponse | JSONResponse:
-    if not settings.stripe_secret_key.get_secret_value():
+    if not _is_payment_available():
         return JSONResponse(
             status_code=503,
             content={"detail": "Payment processing is temporarily unavailable"},

@@ -128,3 +128,12 @@ export function getCheckoutSession(sessionId: string): Promise<CheckoutSession> 
     method: "GET",
   });
 }
+
+export function simulateStubPaymentSuccess(
+  paymentIntentId: string
+): Promise<{ status: string }> {
+  return requestJson<{ status: string }>(
+    `/api/v1/dev/payments/${paymentIntentId}/simulate-success`,
+    { method: "POST" }
+  );
+}

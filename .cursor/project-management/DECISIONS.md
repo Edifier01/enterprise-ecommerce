@@ -385,6 +385,53 @@ per-feature coordination and validation to cheaper models:
 
 ---
 
+## ADR-006
+
+| Field | Value |
+|-------|-------|
+| **Decision ID** | ADR-006 |
+| **Date** | 2026-07-09 |
+| **Status** | Accepted |
+| **Full ADR** | `docs/adr/ADR-006-dev-payment-stub.md` |
+
+**Context:**
+
+ADR-004 defers YooKassa to the final project gate. Local development and browser
+smoke cannot complete checkout without Stripe keys or CLI webhook forwarding,
+even though backend tests already prove the lifecycle with an in-memory gateway.
+
+**Decision:**
+
+- Add `StubPaymentGateway` behind existing `IStripeGateway` with
+  `payment_provider=auto|stub|stripe` (auto defaults to stub without Stripe key).
+- Add dev-only `POST /api/v1/dev/payments/{id}/simulate-success` that routes
+  through `WebhookService` (preserves ADR-003 order invariant).
+- Frontend `NEXT_PUBLIC_PAYMENT_MODE=auto|stub|stripe` shows test payment UI
+  when stub mode is active.
+- Hard-gate stub from production (`payment_provider=stub` fails fast; simulate
+  endpoint returns 404).
+
+**Alternatives Considered:**
+
+| Alternative | Reason Rejected |
+|-------------|-----------------|
+| Synchronous order on payment intent | Violates ADR-003 webhook invariant |
+| Require Stripe test keys for dev | Validates provider being replaced per ADR-004 |
+
+**Consequences:**
+
+- Positive: full cart→order flow works locally without provider credentials.
+- Negative: stub does not validate real provider signatures; Stripe naming persists
+  until YooKassa sprint.
+
+**Related Rules:**
+
+- `ecommerce/02-checkout`
+- `ecommerce/03-payments`
+- `security/02-pci`
+
+---
+
 ## Decision Log Template
 
 Use when recording new decisions:

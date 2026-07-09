@@ -667,3 +667,119 @@ async def test_checkout_session_refreshes_stale_cart_price(
 
     cart_response = await client.get("/api/v1/cart")
     assert cart_response.json()["lines"][0]["unit_price_cents"] == 3000
+
+
+@pytest.fixture
+async def stub_checkout_client_with_db() -> AsyncGenerator[
+    tuple[AsyncClient, async_sessionmaker], None
+]:
+    original_provider = settings.payment_provider
+    original_stripe_key = settings.stripe_secret_key
+    original_webhook_secret = settings.stripe_webhook_secret
+    settings.payment_provider = "stub"
+    settings.stripe_secret_key = type(settings.stripe_secret_key)("")  # type: ignore[misc]
+    settings.stripe_webhook_secret = type(settings.stripe_webhook_secret)("")  # type: ignore[misc]
+
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    product, variant, inventory = _seed_product_and_variant()
+    async with session_factory() as session:
+        session.add(product)
+        session.add(variant)
+        session.add(inventory)
+        await session.commit()
+
+    async def override_session() -> AsyncGenerator[AsyncSession, None]:
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db_session] = override_session
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac, session_factory
+
+    app.dependency_overrides.clear()
+    settings.payment_provider = original_provider
+    settings.stripe_secret_key = original_stripe_key
+    settings.stripe_webhook_secret = original_webhook_secret
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_stub_payment_intent_without_stripe_keys(
+    stub_checkout_client_with_db: tuple[AsyncClient, async_sessionmaker],
+) -> None:
+    client, _ = stub_checkout_client_with_db
+    await client.post(
+        "/api/v1/cart/lines",
+        json={"variant_id": str(_VARIANT_ID), "quantity": 1},
+    )
+    session_resp = await client.post(
+        "/api/v1/checkout/sessions",
+        headers={"Idempotency-Key": "checkout-key-stub-pi"},
+    )
+    session_id = session_resp.json()["id"]
+
+    response = await client.post(
+        f"/api/v1/checkout/sessions/{session_id}/payment-intent",
+        headers={"Idempotency-Key": "pi-key-stub"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["payment_intent_id"].startswith("pi_stub_")
+    assert data["client_secret"].endswith("_secret_stub")
+
+
+@pytest.mark.asyncio
+async def test_stub_simulate_success_creates_order(
+    stub_checkout_client_with_db: tuple[AsyncClient, async_sessionmaker],
+) -> None:
+    client, session_factory = stub_checkout_client_with_db
+    await client.post(
+        "/api/v1/cart/lines",
+        json={"variant_id": str(_VARIANT_ID), "quantity": 2},
+    )
+    session_resp = await client.post(
+        "/api/v1/checkout/sessions",
+        headers={"Idempotency-Key": "checkout-key-stub-sim"},
+    )
+    session_id = session_resp.json()["id"]
+    pi_resp = await client.post(
+        f"/api/v1/checkout/sessions/{session_id}/payment-intent",
+        headers={"Idempotency-Key": "pi-key-stub-sim"},
+    )
+    payment_intent_id = pi_resp.json()["payment_intent_id"]
+
+    simulate_resp = await client.post(
+        f"/api/v1/dev/payments/{payment_intent_id}/simulate-success",
+    )
+    assert simulate_resp.status_code == 200
+    assert simulate_resp.json()["status"] == "processed"
+
+    status_resp = await client.get(f"/api/v1/checkout/sessions/{session_id}")
+    assert status_resp.json()["order_number"] is not None
+    assert status_resp.json()["status"] == "completed"
+
+    async with session_factory() as session:
+        orders = (await session.execute(select(OrderModel))).scalars().all()
+        assert len(orders) == 1
+        assert orders[0].total_cents == 5000
+
+
+@pytest.mark.asyncio
+async def test_stub_simulate_success_forbidden_in_production(
+    stub_checkout_client_with_db: tuple[AsyncClient, async_sessionmaker],
+) -> None:
+    client, _ = stub_checkout_client_with_db
+    original_environment = settings.environment
+    settings.environment = "production"
+    try:
+        response = await client.post("/api/v1/dev/payments/pi_stub_fake/simulate-success")
+        assert response.status_code == 404
+    finally:
+        settings.environment = original_environment
