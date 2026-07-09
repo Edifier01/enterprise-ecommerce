@@ -21,6 +21,9 @@ from app.features.catalog.infrastructure.persistence.models import (
     ProductModel,
     ProductVariantModel,
 )
+from app.features.inventory.infrastructure.persistence.models import InventoryItemModel
+
+_DEFAULT_IN_STOCK_QUANTITY = 50
 
 # --- categories ------------------------------------------------------------
 _CATEGORIES = [
@@ -162,12 +165,22 @@ async def seed() -> None:
                 )
             )
             for variant in variants:
+                variant_id = uuid.uuid4()
+                in_stock = data["in_stock"]
                 session.add(
                     ProductVariantModel(
-                        id=uuid.uuid4(),
+                        id=variant_id,
                         product_id=product_id,
-                        in_stock=data["in_stock"],
+                        in_stock=in_stock,
                         **variant,
+                    )
+                )
+                session.add(
+                    InventoryItemModel(
+                        variant_id=variant_id,
+                        quantity_on_hand=_DEFAULT_IN_STOCK_QUANTITY if in_stock else 0,
+                        quantity_reserved=0,
+                        version=0,
                     )
                 )
 

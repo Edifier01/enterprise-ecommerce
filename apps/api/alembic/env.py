@@ -14,6 +14,8 @@ from app.core.database import Base
 # Import models so metadata is registered
 from app.features.auth.infrastructure.persistence import models as auth_models  # noqa: F401
 from app.features.catalog.infrastructure.persistence import models as catalog_models  # noqa: F401
+from app.features.checkout.infrastructure.persistence import models as checkout_models  # noqa: F401
+from app.features.inventory.infrastructure.persistence import models as inventory_models  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

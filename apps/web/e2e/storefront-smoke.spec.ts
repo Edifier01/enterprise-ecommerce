@@ -18,7 +18,14 @@ test.describe("Storefront smoke", () => {
     const response = await page.goto("/cart");
     expect(response?.status()).toBe(200);
     await expect(page.getByRole("heading", { name: "Корзина" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Корзина пуста" })).toBeVisible();
+    await expect(page.getByText("Проверьте товары перед переходом к оплате.")).toBeVisible();
+  });
+
+  test("checkout page loads payment shell", async ({ page }) => {
+    const response = await page.goto("/checkout");
+    expect(response?.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: "Оформление заказа" })).toBeVisible();
+    await expect(page.getByText("Магазин не получает и не хранит данные карты.")).toBeVisible();
   });
 
   test("login page loads with Russian form", async ({ page }) => {

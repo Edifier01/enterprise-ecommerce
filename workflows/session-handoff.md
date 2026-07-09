@@ -28,7 +28,7 @@ Ensure every Cursor session loads project context, executes work consistently, a
 |------|-------|-------|--------|
 | Primary | Main Cursor agent | Per model-routing | context-loading, model-routing |
 | Parallel work | Domain subagents | Per agent definition | subagent-orchestrator |
-| Final check | verifier | Opus | — |
+| Final check | verifier | Composer 2.5 | — |
 
 ---
 

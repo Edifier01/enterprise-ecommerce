@@ -1,5 +1,6 @@
 """Auth API tests with in-memory SQLite."""
 
+import uuid
 from collections.abc import AsyncGenerator
 
 import pytest
@@ -8,6 +9,8 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.database import Base, get_db_session
+from app.features.catalog.infrastructure.persistence.models import ProductModel, ProductVariantModel
+from app.features.inventory.infrastructure.persistence.models import InventoryItemModel
 from app.main import app
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -195,3 +198,74 @@ async def test_me_with_valid_token_returns_current_user(auth_client: AsyncClient
     assert data["email"] == "me@example.com"
     assert "id" in data
     assert "created_at" in data
+
+
+@pytest.mark.asyncio
+async def test_login_merges_guest_cart_into_authenticated_cart(
+    auth_client_with_db: tuple[AsyncClient, async_sessionmaker],
+) -> None:
+    client, session_factory = auth_client_with_db
+    product_id = uuid.uuid4()
+    variant_id = uuid.uuid4()
+
+    async with session_factory() as session:
+        session.add(
+            ProductModel(
+                id=product_id,
+                name="Merge Cart Product",
+                slug="merge-cart-product",
+                price_cents=1500,
+                currency="USD",
+                in_stock=True,
+            )
+        )
+        session.add(
+            ProductVariantModel(
+                id=variant_id,
+                product_id=product_id,
+                sku="MERGE-CART-SKU",
+                name="Default",
+                attributes={},
+                price_cents=1500,
+                in_stock=True,
+                is_default=True,
+                sort_order=0,
+            )
+        )
+        session.add(
+            InventoryItemModel(
+                id=variant_id,
+                variant_id=variant_id,
+                quantity_on_hand=10,
+                quantity_reserved=0,
+                version=0,
+            )
+        )
+        await session.commit()
+
+    await client.post(
+        "/api/v1/auth/register",
+        json={"email": "merge-cart@example.com", "password": "secret123"},
+    )
+    add_response = await client.post(
+        "/api/v1/cart/lines",
+        json={"variant_id": str(variant_id), "quantity": 2},
+    )
+    assert add_response.status_code == 200
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "merge-cart@example.com", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
+
+    cart_response = await client.get(
+        "/api/v1/cart",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert cart_response.status_code == 200
+    data = cart_response.json()
+    assert len(data["lines"]) == 1
+    assert data["lines"][0]["variant_id"] == str(variant_id)
+    assert data["lines"][0]["quantity"] == 2

@@ -1,5 +1,9 @@
 # Orchestrator Implementation Review
 
+> **Historical document (pre-AI-002).** Model assignments in this review (orchestrator
+> and verifier on Opus) were superseded by **AI-002** (2026-07-08). See
+> `DECISIONS.md`, `docs/MODEL-ROUTING.md`, and `.cursor/agents/README.md` for current policy.
+
 **Date:** 2026-07-08
 **Reviewer:** AI Platform Architect (Senior)
 **Scope:** Upgrade AI Development Platform from "Cursor with AI tools" to "AI Engineering Team under Project Orchestrator"

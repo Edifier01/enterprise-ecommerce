@@ -19,7 +19,7 @@ start-feature skill
   ├── Phase 2: Classify complexity
   │
   ▼
-project-orchestrator (Opus, readonly)
+project-orchestrator (GPT-5.5, readonly)
   │
   ├── Reads PM state + DECISIONS.md
   ├── Creates Feature Plan
@@ -32,7 +32,7 @@ subagent-orchestrator skill
   ├── Round 2: Sequential dependent agents
   │
   ▼
-verifier (Opus, readonly)
+verifier (Composer 2.5, readonly)
   │
   ├── Quality Gate Checklist
   ├── ✅ PASSED / ⚠️ NOTES / ❌ FAILED
@@ -49,8 +49,8 @@ PM State Update (all 5 files)
 
 | Agent | Role | Model | When to use |
 |-------|------|-------|-------------|
-| `project-orchestrator` | Feature coordination, planning | Opus | Start of any feature |
-| `enterprise-architect` | Architecture, ADRs, DDD | Opus (readonly) | New domains, architectural decisions |
+| `project-orchestrator` | Feature coordination, planning | GPT-5.5 | Start of any feature |
+| `enterprise-architect` | Architecture, ADRs, DDD | Opus (readonly) | COMPLEX features, architectural decisions |
 | `backend-engineer` | FastAPI, use cases, repositories | Composer 2.5 | Backend implementation |
 | `frontend-engineer` | Next.js, shadcn/ui, pages | Composer 2.5 | Frontend implementation |
 | `database-engineer` | PostgreSQL schema, Alembic | Composer 2.5 | Schema changes, migrations |
@@ -60,9 +60,12 @@ PM State Update (all 5 files)
 | `security-auditor` | Auth, PCI, OWASP | Opus (readonly) | Before merge of auth/payments |
 | `qa-engineer` | Playwright, pytest, E2E | Composer 2.5 | Tests |
 | `devops-engineer` | Docker, CI/CD, GitHub Actions | GPT-5.5 | Pipelines, deployment |
-| `verifier` | Post-implementation quality gate | Opus (readonly) | After any feature |
+| `verifier` | Post-implementation quality gate | Composer 2.5 (readonly) | After any feature |
 
 **Total: 12 agents.** `project-orchestrator` is the coordinator. All others are specialists.
+
+> **Cost policy (AI-002):** Opus reserved for `enterprise-architect`, `security-auditor`,
+> `checkout-specialist`. Orchestration and verification default to cheaper models.
 
 ---
 
@@ -70,14 +73,14 @@ PM State Update (all 5 files)
 
 | Task type | Model | Reason |
 |-----------|-------|--------|
-| CRUD endpoints, UI components, tests, migrations | Composer 2.5 | Fast, cost-effective for boilerplate |
-| Research, planning, documentation, comparisons | GPT-5.5 | Web search, structured output |
-| Architecture, security, payments, orchestration | Opus | Deep reasoning, cross-domain analysis |
+| CRUD endpoints, UI components, tests, migrations, verification | Composer 2.5 | Fast, cost-effective for boilerplate |
+| Research, planning, orchestration, documentation, comparisons | GPT-5.5 | Structured output, coordination |
+| Architecture, security, payments (COMPLEX only) | Opus | Deep reasoning, high-stakes domains |
 
-**Cost rules:**
-- Opus: max 1–2 agents per mission (orchestrator + verifier)
-- GPT-5.5: research and docs subagents only
-- Composer 2.5: default for all implementation subagents
+**Cost rules (AI-002):**
+- Opus: reserved for `enterprise-architect`, `security-auditor`, `checkout-specialist` only
+- GPT-5.5: `project-orchestrator` + research/docs subagents
+- Composer 2.5: default for all implementation and `verifier` subagents
 
 ---
 
@@ -161,9 +164,10 @@ Agent Assignment:
   qa-engineer       → pytest (create, list, auth guard), Playwright (submit review flow)
   security-auditor  → auth guard check, PII in body not logged
 
-Model Strategy:
-  Opus:         orchestration, security review
-  Composer 2.5: all implementation + tests
+Model Strategy (cost-optimized, AI-002):
+  Composer 2.5: all implementation + tests + verification
+  GPT-5.5:      orchestration/planning
+  Opus:         enterprise-architect (ADR), security-auditor (auth guard review)
 
 Execution:
   Round 1 (parallel): database-engineer, api-engineer
@@ -255,6 +259,7 @@ Not sure?
 | Anti-pattern | Why | Correct approach |
 |-------------|-----|-----------------|
 | Using Opus for CRUD boilerplate | Unnecessarily expensive | Use Composer 2.5 |
+| Running orchestration or verification on Opus | Unnecessarily expensive (AI-002) | GPT-5.5 for orchestrator, Composer 2.5 for verifier |
 | Loading all 47 skills at once | Context overflow, reduces precision | Load 1 primary + relevant domain skill |
 | Skipping `verifier` on payment features | PCI/security risk | Always run `verifier` after payments |
 | Not updating PM state after work | Next agent loses context | Update all 5 files after every session |

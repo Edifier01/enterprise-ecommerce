@@ -7,6 +7,7 @@ import { ACCESS_TOKEN_COOKIE } from "@/lib/auth/constants";
 import { buildAuthCookieOptions } from "@/lib/auth/session";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const CART_SESSION_COOKIE = "cart_session_id";
 
 export type AuthActionState = {
   error?: string;
@@ -23,9 +24,16 @@ export async function loginAction(
     return { error: "Некорректные данные формы." };
   }
 
+  const cookieStore = await cookies();
+  const cartSession = cookieStore.get(CART_SESSION_COOKIE)?.value;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (cartSession) {
+    headers["X-Cart-Session-Id"] = cartSession;
+  }
+
   const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ email, password }),
   });
 
@@ -34,7 +42,6 @@ export async function loginAction(
   }
 
   const data = (await res.json()) as { access_token: string };
-  const cookieStore = await cookies();
   cookieStore.set(ACCESS_TOKEN_COOKIE, data.access_token, buildAuthCookieOptions());
   redirect("/");
 }

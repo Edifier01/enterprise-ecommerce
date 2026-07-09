@@ -93,11 +93,11 @@ Cursor Agent (главный ассистент)
 
 ### 3.3 Agents (субагенты) — `.cursor/agents/`
 
-**11 специалистов** — изолированный контекст для сложных задач.
+**12 специалистов** — изолированный контекст для сложных задач.
 
 | Agent | Роль | Модель |
 |-------|------|--------|
-| `project-orchestrator` | Координатор фич, планирование | Opus (readonly) |
+| `project-orchestrator` | Координатор фич, планирование | GPT-5.5 (readonly) |
 | `enterprise-architect` | Архитектура, ADR | Opus |
 | `backend-engineer` | FastAPI, use cases | Composer 2.5 |
 | `frontend-engineer` | Next.js, shadcn | Composer 2.5 |
@@ -108,7 +108,10 @@ Cursor Agent (главный ассистент)
 | `security-auditor` | Безопасность, PCI | Opus (readonly) |
 | `qa-engineer` | E2E, Playwright | Composer 2.5 |
 | `devops-engineer` | Docker, CI | GPT-5.5 |
-| `verifier` | Проверка «готово» | Opus (readonly) |
+| `verifier` | Проверка «готово» | Composer 2.5 (readonly) |
+
+> **Политика AI-002:** Opus только для architect / security / checkout.
+> Orchestrator и verifier — на более дешёвых моделях.
 
 **Как вызвать:**
 
@@ -163,9 +166,11 @@ Cursor Agent (главный ассистент)
 
 | Задача | Модель | Почему |
 |--------|--------|--------|
-| CRUD, UI, тесты | **Composer 2.5** | Быстро, cost-effective |
-| Research, планирование | **GPT-5.5** | Поиск, сравнения |
-| Архитектура, security, checkout | **Opus 4.7** | Глубокий reasoning |
+| CRUD, UI, тесты, верификация | **Composer 2.5** | Быстро, cost-effective |
+| Research, планирование, orchestration | **GPT-5.5** | Координация, сравнения |
+| Архитектура, security, checkout (COMPLEX) | **Opus** | Глубокий reasoning |
+
+Политика **AI-002**: orchestrator → GPT-5.5, verifier → Composer 2.5, Opus только для architect/security/checkout.
 
 Skill: `/model-routing`  
 Шпаргалка: `docs/MODEL-ROUTING.md`
@@ -227,10 +232,12 @@ docker-compose.yml       PostgreSQL локально
 
 ### Checkout + Stripe
 
-1. Модель: Opus для дизайна, Composer 2.5 для кода  
-2. `/implement-checkout-flow` + `/stripe-integration`  
-3. `/security-auditor` — PCI  
-4. `/playwright-e2e-checkout` — E2E
+1. **Agent:** `checkout-specialist` — **Model:** Opus (`claude-opus-4-8-thinking-high`)
+2. Реализация API/UI: `backend-engineer` + `frontend-engineer` (Composer 2.5)
+3. `/implement-checkout-flow` + `/stripe-integration`
+4. `/security-auditor` — PCI (Opus)
+5. **Code review:** routine → `/verifier` (Composer 2.5); architectural/security → Opus
+6. `/playwright-e2e-checkout` — E2E (Composer 2.5)
 
 ### Не знаете с чего начать
 

@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
+import { addCartLine } from "@/lib/checkout/api";
 import type { Product, ProductVariant } from "@/lib/api";
 import {
   formatCompareAtPrice,
@@ -24,6 +25,7 @@ function pickDefaultVariant(variants: ProductVariant[]): ProductVariant | null {
 }
 
 export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
+  const router = useRouter();
   const variants = [...product.variants].sort(
     (a, b) => a.sort_order - b.sort_order
   );
@@ -33,6 +35,8 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   );
 
   const selected = variants.find((variant) => variant.id === selectedId) ?? null;
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const currentPrice = selected?.price_cents ?? product.price_cents;
   const inStock = selected ? selected.in_stock : product.in_stock;
@@ -40,8 +44,22 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   const discount = compareAt ? getDiscountPercent(currentPrice, compareAt) : null;
   const onSale = discount !== null && discount > 0;
 
-  // Prefer the concrete SKU when a variant is selected; fall back to the slug.
-  const buyReference = selected ? selected.sku : product.slug;
+  function handleAddToCart() {
+    if (!selected) {
+      setError("Для покупки выберите доступный вариант товара.");
+      return;
+    }
+
+    setError(null);
+    startTransition(async () => {
+      try {
+        await addCartLine(selected.id, 1);
+        router.push("/cart");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Не удалось добавить товар");
+      }
+    });
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -106,17 +124,15 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
       ) : null}
 
       <Button
+        type="button"
         size="lg"
-        disabled={!inStock}
+        disabled={!inStock || !selected || isPending}
         className="w-full bg-store-cta text-store-cta-foreground hover:bg-store-cta/90 disabled:opacity-50 sm:w-auto sm:min-w-48"
-        render={
-          inStock ? (
-            <Link href={`/cart?add=${encodeURIComponent(buyReference)}`} />
-          ) : undefined
-        }
+        onClick={handleAddToCart}
       >
-        Купить
+        {isPending ? "Добавляем..." : "Купить"}
       </Button>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
 }

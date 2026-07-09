@@ -10,14 +10,14 @@ Checkout and Payments Implementation
 
 ## Purpose
 
-Implement cart, checkout session, Stripe PaymentIntents, webhooks, and order confirmation following PCI scope rules and idempotency standards.
+Implement cart, checkout session, provider-backed payments, webhooks/notifications, and order confirmation following PCI scope rules and idempotency standards. The final project payment provider is YooKassa per ADR-004.
 
 ---
 
 ## Trigger
 
 - Cart or checkout session work
-- Stripe integration (PaymentIntent, webhooks)
+- Payment provider integration (YooKassa for the final project gate)
 - Order placement flow
 - Payment-related OpenAPI changes
 
@@ -27,12 +27,12 @@ Implement cart, checkout session, Stripe PaymentIntents, webhooks, and order con
 
 | Role | Agent | Model | Skills |
 |------|-------|-------|--------|
-| Lead | checkout-specialist | Opus | implement-checkout-flow, stripe-integration |
+| Lead | checkout-specialist | Opus | implement-checkout-flow, payment-integration |
 | Security | security-auditor | Opus | pci-compliance, cc-skill-security-review |
 | Backend | backend-engineer | Composer 2.5 | python-fastapi-development, payment-integration |
 | Frontend | frontend-engineer | Composer 2.5 | shadcn, zustand-store-ts |
 | QA | qa-engineer | Composer 2.5 | playwright-e2e-checkout, e2e-testing |
-| Validation | verifier | Opus | — |
+| Validation | verifier | Composer 2.5 | — |
 
 ---
 
@@ -42,12 +42,12 @@ Implement cart, checkout session, Stripe PaymentIntents, webhooks, and order con
 
 **Input:** TASKS.md item, `ecommerce/02-checkout`, `ecommerce/03-payments`, `security/02-pci`
 
-**Output:** Flow diagram — cart → checkout → payment → order → webhook
+**Output:** Flow diagram — cart → checkout → payment → provider notification → order
 
 **Checklist:**
 
-- [ ] Confirm SAQ A scope (Stripe Elements, no raw card data)
-- [ ] Identify idempotency keys and webhook events
+- [ ] Confirm PCI scope and hosted/provider-side card-data handling
+- [ ] Identify idempotency keys and provider notification events
 - [ ] Read DECISIONS.md and payment ADRs if any
 
 ### Phase 2 — Planning
@@ -71,10 +71,10 @@ Implement cart, checkout session, Stripe PaymentIntents, webhooks, and order con
 **Checklist:**
 
 - [ ] Cart session / checkout session API
-- [ ] Stripe PaymentIntent creation (server-side only)
-- [ ] Webhook handler with idempotency store
-- [ ] Order creation on `payment_intent.succeeded`
-- [ ] Frontend checkout page with Stripe.js (publishable key only)
+- [ ] Provider payment creation (server-side only)
+- [ ] Provider notification handler with idempotency store
+- [ ] Order creation only after verified provider success notification
+- [ ] Frontend checkout page using provider-approved hosted/confirmation flow
 - [ ] Never log or store PAN/CVV
 
 ### Phase 4 — Validation

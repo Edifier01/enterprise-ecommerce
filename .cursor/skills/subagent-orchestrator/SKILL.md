@@ -14,7 +14,9 @@ tags: [subagents, orchestration, parallel, multi-agent, model-routing]
 > **Related Rules:** core/08-model-routing, core/07-tool-selection, core/10-project-state-management  
 > **Related Agents:** enterprise-architect, backend-engineer, frontend-engineer, qa-engineer, verifier
 
-Coordinate parallel subagents for tasks spanning 3+ files. Uses project model routing: Composer 2.5 (implementation), GPT-5.5 (research/planning), Claude Opus 4.7 (architecture/security).
+Coordinate parallel subagents for tasks spanning 3+ files. Uses project model routing
+(AI-002): Composer 2.5 (implementation, verification), GPT-5.5 (research/planning),
+Opus (architecture/security/payments only — see `core/08-model-routing.mdc`).
 
 ## Use this skill when
 
@@ -87,7 +89,7 @@ CRUD / UI / tests / boilerplate / migrations?
   → composer-2.5-fast (default for builders)
 
 Task > 20 files OR > 500 lines?
-  → Composer 2.5 for all builders; Opus for final verifier only
+  → Composer 2.5 for all builders and for verifier (default)
 
 Escalate Composer 2.5 → Opus when:
   - Requirements ambiguous
@@ -96,11 +98,11 @@ Escalate Composer 2.5 → Opus when:
   - Repeated implementation failure
 ```
 
-**Cost rules:**
+**Cost rules (AI-002):**
 
-- Opus: architecture, security audit, verifier — never for bulk CRUD subagents
+- Opus: `enterprise-architect`, `security-auditor`, `checkout-specialist` only — never for bulk CRUD or routine verification subagents
 - GPT-5.5: research and planning subagents
-- Composer 2.5: default for implementation, E2E, documentation drafts
+- Composer 2.5: default for implementation, E2E, verification (`verifier`), documentation drafts
 - Browser subagent: 1 per mission max; pair with Playwright MCP
 
 ---
@@ -130,7 +132,7 @@ Load only context required per `core/05-context-loading.mdc` and `core/10-projec
 ```
 Round 1: Independent agents in parallel (Task tool, single message)
 Round 2: Dependent agents after Round 1 artifacts
-Round 3: Verifier agent (Opus, readonly) + integration check
+Round 3: Verifier agent (Composer 2.5, readonly) + integration check
 ```
 
 Between rounds:
@@ -187,7 +189,7 @@ Archive optional: copy previous HANDOFF to `docs/handoffs/YYYY-MM-DD-mission-slu
 | Catalog CRUD | catalog-specialist + database-engineer | Composer 2.5 + Composer 2.5 |
 | Stripe webhooks | checkout-specialist + security-auditor | Opus + Opus |
 | Product page UI | frontend-engineer + shadcn skill | Composer 2.5 |
-| Full feature | enterprise-architect → implementers → verifier | Opus → Composer 2.5 → Opus |
+| Full feature | enterprise-architect → implementers → verifier | Opus → Composer 2.5 → Composer 2.5 |
 
 ---
 

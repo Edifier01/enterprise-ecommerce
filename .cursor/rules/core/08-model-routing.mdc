@@ -40,7 +40,7 @@ Current project preference:
 
 Primary Architecture Model
 
-- Claude Opus 4.7
+- Claude Opus (display name: Opus 4.7; agent slug: `claude-opus-4-8-thinking-high`)
 
 Primary Research Model
 
@@ -91,7 +91,7 @@ Prefer Claude Opus for:
 - Domain Modeling
 - Large Refactoring
 - Complex Business Logic
-- Code Review
+- Architectural or security code review (PCI, auth, payments)
 - Technical Debt Analysis
 - Design Decisions
 - Security Review
@@ -116,8 +116,41 @@ Prefer Composer 2.5 for:
 - Component generation
 - Simple refactoring
 - Documentation drafting
+- Routine code review / quality gate (`verifier`)
 
 Use Composer 2.5 whenever implementation speed is the priority.
+
+---
+
+# Agent Model Defaults (cost-optimized, AI-002)
+
+Opus is the most expensive model. Reserve it for genuinely complex or high-stakes
+work — not for coordination or routine checks that run on every feature.
+
+| Agent | Default model | Rationale |
+|-------|---------------|-----------|
+| `enterprise-architect` | **Opus** | Deep design, ADRs, DDD boundaries |
+| `security-auditor` | **Opus** | Auth / PCI / OWASP — high stakes |
+| `checkout-specialist` | **Opus** | Payments correctness + security |
+| `project-orchestrator` | **GPT-5.5** | Planning & routing, not deep reasoning |
+| `verifier` | **Composer 2.5** | Deterministic quality gate + test runs |
+| `backend / frontend / database / api / catalog / qa` | **Composer 2.5** | Implementation & tests |
+| `devops-engineer` | **GPT-5.5** | CI/CD & deploy planning |
+
+Rules:
+
+- Do NOT run per-feature orchestration or verification on Opus. For a **COMPLEX**
+  feature, route the deep design/ADR to `enterprise-architect` (Opus) instead of
+  escalating the orchestrator itself.
+- `verifier` escalates to Opus ONLY when it uncovers a real architectural,
+  security, or payments/PCI concern — never for a routine pass/fail check.
+- When in doubt, start on the cheaper model and escalate on evidence.
+
+**Checkout + Stripe:** `checkout-specialist` → Opus (`claude-opus-4-8-thinking-high`);
+bulk API/UI work → Composer 2.5 implementers.
+
+**Code review:** routine quality gate → `verifier` (Composer 2.5); architectural or
+security review (PCI, auth, payments) → Opus (`enterprise-architect` / `security-auditor`).
 
 ---
 

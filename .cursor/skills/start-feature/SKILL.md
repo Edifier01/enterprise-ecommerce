@@ -108,10 +108,11 @@ Agent Assignment:
   [agent-name] → [specific task]
   [agent-name] → [specific task]
 
-Model Strategy:
-  Opus:         orchestration, architecture review
-  Composer 2.5: implementation, tests, migrations
-  GPT-5.5:      research, documentation (if needed)
+Model Strategy (cost-optimized, AI-002):
+  Composer 2.5: implementation, tests, migrations, verification (default)
+  GPT-5.5:      orchestration/planning, research, documentation
+  Opus:         ONLY for COMPLEX — enterprise-architect (ADR/deep design),
+                security-auditor (auth/PCI), checkout-specialist (payments)
 
 Execution:
   Round 1 (parallel): [agents without dependencies]

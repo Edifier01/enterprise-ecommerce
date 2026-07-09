@@ -39,8 +39,8 @@ skill-router, subagent-orchestrator, context7-auto-research, multi-agent-archite
 
 | Task | Primary Skill | Model | MCP | Agent |
 |------|---------------|-------|-----|-------|
-| New feature (any domain) | start-feature | Opus (planning) + Composer 2.5 (impl) | Memory, Context7 | project-orchestrator |
-| Checkout + Stripe | stripe-integration | Composer 2.5 | postgres, openapi | checkout-specialist |
+| New feature (any domain) | start-feature | GPT-5.5 (planning) + Composer 2.5 (impl) | Memory, Context7 | project-orchestrator |
+| Checkout + Stripe | stripe-integration | Opus (`claude-opus-4-8-thinking-high`) | postgres, openapi | checkout-specialist |
 | PCI review | pci-compliance | Opus | sentry | security-auditor |
 | UI component | shadcn | Composer 2.5 | shadcn | frontend-engineer |
 | FastAPI endpoint | fastapi-pro | Composer 2.5 | openapi, postgres | backend-engineer |

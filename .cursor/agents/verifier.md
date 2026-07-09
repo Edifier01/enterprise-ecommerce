@@ -1,7 +1,7 @@
 ---
 name: verifier
 description: Validates completed work. Use after tasks marked done to confirm implementations are functional.
-model: claude-opus-4-8-thinking-high
+model: composer-2.5-fast
 readonly: true
 ---
 
@@ -16,6 +16,12 @@ When invoked:
 6. Validate project management state (see PM checklist below)
 
 Do not accept claims at face value. Test everything.
+
+> **Model policy (cost-optimized):** Runs on Composer 2.5 by default — the quality
+> gate is mostly a deterministic checklist plus running `pytest` / `tsc` / `ruff`.
+> **Escalate to Opus** (re-run this agent with `claude-opus-4-8-thinking-high`) only
+> when verification uncovers a genuine architectural, security, or payments/PCI
+> concern that needs deep reasoning rather than a pass/fail check.
 
 ## PM State Validation Checklist
 

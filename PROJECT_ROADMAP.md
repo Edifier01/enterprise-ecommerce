@@ -452,10 +452,14 @@ Completed:
 * Monorepo scaffold (`apps/api/`, `apps/web/`, `docker-compose.yml`, `openapi.yaml`)
 * ADR-001 monorepo structure
 * Catalog MVP: `GET /api/v1/products`, Alembic migration, storefront grid, pytest baseline
+* Checkout foundation through Sprint 9: carts, checkout/order persistence model,
+  PostgreSQL migration 006, and browser PDP -> cart -> checkout shell smoke
 
 Remaining:
 
-* Categories, variants, auth, checkout, Stripe, orders, CI, Playwright E2E
+* Inventory reservation/deduction, search, deployment documentation, and final
+  YooKassa payment integration with full browser payment smoke as the project
+  release gate
 
 ---
 
@@ -571,6 +575,8 @@ The AI platform is complete when:
 The application is complete when:
 
 * Catalog, auth, checkout, orders, and payments domains are implemented per OpenAPI and rules.
+* YooKassa is implemented and validated as the final payment provider.
+* Full browser payment smoke passes through provider-confirmed order creation.
 * CI pipeline runs lint, test, and build.
 * Playwright E2E covers critical flows.
 * Production deployment path documented.

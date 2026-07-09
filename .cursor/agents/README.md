@@ -26,7 +26,14 @@ Every agent must:
 | `security-auditor` | Auth, PCI, OWASP audits | Opus | Sensitive modules (readonly) |
 | `qa-engineer` | Playwright E2E, integration tests | Composer 2.5 | Test flows |
 | `devops-engineer` | Docker, CI/CD, GitHub Actions | GPT-5.5 | Pipelines, deploy |
-| `verifier` | Validates completed work before done | Opus | Post-implementation check |
+| `verifier` | Validates completed work before done | Composer 2.5 | Post-implementation check |
+| `project-orchestrator` | Feature planning + specialist routing | GPT-5.5 | Every feature (never writes code) |
+
+> **Cost policy (AI-002):** Opus is reserved for genuinely complex/high-stakes work
+> only — `enterprise-architect` (COMPLEX/ADR), `security-auditor` (auth/PCI), and
+> `checkout-specialist` (payments). Per-feature coordination (`project-orchestrator`)
+> and validation (`verifier`) run on cheaper models and escalate to Opus only when a
+> real architectural/security concern surfaces.
 
 ## Workflows
 

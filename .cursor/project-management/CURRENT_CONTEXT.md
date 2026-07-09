@@ -6,19 +6,19 @@
 
 ## Current Module
 
-`apps/` — Phase 24 application. Auth foundation complete (backend JWT + frontend session).
+`apps/` — Phase 24 application. Sprint 10 closed; ready for next Phase 24 epic.
 
 ---
 
 ## Current Feature
 
-Catalog — **Sprint 8 (Product variants & pricing display) complete** (variants, compare-at sale pricing, real primary-category filter). Stripe checkout next.
+**Sprint 10 — Inventory Reservation/Deduction** ✅ **CLOSED** (2026-07-09). Next up: Phase 24 follow-on work (search API, order history UI, or other prioritized epic). Final YooKassa payment integration remains deferred to the final project gate per ADR-004.
 
 ---
 
 ## Active Agent
 
-Implementation Agent (Sprint 8 Variants & Pricing — verified complete)
+Implementation Agent (Sprint 10 closeout complete)
 
 ---
 
@@ -30,13 +30,13 @@ Run `git branch --show-current` at session start
 
 ## Current Milestone
 
-**Phase 24 — Internet Store Design** (~85%)
+**Phase 24 — Internet Store Design** (~96%)
 
 ---
 
 ## Current Blockers
 
-None — run `alembic upgrade head` for PostgreSQL migrations 001–005, then `python -m scripts.seed_dev` before expecting live data
+None.
 
 ---
 
@@ -47,15 +47,13 @@ None — run `alembic upgrade head` for PostgreSQL migrations 001–005, then `p
 | AI Platform (Phases 0–23, 25) | ✅ Complete (100%) |
 | Sprint 5 — Auth Security Hardening | ✅ Complete |
 | Sprint 6 — JWT Verification & Auth Foundation | ✅ Complete |
-| Phase 24 application | 🔄 ~85% |
-| Storefront Design S1 (tokens + config) | ✅ Complete |
-| Storefront Design S2 (layout shell) | ✅ Complete |
-| Storefront Design S3 (catalog components) | ✅ Complete |
-| Storefront Design S4 (homepage + catalog pages) | ✅ Complete |
-| Storefront Design S5 (PDP + search/cart placeholders) | ✅ Complete |
-| Storefront Design S6 (auth RU + E2E smoke) | ✅ Complete |
-| Sprint 7 — Category domain (backend + API + frontend) | ✅ Complete |
+| Phase 24 application | 🔄 ~96% |
+| Storefront Design S1–S6 | ✅ Complete |
+| Sprint 7 — Category domain | ✅ Complete |
 | Sprint 8 — Product variants & pricing display | ✅ Complete |
+| Sprint 9 — Checkout foundation | ✅ Closed |
+| Sprint 10 — Inventory reservation/deduction | ✅ Closed |
+| Final payment integration — YooKassa | ⏳ Deferred to final project gate |
 
 ---
 
@@ -68,10 +66,13 @@ None — run `alembic upgrade head` for PostgreSQL migrations 001–005, then `p
 | Auth dependencies | `apps/api/app/features/auth/presentation/dependencies.py` |
 | Auth session (frontend) | `apps/web/src/lib/auth/session.ts` |
 | OpenAPI | `openapi.yaml` |
+| Checkout ADR | `docs/adr/ADR-003-stripe-checkout-payments.md` |
+| Inventory ADR | `docs/adr/ADR-005-inventory-reservation-and-deduction.md` |
+| Final payment ADR | `docs/adr/ADR-004-yookassa-final-payment-integration.md` |
 | PM state | `.cursor/project-management/` |
 
 ---
 
 ## Last Updated
 
-2026-07-08
+2026-07-09

@@ -9,7 +9,6 @@ from app.features.catalog.domain.ports import IProductRepository
 from app.features.catalog.infrastructure.persistence.models import (
     CategoryModel,
     ProductModel,
-    ProductVariantModel,
 )
 
 

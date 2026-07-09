@@ -28,7 +28,7 @@ Cursor reads `.cursor/` and behaves as a team of AI specialists with shared stan
 | Frontend | Next.js 15 App Router + Tailwind v4 + shadcn/ui | `apps/web/` |
 | Backend | FastAPI + SQLAlchemy 2.0 async + Alembic | `apps/api/` |
 | Database | PostgreSQL 16 | `docker-compose.yml` |
-| Payments | Stripe (planned) | — |
+| Payments | YooKassa (final provider; Stripe foundation/prototype exists) | final project gate |
 | API Contract | OpenAPI 3.1 | `openapi.yaml` |
 | Python | 3.13 | `apps/api/` |
 | Node | 24 | `apps/web/` |
@@ -48,9 +48,10 @@ Cursor reads `.cursor/` and behaves as a team of AI specialists with shared stan
 
 ## 4. Current Phase
 
-- **Phase 24 — Internet Store** (~55%)
+- **Phase 24 — Internet Store** (~94%)
 - **AI Platform (Phases 0–23, 25):** 100% complete
-- **Sprints completed:** Sprint 1 (Architecture Hardening) + Sprint 2 (Quality Baseline) + Sprint 3 (CI/CD + Auth + E2E)
+- **Sprints completed:** Sprint 1-9 through checkout foundation
+- **Final payment gate:** YooKassa integration and full payment smoke
 
 ---
 
@@ -59,7 +60,8 @@ Cursor reads `.cursor/` and behaves as a team of AI specialists with shared stan
 | Domain | Backend | Frontend |
 |--------|---------|----------|
 | catalog | `Product` entity, `GET /api/v1/products`, `GET /api/v1/products/{slug}` | Product grid, product detail page `/products/[slug]` |
-| auth | `User` entity, `POST /api/v1/auth/register`, `POST /api/v1/auth/login` (JWT) | Not yet (Sprint 4 frontend) |
+| auth | `User` entity, register/login/JWT verification, `GET /api/v1/auth/me` | Login/register/account pages with httpOnly cookie session |
+| checkout | Cart, checkout sessions, payment/order persistence foundation | Cart, checkout, and confirmation pages |
 
 ---
 
@@ -92,8 +94,11 @@ Every new domain MUST follow this exact structure.
 | ID | Decision | Details |
 |----|----------|---------|
 | ADR-001 | Monorepo structure | `apps/api` + `apps/web` + `openapi.yaml` at root |
+| ADR-003 | Checkout foundation | Stripe-based Sprint 9 foundation/prototype; superseded for final provider |
+| ADR-004 | YooKassa final payment integration | Payment-system implementation and smoke moved to final project gate |
 | PM-001 | `.cursor/project-management/` as operational source of truth | 5 PM state files |
-| AI-001 | Project Orchestrator pattern | `project-orchestrator` (Opus, readonly) + `start-feature` skill entry point |
+| AI-001 | Project Orchestrator pattern | `project-orchestrator` (GPT-5.5, readonly) + `start-feature` skill entry point |
+| AI-002 | Cost-optimized model routing | Opus reserved for architect/security/checkout; orchestrator → GPT-5.5, verifier → Composer 2.5 |
 | — | Money as integer cents | `price_cents: int` — never `float` |
 | — | DI via FastAPI `Depends()` | `IRepository` injected into use cases via router |
 | — | Async SQLAlchemy only | No synchronous DB calls |

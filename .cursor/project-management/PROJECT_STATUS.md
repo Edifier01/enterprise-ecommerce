@@ -9,19 +9,21 @@
 
 **Phase 24 — Internet Store Design**
 
-Platform phases 0–23 and Phase 25 complete. Auth foundation complete. Storefront design complete. Category domain (Sprint 7) complete. Product variants & pricing display (Sprint 8) complete. Stripe checkout next.
+Platform phases 0–23 and Phase 25 complete. Sprints 1–10 complete. Sprint 10 formally closed 2026-07-09. Final YooKassa payment integration deferred to final project gate per ADR-004.
 
 ---
 
 ## Current Objective
 
-Build category hierarchy and product variants, then Stripe checkout.
+Start next Phase 24 epic. Recommended: search API or order history UI per product priority.
 
 ---
 
 ## Current Sprint
 
-**Sprint 8 — Product Variants & Pricing Display** ✅ COMPLETE (variants + compare-at pricing + real category filter; 35/35 pytest, tsc clean)
+**Sprint 10 — Inventory Reservation/Deduction** ✅ **CLOSED** (2026-07-09)
+
+Delivered: inventory bounded context, migration 007, checkout reservation/deduction/release integration, cart availability checks, frontend stock error messaging, seed inventory quantities. Quality gate: 51/51 pytest, ruff clean, tsc clean.
 
 ---
 
@@ -31,45 +33,35 @@ Build category hierarchy and product variants, then Stripe checkout.
 
 **Overall roadmap:** ~96% (25/26 phases — Phase 24 application in progress)
 
-**Phase 24 (application):** ~90% (catalog + categories + variants/pricing + auth + full storefront UX + CI + E2E smoke)
+**Phase 24 (application):** ~96% (catalog + categories + variants/pricing + auth + checkout + inventory + storefront UX + CI + E2E smoke; final YooKassa payment gate pending)
 
 ---
 
 ## Completed Work
 
-- [x] Sprint 1 — architecture hardening (H1–H5 from Full Review)
-- [x] Sprint 2 — quality baseline (migration, error handlers, seed, shadcn/ui)
+- [x] Sprint 1 — architecture hardening
+- [x] Sprint 2 — quality baseline
 - [x] Sprint 3 — CI/CD + Auth API + E2E baseline
 - [x] Sprint 4 — AI Orchestration Upgrade
-- [x] Sprint 5 — Auth Security Hardening (SecretStr, ports/adapters, UoW, health/ready, request-id)
-- [x] Sprint 6 — JWT Verification & Auth Foundation:
-  - [x] `verify_access_token` + `get_current_user` + `GET /auth/me`
-  - [x] `JwtTokenService` constructor injection
-  - [x] `__init__.py` in all Python packages
-  - [x] Frontend auth: login/register/account pages, httpOnly cookie, middleware
-  - [x] Storefront layout shell (TopBar, MainHeader, TrustBar, Footer, MobileBottomNav)
-  - [x] Storefront catalog components (ProductCard, ProductGrid, CategoryCard, Breadcrumbs, SortToolbar, SectionTabs, PromoBanner, SeoContentBlock)
-  - [x] Storefront homepage + catalog pages (`/`, `/catalog`, `/catalog/[slug]`, static `categories.ts`)
-  - [x] Storefront PDP + placeholder pages (`/products/[slug]`, `/search`, `/cart`)
-  - [x] Auth pages RU polish + E2E smoke tests (`homepage.spec.ts`, `storefront-smoke.spec.ts`)
-  - [x] `MainHeader` with auth state in root layout (`lang="ru"`)
-  - [x] `openapi.yaml`: `/health/ready`, `/auth/me`, bearerAuth
-  - [x] 19/19 pytest green, ruff clean, tsc 0 errors
-  - [x] Technical audit: `docs/AUDIT_REPORT_CURRENT_STATE.md`
+- [x] Sprint 5 — Auth Security Hardening
+- [x] Sprint 6 — JWT Verification & Auth Foundation + storefront design
+- [x] Sprint 7 — Category domain
+- [x] Sprint 8 — Product variants & pricing display
+- [x] Sprint 9 — Checkout foundation (formally closed 2026-07-09)
+- [x] Sprint 10 — Inventory reservation/deduction (formally closed 2026-07-09)
 
 ---
 
 ## Active Work
 
-- [x] Category hierarchy (Sprint 7 complete)
-- [x] Product variants and pricing display (Sprint 8 complete)
-- [ ] Stripe checkout integration (next)
+- [ ] Search API or order history UI (recommended next per product priority)
+- [ ] Final YooKassa payment integration and full payment smoke (deferred to final project gate)
 
 ---
 
 ## Blocked Work
 
-None
+None.
 
 ---
 
@@ -77,26 +69,27 @@ None
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Empty product list without migration/seed | Medium | Run `alembic upgrade head` (migrations 001–003) + seed data |
+| Empty product list without migration/seed | Medium | Run `alembic upgrade head` + seed data |
 | E2E tests skipped in CI (no API server) | Medium | Add `webServer` to Playwright config or CI service containers |
 | Architecture drift | High | Read `DECISIONS.md` and ADRs before structural changes |
+| Stripe-specific code remains temporarily | Medium | Final payment sprint migrates to YooKassa per ADR-004 |
+| Reservation TTL sweep not automated | Medium | `expire_active_reservations` exists; add background job in ops sprint |
 
 ---
 
 ## Next Actions
 
-1. Stripe checkout integration (Sprint 9)
-2. Fix E2E CI coverage (Playwright webServer)
-3. Product↔Category many-to-many (deferred per ADR-002) when secondary navigation is needed
+1. Pick next Phase 24 epic per product priority (search API, order history UI).
+2. At final project gate: implement YooKassa and run full browser payment smoke.
 
 ---
 
 ## Last Updated
 
-2026-07-08 (Sprint 8 Variants & Pricing verified complete — 35/35 pytest green, tsc clean)
+2026-07-09 (Sprint 10 formally closed — quality gate passed: 51/51 pytest, ruff, tsc)
 
 ---
 
 ## Last Agent
 
-Implementation Agent (Sprint 8 Variants & Pricing — tests added, mock cleanup verified, PM sync)
+Implementation Agent (Sprint 10 formal closeout)

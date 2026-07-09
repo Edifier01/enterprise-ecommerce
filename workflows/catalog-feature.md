@@ -32,7 +32,7 @@ Implement or extend catalog domain features (products, categories, variants) in 
 | Frontend | frontend-engineer | Composer 2.5 | shadcn, react-nextjs-development |
 | Database | database-engineer | Composer 2.5 | postgresql, postgresql-optimization |
 | API contract | api-engineer | Composer 2.5 | openapi-spec-generator |
-| Validation | verifier | Opus | — |
+| Validation | verifier | Composer 2.5 | — |
 
 ---
 

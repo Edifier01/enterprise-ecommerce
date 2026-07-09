@@ -31,6 +31,11 @@ from app.features.auth.presentation.schemas import (
     RegisterResponse,
     TokenResponse,
 )
+from app.features.checkout.domain.ports import ICheckoutRepository
+from app.features.checkout.presentation.dependencies import (
+    get_checkout_repository,
+    resolve_cart_session_token,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -56,12 +61,19 @@ async def login(
     repo: IUserRepository = Depends(get_user_repository),
     hasher: IPasswordHasher = Depends(get_password_hasher),
     token_service: ITokenService = Depends(get_token_service),
+    cart_session_token: str | None = Depends(resolve_cart_session_token),
+    checkout_repo: ICheckoutRepository = Depends(get_checkout_repository),
 ) -> TokenResponse:
     use_case = LoginUserUseCase(repo, hasher, token_service)
     try:
         access_token = await use_case.execute(email=request.email, password=request.password)
     except InvalidCredentialsError:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    if cart_session_token:
+        user = await repo.get_by_email(request.email)
+        if user is not None:
+            await checkout_repo.merge_guest_cart_into_user_cart(cart_session_token, user.id)
+            await checkout_repo.commit()
     return TokenResponse(access_token=access_token)
 
 

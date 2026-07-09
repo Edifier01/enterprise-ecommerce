@@ -123,7 +123,7 @@
 **Status:** COMPLETED (2026-07-08)
 
 - [x] `.cursor/rules/core/11-planning-first.mdc` — mandatory planning gate before implementation
-- [x] `.cursor/agents/project-orchestrator.md` — main feature coordinator (Opus, readonly)
+- [x] `.cursor/agents/project-orchestrator.md` — main feature coordinator (GPT-5.5, readonly; was Opus pre-AI-002)
 - [x] `.cursor/workflows/feature-lifecycle.md` — 12-phase universal feature lifecycle workflow
 - [x] `.cursor/skills/start-feature/SKILL.md` — `/start-feature` unified entry point
 - [x] `PROJECT_BRAIN.md` — quick context layer at repo root
@@ -216,14 +216,65 @@
 - [x] `tests/test_variants.py`: 11 tests (variant ordering/shape, sale vs no-sale, category filter, domain invariant)
 - [x] Full backend suite: 35/35 pytest green; TypeScript 0 errors
 
-### Feature: Checkout & Payments
+### Feature: Checkout Foundation
 
-**Status:** BACKLOG
+**Status:** COMPLETED
 
-- [ ] Cart session management
-- [ ] Stripe PaymentIntent integration
-- [ ] Webhook handler with idempotency
-- [ ] Order confirmation flow
+- [x] ADR-003 — Stripe checkout foundation, payment/order lifecycle, and order creation
+- [x] Cart session management (guest/auth cart model, server-side line snapshots)
+- [x] Stripe PaymentIntent integration (Payment Element flow, idempotency key)
+- [x] Webhook handler with signature verification + event idempotency
+- [x] Order confirmation flow (order created only from `payment_intent.succeeded`)
+- [x] Frontend cart, checkout, and confirmation pages
+- [x] Wire guest-cart merge into auth login flow
+- [x] Browser-auth checkout support (`access_token` cookie recognized by checkout API)
+- [x] Checkout price revalidation refreshes stale server-side cart snapshots
+- [x] Checkout security hardening (Stripe CSP/security headers + checkout/webhook rate limiting)
+- [x] Captured-payment anomaly paths emit critical manual-review logs
+- [x] Backend tests: 48/48 pytest green
+- [x] Frontend TypeScript: `tsc --noEmit` clean
+- [x] Run PostgreSQL `alembic upgrade head` through migration 006 (environment validation)
+- [x] Run browser checkout foundation smoke with API (release validation)
+  - [x] Browser shell smoke: PDP -> cart -> checkout works against local API on `localhost:3000`
+- [x] ADR-004 — YooKassa selected as final payment provider; Stripe validation skipped by decision
+- [x] Inventory reservation/deduction sprint (deferred per ADR-003) — see Sprint 10 below
+
+### Sprint 10 — Inventory Reservation and Deduction
+
+**Status:** COMPLETED (2026-07-09)
+
+- [x] ADR-005 — inventory reservation lifecycle, concurrency, and checkout integration
+- [x] Inventory bounded context (`apps/api/app/features/inventory/`)
+- [x] Migration `007_add_inventory_reservations` (`inventory_items`, `inventory_reservations`)
+- [x] Reserve at checkout session creation; re-affirm at payment intent
+- [x] Deduct on verified payment success (same transaction as order creation)
+- [x] Release on payment failed/canceled webhook paths
+- [x] Cart availability checks via `ensure_available` (409 on insufficient stock)
+- [x] Frontend RU out-of-stock messaging in cart/checkout (`getCheckoutErrorMessage`)
+- [x] `seed_dev.py` seeds `inventory_items` with default quantities per variant
+- [x] Backend tests: 51/51 pytest green (inventory reserve/deduct/release/idempotency)
+- [x] Backend lint: ruff clean; Frontend TypeScript: tsc clean
+
+### Sprint 9 — Formal Closeout
+
+**Status:** COMPLETED (2026-07-09)
+
+- [x] Quality gate re-run: 48/48 pytest green (`DATABASE_URL=sqlite+aiosqlite:///:memory:`)
+- [x] Quality gate re-run: `ruff check app tests` clean (fixed unused import in catalog repository)
+- [x] Quality gate re-run: `tsc --noEmit` clean
+- [x] Confirm PostgreSQL migration 006 validated at head (prior session)
+- [x] Confirm browser checkout foundation smoke passed (prior session)
+- [x] PM state synced: Sprint 9 marked CLOSED; YooKassa deferred to final project gate
+- [x] Handoff written with next sprint recommendation (inventory reservation/deduction)
+
+### Final Project Gate — YooKassa Payment Integration
+
+**Status:** PLANNED
+
+- [ ] Replace/refactor Stripe-specific payment provider integration with YooKassa
+- [ ] Update payment configuration, webhook/notification handling, OpenAPI naming, frontend checkout UI, CSP/security headers, and tests for YooKassa
+- [ ] Run full browser payment smoke through YooKassa test mode to provider-confirmed order creation
+- [ ] Verify payment logs do not expose provider payloads, secrets, confirmation tokens, card data, or equivalent sensitive details
 
 ---
 
