@@ -2,7 +2,9 @@ import { cookies } from "next/headers";
 
 import { ACCESS_TOKEN_COOKIE } from "@/lib/auth/constants";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { getApiBase } from "@/lib/api-base";
+
+const API_BASE = getApiBase();
 
 export type AuthUser = {
   id: string;

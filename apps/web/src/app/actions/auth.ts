@@ -6,7 +6,9 @@ import { redirect } from "next/navigation";
 import { ACCESS_TOKEN_COOKIE } from "@/lib/auth/constants";
 import { buildAuthCookieOptions } from "@/lib/auth/session";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { getApiBase } from "@/lib/api-base";
+
+const API_BASE = getApiBase();
 const CART_SESSION_COOKIE = "cart_session_id";
 
 export type AuthActionState = {
