@@ -181,6 +181,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/auth/register/wholesaler:
+    post:
+      summary: Register a wholesaler account with business profile
+      operationId: registerWholesaler
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WholesalerRegisterRequest"
+      responses:
+        "201":
+          description: Wholesaler registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "409":
+          description: Email or INN already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /api/v1/auth/login:
     post:
       summary: Login and receive access token
@@ -988,8 +1013,62 @@ components:
 
     RegisterRequest:
       type: object
-      required: [email, password]
+      required: [first_name, last_name, email, password]
       properties:
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+
+    WholesalerRegisterRequest:
+      type: object
+      required:
+        - full_name
+        - edo_provider
+        - edo_id
+        - phone
+        - inn
+        - ogrnip
+        - legal_address
+        - email
+        - password
+      properties:
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        edo_provider:
+          type: string
+          minLength: 1
+          maxLength: 255
+        edo_id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 32
+        inn:
+          type: string
+          pattern: "^\\d{12}$"
+        ogrnip:
+          type: string
+          pattern: "^\\d{15}$"
+        legal_address:
+          type: string
+          minLength: 1
+          maxLength: 500
         email:
           type: string
           format: email
@@ -999,12 +1078,16 @@ components:
 
     RegisterResponse:
       type: object
-      required: [id, email, created_at]
+      required: [id, email, first_name, last_name, created_at]
       properties:
         id:
           type: string
           format: uuid
         email:
+          type: string
+        first_name:
+          type: string
+        last_name:
           type: string
         created_at:
           type: string
@@ -1032,12 +1115,16 @@ components:
 
     MeResponse:
       type: object
-      required: [id, email, is_wholesaler, created_at]
+      required: [id, email, first_name, last_name, is_wholesaler, created_at]
       properties:
         id:
           type: string
           format: uuid
         email:
+          type: string
+        first_name:
+          type: string
+        last_name:
           type: string
         is_wholesaler:
           type: boolean

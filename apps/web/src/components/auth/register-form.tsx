@@ -13,6 +13,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+const inputClassName =
+  "h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+
 const initialState: AuthActionState = {};
 
 export function RegisterForm() {
@@ -29,6 +32,36 @@ export function RegisterForm() {
       <CardContent>
         <form action={formAction} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
+            <label htmlFor="last_name" className="text-sm font-medium">
+              Фамилия
+            </label>
+            <input
+              id="last_name"
+              name="last_name"
+              type="text"
+              autoComplete="family-name"
+              required
+              maxLength={100}
+              className={inputClassName}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="first_name" className="text-sm font-medium">
+              Имя
+            </label>
+            <input
+              id="first_name"
+              name="first_name"
+              type="text"
+              autoComplete="given-name"
+              required
+              maxLength={100}
+              className={inputClassName}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
             <label htmlFor="email" className="text-sm font-medium">
               Email
             </label>
@@ -38,7 +71,7 @@ export function RegisterForm() {
               type="email"
               autoComplete="email"
               required
-              className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className={inputClassName}
             />
           </div>
 
@@ -54,11 +87,9 @@ export function RegisterForm() {
               required
               minLength={8}
               maxLength={128}
-              className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className={inputClassName}
             />
-            <p className="text-xs text-muted-foreground">
-              Минимум 8 символов.
-            </p>
+            <p className="text-xs text-muted-foreground">Минимум 8 символов.</p>
           </div>
 
           {state.error && (
@@ -78,6 +109,14 @@ export function RegisterForm() {
             Войти
           </Link>
         </p>
+
+        <Button
+          variant="outline"
+          className="mt-4 w-full"
+          render={<Link href="/register/wholesale" />}
+        >
+          Зарегистрироваться как оптовик
+        </Button>
       </CardContent>
     </Card>
   );

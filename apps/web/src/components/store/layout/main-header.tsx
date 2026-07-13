@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import { ShoppingCart } from "lucide-react";
 
 import { logoutAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -15,9 +17,17 @@ export async function MainHeader() {
         <div className="flex h-14 items-center justify-between gap-4 md:h-16">
           <Link
             href="/"
-            className="shrink-0 text-lg font-semibold tracking-tight text-foreground"
+            className="flex shrink-0 items-center gap-2 text-lg font-semibold uppercase tracking-wide text-foreground"
           >
-            {siteConfig.name}
+            <Image
+              src={siteConfig.images.logo}
+              alt=""
+              width={36}
+              height={36}
+              className="size-9 rounded-full object-cover"
+              priority
+            />
+            <span>{siteConfig.name}</span>
           </Link>
 
           <nav
@@ -36,11 +46,15 @@ export async function MainHeader() {
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            <Link
+              href="/cart"
+              className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label="Корзина"
+            >
+              <ShoppingCart className="size-5" aria-hidden />
+            </Link>
             {user ? (
               <>
-                <span className="hidden max-w-[10rem] truncate text-sm text-muted-foreground lg:inline">
-                  {user.email}
-                </span>
                 <Button
                   variant="outline"
                   size="sm"

@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from app.features.auth.domain.entities import User
+from app.features.auth.domain.entities import User, WholesalerProfile
 from app.features.auth.domain.token_claims import TokenClaims
 
 
@@ -25,6 +25,16 @@ class IUserRepository(ABC):
     @abstractmethod
     async def create(self, user: User) -> User:
         """Persist a new user (flush only — caller must commit)."""
+        ...
+
+    @abstractmethod
+    async def create_wholesaler(self, user: User, profile: WholesalerProfile) -> User:
+        """Persist a wholesaler user and business profile."""
+        ...
+
+    @abstractmethod
+    async def get_by_inn(self, inn: str) -> User | None:
+        """Return a wholesaler user by INN, or None if not found."""
         ...
 
     @abstractmethod

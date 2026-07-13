@@ -6,19 +6,19 @@
 
 ## Current Module
 
-`apps/` — Phase 24 application. Sprint E (wholesale pricing) complete.
+`apps/` — Phase 24 application. Storefront UX + auth registration overhaul.
 
 ---
 
 ## Current Feature
 
-**Final YooKassa Payment Integration** ⏳ **PLANNED** (next gate after Sprint E).
+**СУХОПУТ branding + header UX + retail/wholesaler registration** ✅ **COMPLETE**
 
 ---
 
 ## Active Agent
 
-Implementation Agent (Sprint E closeout)
+Implementation Agent
 
 ---
 
@@ -38,9 +38,11 @@ None.
 
 | Area | Status |
 |------|--------|
-| Phase 24 application | 🔄 ~99% |
-| Sprint A–D — Admin | ✅ Complete |
-| **Sprint E — Wholesale Pricing** | ✅ Complete |
+| Header: TopBar search + Связаться | ✅ |
+| Header: cart icon, no email | ✅ |
+| Branding СУХОПУТ + favicon | ✅ |
+| Retail registration (ФИО + email) | ✅ |
+| Wholesaler self-registration | ✅ |
 | Final YooKassa integration | ⏳ Next gate |
 
 ---
@@ -49,12 +51,12 @@ None.
 
 | Resource | Path |
 |----------|------|
-| ADR-008 | `docs/adr/ADR-008-wholesale-retail-pricing.md` |
-| Pricing resolver | `apps/api/app/features/catalog/domain/pricing.py` |
-| Admin customers | `apps/web/src/app/admin/(panel)/customers/page.tsx` |
+| Migration 011 | `apps/api/alembic/versions/011_user_profiles_wholesaler.py` |
+| Wholesaler register | `apps/web/src/app/register/wholesale/page.tsx` |
+| Site config | `apps/web/src/lib/store/site-config.ts` |
 
 ---
 
 ## Last Updated
 
-2026-07-10 (Sprint E wholesale pricing complete)
+2026-07-13 (СУХОПУТ UX + registration)

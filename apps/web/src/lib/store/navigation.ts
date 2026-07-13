@@ -13,8 +13,14 @@ export type StoreNavItem = {
   icon: LucideIcon;
 };
 
-/** Primary storefront navigation — 5 items (stich.su pattern) */
-export const storeNavigation: StoreNavItem[] = [
+/** Desktop header — text links only (cart/search live elsewhere). */
+export const headerNavigation: StoreNavItem[] = [
+  { label: "Главная", href: "/", icon: Home },
+  { label: "Каталог", href: "/catalog", icon: LayoutGrid },
+];
+
+/** Mobile bottom nav — full 5-item pattern. */
+export const mobileNavigation: StoreNavItem[] = [
   { label: "Главная", href: "/", icon: Home },
   { label: "Каталог", href: "/catalog", icon: LayoutGrid },
   { label: "Поиск", href: "/search", icon: Search },
@@ -22,5 +28,5 @@ export const storeNavigation: StoreNavItem[] = [
   { label: "Профиль", href: "/account", icon: User },
 ];
 
-export const mainNavigation = storeNavigation;
-export const mobileNavigation = storeNavigation;
+export const mainNavigation = headerNavigation;
+export const storeNavigation = mobileNavigation;

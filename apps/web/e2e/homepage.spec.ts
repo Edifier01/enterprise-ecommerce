@@ -19,9 +19,9 @@ test.describe("Homepage", () => {
     await expect(nav).toBeVisible();
     await expect(nav.getByRole("link", { name: "Главная" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Каталог" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Поиск" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Корзина" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Профиль" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Корзина" })).toBeVisible();
+    await expect(page.getByLabel("Поиск по каталогу")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Связаться" })).toBeVisible();
   });
 
   test("shows product grid or graceful empty/error state", async ({ page }) => {

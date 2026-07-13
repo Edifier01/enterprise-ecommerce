@@ -4,6 +4,8 @@ import json
 import uuid
 from collections.abc import AsyncGenerator
 
+from tests.auth_payloads import retail_register_payload
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -81,7 +83,7 @@ async def _admin_token(client: AsyncClient, email: str, password: str) -> str:
 async def _place_order(client: AsyncClient) -> str:
     await client.post(
         "/api/v1/auth/register",
-        json={"email": "admin-orders-user@example.com", "password": "secret123"},
+        json=retail_register_payload("admin-orders-user@example.com"),
     )
     login_response = await client.post(
         "/api/v1/auth/login",

@@ -14,8 +14,8 @@ export type FooterColumn = {
 };
 
 export const siteConfig = {
-  name: "Enterprise Store",
-  description: "Интернет-магазин с широким ассортиментом и быстрой доставкой",
+  name: "СУХОПУТ",
+  description: "Интернет-магазин СУХОПУТ — широкий ассортимент и быстрая доставка",
   locale: "ru-RU" as const,
   defaultCurrency: "RUB" as const,
 
@@ -75,10 +75,11 @@ export const siteConfig = {
         ],
       },
     ] satisfies FooterColumn[],
-    copyright: `© ${new Date().getFullYear()} Enterprise Store. Все права защищены.`,
+    copyright: `© ${new Date().getFullYear()} СУХОПУТ. Все права защищены.`,
   },
 
   images: {
+    logo: "/logo.png",
     productPlaceholder: "/images/product-placeholder.svg",
     productPlaceholderExternal: "https://placehold.co/400x400/e2e8f0/64748b?text=Нет+фото",
   },

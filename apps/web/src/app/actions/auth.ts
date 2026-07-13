@@ -15,6 +15,11 @@ export type AuthActionState = {
   error?: string;
 };
 
+function readRequiredString(formData: FormData, key: string): string | null {
+  const value = formData.get(key);
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
 export async function loginAction(
   _prev: AuthActionState | null,
   formData: FormData,
@@ -52,17 +57,24 @@ export async function registerAction(
   _prev: AuthActionState | null,
   formData: FormData,
 ): Promise<AuthActionState> {
-  const email = formData.get("email");
+  const firstName = readRequiredString(formData, "first_name");
+  const lastName = readRequiredString(formData, "last_name");
+  const email = readRequiredString(formData, "email");
   const password = formData.get("password");
 
-  if (typeof email !== "string" || typeof password !== "string") {
-    return { error: "Некорректные данные формы." };
+  if (!firstName || !lastName || !email || typeof password !== "string") {
+    return { error: "Заполните все обязательные поля." };
   }
 
   const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      password,
+    }),
   });
 
   if (res.status === 409) {
@@ -70,7 +82,65 @@ export async function registerAction(
   }
 
   if (res.status === 422) {
-    return { error: "Проверьте email и пароль (минимум 8 символов)." };
+    return { error: "Проверьте данные формы и пароль (минимум 8 символов)." };
+  }
+
+  if (!res.ok) {
+    return { error: "Не удалось зарегистрироваться. Попробуйте снова." };
+  }
+
+  redirect("/login");
+}
+
+export async function registerWholesaleAction(
+  _prev: AuthActionState | null,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const payload = {
+    full_name: readRequiredString(formData, "full_name"),
+    edo_provider: readRequiredString(formData, "edo_provider"),
+    edo_id: readRequiredString(formData, "edo_id"),
+    phone: readRequiredString(formData, "phone"),
+    inn: readRequiredString(formData, "inn"),
+    ogrnip: readRequiredString(formData, "ogrnip"),
+    legal_address: readRequiredString(formData, "legal_address"),
+    email: readRequiredString(formData, "email"),
+    password: formData.get("password"),
+  };
+
+  if (
+    !payload.full_name ||
+    !payload.edo_provider ||
+    !payload.edo_id ||
+    !payload.phone ||
+    !payload.inn ||
+    !payload.ogrnip ||
+    !payload.legal_address ||
+    !payload.email ||
+    typeof payload.password !== "string"
+  ) {
+    return { error: "Заполните все обязательные поля." };
+  }
+
+  const res = await fetch(`${API_BASE}/api/v1/auth/register/wholesaler`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (res.status === 409) {
+    const body = (await res.json().catch(() => null)) as { detail?: string } | null;
+    if (body?.detail === "INN already registered") {
+      return { error: "Этот ИНН уже зарегистрирован." };
+    }
+    return { error: "Этот email уже зарегистрирован." };
+  }
+
+  if (res.status === 422) {
+    return {
+      error:
+        "Проверьте данные: ИНН — 12 цифр, ОГРНИП — 15 цифр, пароль — минимум 8 символов.",
+    };
   }
 
   if (!res.ok) {

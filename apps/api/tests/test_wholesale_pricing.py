@@ -9,6 +9,8 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from tests.auth_payloads import retail_register_payload
+
 from app.core.config import settings
 from app.core.database import Base, get_db_session
 from app.features.catalog.infrastructure.persistence.models import ProductModel, ProductVariantModel
@@ -115,7 +117,7 @@ async def wholesale_client_with_db() -> AsyncGenerator[
 async def _register_and_login(client: AsyncClient, email: str) -> str:
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "password": "secret123"},
+        json=retail_register_payload(email),
     )
     login = await client.post(
         "/api/v1/auth/login",
@@ -311,7 +313,7 @@ async def test_login_revalidates_guest_cart_to_wholesale(wholesale_client_with_d
     email = "merge-wholesale@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "password": "secret123"},
+        json=retail_register_payload(email),
     )
     async with session_factory() as session:
         await session.execute(

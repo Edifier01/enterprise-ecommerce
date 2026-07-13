@@ -4,6 +4,8 @@ import json
 import uuid
 from collections.abc import AsyncGenerator
 
+from tests.auth_payloads import retail_register_payload
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -68,7 +70,7 @@ def _payment_succeeded_event(payment_intent_id: str, event_id: str) -> dict:
 async def _place_authenticated_order(client: AsyncClient) -> tuple[str, str]:
     await client.post(
         "/api/v1/auth/register",
-        json={"email": "orders-user@example.com", "password": "secret123"},
+        json=retail_register_payload("orders-user@example.com"),
     )
     login_response = await client.post(
         "/api/v1/auth/login",
@@ -210,7 +212,7 @@ async def test_get_order_detail_not_found_for_other_user(orders_client: AsyncCli
 
     await orders_client.post(
         "/api/v1/auth/register",
-        json={"email": "other-user@example.com", "password": "secret123"},
+        json=retail_register_payload("other-user@example.com"),
     )
     other_login = await orders_client.post(
         "/api/v1/auth/login",
@@ -229,7 +231,7 @@ async def test_get_order_detail_not_found_for_other_user(orders_client: AsyncCli
 async def test_list_orders_empty_for_new_user(orders_client: AsyncClient) -> None:
     await orders_client.post(
         "/api/v1/auth/register",
-        json={"email": "empty-orders@example.com", "password": "secret123"},
+        json=retail_register_payload("empty-orders@example.com"),
     )
     login_response = await orders_client.post(
         "/api/v1/auth/login",

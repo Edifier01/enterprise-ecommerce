@@ -4,6 +4,8 @@ import json
 import uuid
 from collections.abc import AsyncGenerator
 
+from tests.auth_payloads import retail_register_payload
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
@@ -603,7 +605,7 @@ async def test_checkout_uses_access_token_cookie_for_authenticated_cart(
     client, session_factory = checkout_client_with_db
     await client.post(
         "/api/v1/auth/register",
-        json={"email": "checkout-user@example.com", "password": "secret123"},
+        json=retail_register_payload("checkout-user@example.com"),
     )
     login_response = await client.post(
         "/api/v1/auth/login",

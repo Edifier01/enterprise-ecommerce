@@ -66,7 +66,7 @@ None.
 
 ## Last Updated
 
-2026-07-10 (Sprint E complete)
+2026-07-13 (СУХОПУТ UX + registration)
 
 ---
 

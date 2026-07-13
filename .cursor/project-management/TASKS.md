@@ -534,6 +534,19 @@ admin-assigned. Existing orders are never repriced.
 
 ---
 
+### Feature: СУХОПУТ Branding, Header UX & Registration
+
+**Status:** COMPLETED (2026-07-13)
+
+- [x] TopBar centered search; «Связаться» retained
+- [x] MainHeader cart icon; email removed; desktop nav trimmed
+- [x] Store name «СУХОПУТ» + logo + favicon
+- [x] Retail registration: first_name, last_name, email, password
+- [x] Wholesaler self-registration with business profile + validation
+- [x] Migration 011 + API + OpenAPI + tests (119/119 pytest)
+
+---
+
 ### Final Project Gate — YooKassa Payment Integration
 
 **Status:** PLANNED

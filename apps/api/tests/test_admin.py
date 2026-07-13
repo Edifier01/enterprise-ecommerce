@@ -2,6 +2,8 @@
 
 from collections.abc import AsyncGenerator
 
+from tests.auth_payloads import retail_register_payload
+
 import pytest
 import sqlalchemy as sa
 from httpx import ASGITransport, AsyncClient
@@ -131,7 +133,7 @@ async def test_admin_me_without_token_returns_401(admin_client: AsyncClient) -> 
 async def test_admin_me_with_customer_token_returns_401(admin_client: AsyncClient) -> None:
     await admin_client.post(
         "/api/v1/auth/register",
-        json={"email": "customer@example.com", "password": "customer12"},
+        json=retail_register_payload("customer@example.com", password="customer12"),
     )
     login = await admin_client.post(
         "/api/v1/auth/login",

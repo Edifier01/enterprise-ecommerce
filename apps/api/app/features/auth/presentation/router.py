@@ -10,6 +10,13 @@ from app.features.auth.application.use_cases.register_user import (
     DuplicateEmailError,
     RegisterUserUseCase,
 )
+from app.features.auth.application.use_cases.register_wholesaler import (
+    DuplicateEmailError as WholesalerDuplicateEmailError,
+)
+from app.features.auth.application.use_cases.register_wholesaler import (
+    DuplicateInnError,
+    RegisterWholesalerUseCase,
+)
 from app.features.auth.domain.entities import User
 from app.features.auth.domain.ports import (
     IPasswordHasher,
@@ -30,6 +37,7 @@ from app.features.auth.presentation.schemas import (
     RegisterRequest,
     RegisterResponse,
     TokenResponse,
+    WholesalerRegisterRequest,
 )
 from app.features.checkout.domain.ports import ICheckoutRepository
 from app.features.checkout.presentation.dependencies import (
@@ -51,10 +59,59 @@ async def register(
 ) -> RegisterResponse:
     use_case = RegisterUserUseCase(repo, hasher, uow)
     try:
-        user = await use_case.execute(email=request.email, password=request.password)
+        user = await use_case.execute(
+            email=request.email,
+            password=request.password,
+            first_name=request.first_name,
+            last_name=request.last_name,
+        )
     except DuplicateEmailError:
         raise HTTPException(status_code=409, detail="Email already registered")
-    return RegisterResponse(id=user.id, email=user.email, created_at=user.created_at)
+    return RegisterResponse(
+        id=user.id,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        created_at=user.created_at,
+    )
+
+
+@router.post(
+    "/register/wholesaler",
+    response_model=RegisterResponse,
+    status_code=201,
+    operation_id="registerWholesaler",
+)
+async def register_wholesaler(
+    request: WholesalerRegisterRequest,
+    repo: IUserRepository = Depends(get_user_repository),
+    hasher: IPasswordHasher = Depends(get_password_hasher),
+    uow: IUnitOfWork = Depends(get_unit_of_work),
+) -> RegisterResponse:
+    use_case = RegisterWholesalerUseCase(repo, hasher, uow)
+    try:
+        user = await use_case.execute(
+            email=request.email,
+            password=request.password,
+            full_name=request.full_name,
+            edo_provider=request.edo_provider,
+            edo_id=request.edo_id,
+            phone=request.phone,
+            inn=request.inn,
+            ogrnip=request.ogrnip,
+            legal_address=request.legal_address,
+        )
+    except WholesalerDuplicateEmailError:
+        raise HTTPException(status_code=409, detail="Email already registered")
+    except DuplicateInnError:
+        raise HTTPException(status_code=409, detail="INN already registered")
+    return RegisterResponse(
+        id=user.id,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        created_at=user.created_at,
+    )
 
 
 @router.post("/login", response_model=TokenResponse, operation_id="loginUser")
@@ -89,6 +146,8 @@ async def me(current_user: User = Depends(get_current_user)) -> MeResponse:
     return MeResponse(
         id=current_user.id,
         email=current_user.email,
+        first_name=current_user.first_name,
+        last_name=current_user.last_name,
         is_wholesaler=current_user.is_wholesaler,
         created_at=current_user.created_at,
     )
