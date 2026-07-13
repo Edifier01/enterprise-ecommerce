@@ -223,6 +223,7 @@ async def seed() -> None:
                         **variant,
                     )
                 )
+                await session.flush()
                 session.add(
                     InventoryItemModel(
                         variant_id=variant_id,
