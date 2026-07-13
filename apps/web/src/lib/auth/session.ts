@@ -9,6 +9,7 @@ const API_BASE = getApiBase();
 export type AuthUser = {
   id: string;
   email: string;
+  is_wholesaler: boolean;
   created_at: string;
 };
 

@@ -7,9 +7,10 @@ import { siteConfig } from "@/lib/store/site-config";
 
 export interface ProductDetailProps {
   product: Product;
+  isWholesaler?: boolean;
 }
 
-export function ProductDetail({ product }: ProductDetailProps) {
+export function ProductDetail({ product, isWholesaler = false }: ProductDetailProps) {
   const placeholder = siteConfig.images.productPlaceholder;
 
   return (
@@ -40,7 +41,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
             <p className="text-sm text-muted-foreground">Артикул: {product.slug}</p>
           </header>
 
-          <ProductPurchasePanel product={product} />
+          <ProductPurchasePanel product={product} isWholesaler={isWholesaler} />
 
           <div className="space-y-2 border-t pt-5">
             <h2 className="text-sm font-semibold text-foreground">Описание</h2>

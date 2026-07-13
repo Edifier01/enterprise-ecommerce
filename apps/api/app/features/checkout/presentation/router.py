@@ -7,6 +7,7 @@ from starlette.responses import JSONResponse
 
 from app.core.config import settings
 from app.features.auth.domain.entities import User
+from app.features.catalog.domain.pricing import WholesalePriceUnavailableError
 from app.features.checkout.application.cart_service import (
     CartService,
     LineNotFoundError,
@@ -101,6 +102,18 @@ async def _resolve_and_maybe_set_cookie(
     return cart
 
 
+def _is_wholesaler(user: User | None) -> bool:
+    return user is not None and user.is_wholesaler
+
+
+def _raise_cart_errors(exc: Exception) -> None:
+    if isinstance(exc, WholesalePriceUnavailableError):
+        raise HTTPException(status_code=409, detail=str(exc))
+    if isinstance(exc, VariantNotPurchasableError):
+        raise HTTPException(status_code=400, detail=str(exc))
+    raise exc
+
+
 @router.get("/cart", response_model=CartResponse, operation_id="getCart")
 async def get_cart(
     response: Response,
@@ -115,6 +128,13 @@ async def get_cart(
     )
     if new_token:
         _set_cart_cookie(response, new_token)
+    if not cart.is_empty:
+        try:
+            cart = await cart_service.validate_cart_for_checkout(
+                cart, is_wholesaler=_is_wholesaler(user)
+            )
+        except (WholesalePriceUnavailableError, VariantNotPurchasableError) as exc:
+            _raise_cart_errors(exc)
     await repo.commit()
     return _cart_to_response(cart)
 
@@ -130,9 +150,11 @@ async def add_cart_line(
 ) -> CartResponse:
     cart = await _resolve_and_maybe_set_cookie(response, session_token, user, cart_service)
     try:
-        cart = await cart_service.add_or_update_line(cart, request.variant_id, request.quantity)
-    except VariantNotPurchasableError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        cart = await cart_service.add_or_update_line(
+            cart, request.variant_id, request.quantity, is_wholesaler=_is_wholesaler(user)
+        )
+    except (WholesalePriceUnavailableError, VariantNotPurchasableError) as exc:
+        _raise_cart_errors(exc)
     except InsufficientInventoryError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
     await repo.commit()
@@ -151,11 +173,13 @@ async def update_cart_line(
 ) -> CartResponse:
     cart = await _resolve_and_maybe_set_cookie(response, session_token, user, cart_service)
     try:
-        cart = await cart_service.update_line_quantity(cart, line_id, request.quantity)
+        cart = await cart_service.update_line_quantity(
+            cart, line_id, request.quantity, is_wholesaler=_is_wholesaler(user)
+        )
     except LineNotFoundError:
         raise HTTPException(status_code=404, detail="Cart line not found")
-    except VariantNotPurchasableError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+    except (WholesalePriceUnavailableError, VariantNotPurchasableError) as exc:
+        _raise_cart_errors(exc)
     except InsufficientInventoryError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
     await repo.commit()
@@ -201,11 +225,12 @@ async def create_checkout_session(
             cart=cart,
             user_id=user.id if user else None,
             idempotency_key=idempotency_key,
+            is_wholesaler=_is_wholesaler(user),
         )
     except EmptyCartError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except VariantNotPurchasableError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+    except (WholesalePriceUnavailableError, VariantNotPurchasableError) as exc:
+        _raise_cart_errors(exc)
     except InsufficientInventoryError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
     except ValueError as exc:
@@ -247,6 +272,7 @@ async def create_payment_intent(
             idempotency_key=idempotency_key,
             user_id=user.id if user else None,
             cart_session_token=session_token,
+            is_wholesaler=_is_wholesaler(user),
         )
     except CheckoutSessionNotFoundError:
         raise HTTPException(status_code=404, detail="Checkout session not found")

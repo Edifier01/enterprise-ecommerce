@@ -445,21 +445,24 @@ Internet Store Design
 
 Status:
 
-🔄 In Progress (~35%)
+🔄 In Progress (~99%)
 
 Completed:
 
 * Monorepo scaffold (`apps/api/`, `apps/web/`, `docker-compose.yml`, `openapi.yaml`)
 * ADR-001 monorepo structure
-* Catalog MVP: `GET /api/v1/products`, Alembic migration, storefront grid, pytest baseline
-* Checkout foundation through Sprint 9: carts, checkout/order persistence model,
-  PostgreSQL migration 006, and browser PDP -> cart -> checkout shell smoke
+* Catalog MVP through Sprint 8 (variants, compare-at, categories)
+* Auth (Sprints 3–6), storefront design, checkout foundation (Sprint 9)
+* Inventory reservation/deduction (Sprint 10), dev payment stub (ADR-006)
+* Search, order history UI, reservation TTL sweep
+* Admin panel Sprints A–D (foundation, catalog, inventory, orders)
 
-Remaining:
+In progress / planned:
 
-* Inventory reservation/deduction, search, deployment documentation, and final
-  YooKassa payment integration with full browser payment smoke as the project
-  release gate
+* **Sprint E — Wholesale pricing** (ADR-008): dual retail/wholesale per variant,
+  wholesaler customer status, admin assignment, server-side price resolution
+* Final YooKassa payment integration (release gate, after Sprint E)
+* Production deployment documentation
 
 ---
 

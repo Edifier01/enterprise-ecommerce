@@ -16,6 +16,7 @@ class ProductVariant:
     in_stock: bool
     is_default: bool
     sort_order: int
+    wholesale_price_cents: int | None = None
     attributes: dict[str, str] = field(default_factory=dict)
 
 
@@ -27,6 +28,7 @@ class Product:
     price_cents: int
     currency: str
     in_stock: bool
+    status: str = "active"
     compare_at_price_cents: int | None = None
     category_id: UUID | None = None
     variants: tuple[ProductVariant, ...] = ()

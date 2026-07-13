@@ -10,6 +10,8 @@ import {
 export type ProductGridItem = ProductCardProduct & {
   compareAtCents?: number;
   imageSrc?: string;
+  isWholesaler?: boolean;
+  wholesalePriceCents?: number;
 };
 
 export interface ProductGridProps {
@@ -52,6 +54,10 @@ export function ProductGrid({
               compareAtCents={compareAtCents ?? extraProps.compareAtCents}
               imageSrc={imageSrc ?? extraProps.imageSrc}
               className={extraProps.className}
+              isWholesaler={product.isWholesaler ?? extraProps.isWholesaler}
+              wholesalePriceCents={
+                product.wholesalePriceCents ?? extraProps.wholesalePriceCents
+              }
             />
           </li>
         );

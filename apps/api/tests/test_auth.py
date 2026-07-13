@@ -196,6 +196,7 @@ async def test_me_with_valid_token_returns_current_user(auth_client: AsyncClient
     assert response.status_code == 200
     data = response.json()
     assert data["email"] == "me@example.com"
+    assert data["is_wholesaler"] is False
     assert "id" in data
     assert "created_at" in data
 

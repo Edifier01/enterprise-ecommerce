@@ -30,4 +30,5 @@ class TokenResponse(BaseModel):
 class MeResponse(BaseModel):
     id: UUID
     email: str
+    is_wholesaler: bool
     created_at: datetime

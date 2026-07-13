@@ -5,7 +5,9 @@ import { ProductGrid } from "@/components/store/catalog/product-grid";
 import { PageContainer } from "@/components/store/layout/page-container";
 import { SeoContentBlock } from "@/components/store/marketing/seo-content-block";
 import { getCategories, listProducts } from "@/lib/api";
+import { getAccessToken, getCurrentUser } from "@/lib/auth/session";
 import { getRootCategories } from "@/lib/store/categories";
+import { toProductGridItems } from "@/lib/store/product-grid";
 import { siteConfig } from "@/lib/store/site-config";
 
 export const metadata: Metadata = {
@@ -14,11 +16,15 @@ export const metadata: Metadata = {
 };
 
 export default async function CatalogPage() {
+  const token = await getAccessToken();
+  const user = await getCurrentUser();
+  const isWholesaler = user?.is_wholesaler ?? false;
+
   let products: Awaited<ReturnType<typeof listProducts>> | null = null;
   let error: string | null = null;
 
   try {
-    products = await listProducts(1, 48);
+    products = await listProducts(1, 48, undefined, token);
   } catch {
     error =
       "Не удалось загрузить товары. Убедитесь, что API запущен и доступен.";
@@ -50,13 +56,9 @@ export default async function CatalogPage() {
           productCount: 0,
         }));
 
-  const popularProducts = [...items]
+  const popularProducts = [...toProductGridItems(items, isWholesaler)]
     .sort((a, b) => Number(b.in_stock) - Number(a.in_stock))
-    .slice(0, 8)
-    .map((p) => ({
-      ...p,
-      compareAtCents: p.compare_at_price_cents ?? undefined,
-    }));
+    .slice(0, 8);
 
   return (
     <PageContainer as="div" className="space-y-10 sm:space-y-12">

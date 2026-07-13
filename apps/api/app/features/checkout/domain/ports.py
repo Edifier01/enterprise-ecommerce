@@ -9,6 +9,7 @@ from app.features.checkout.domain.entities import (
     CheckoutSession,
     CheckoutSessionLine,
     Order,
+    OrderLine,
     PaymentIntentResult,
     PaymentRecord,
     ProductSnapshot,
@@ -158,6 +159,23 @@ class ICheckoutRepository(ABC):
 
     @abstractmethod
     async def get_order_by_checkout_session(self, checkout_session_id: UUID) -> Order | None:
+        pass
+
+    @abstractmethod
+    async def list_orders_by_customer(
+        self,
+        customer_id: UUID,
+        page: int,
+        limit: int,
+    ) -> tuple[list[Order], int]:
+        pass
+
+    @abstractmethod
+    async def get_order_with_lines_by_number_for_customer(
+        self,
+        order_number: str,
+        customer_id: UUID,
+    ) -> tuple[Order, list[OrderLine]] | None:
         pass
 
     @abstractmethod

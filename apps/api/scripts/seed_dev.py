@@ -16,6 +16,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
+from app.features.admin.infrastructure.persistence.models import AdminUserModel
+from app.features.auth.infrastructure.persistence.models import UserModel
+from app.features.auth.infrastructure.security.bcrypt_hasher import BcryptPasswordHasher
 from app.features.catalog.infrastructure.persistence.models import (
     CategoryModel,
     ProductModel,
@@ -24,6 +27,8 @@ from app.features.catalog.infrastructure.persistence.models import (
 from app.features.inventory.infrastructure.persistence.models import InventoryItemModel
 
 _DEFAULT_IN_STOCK_QUANTITY = 50
+_WHOLESALER_EMAIL = "wholesaler@example.com"
+_WHOLESALER_PASSWORD = "wholesale12345"
 
 # --- categories ------------------------------------------------------------
 _CATEGORIES = [
@@ -135,14 +140,55 @@ _SAMPLE_PRODUCTS = [
 ]
 
 
+async def _seed_admin_user(session: AsyncSession) -> None:
+    existing = await session.scalar(select(func.count()).select_from(AdminUserModel))
+    if existing and existing > 0:
+        return
+
+    hasher = BcryptPasswordHasher()
+    session.add(
+        AdminUserModel(
+            email=settings.admin_dev_email,
+            hashed_password=hasher.hash(settings.admin_dev_password),
+            role="superadmin",
+            is_active=True,
+        )
+    )
+    await session.commit()
+    print(f"Seeded dev admin user: {settings.admin_dev_email}")
+
+
+async def _seed_wholesaler_user(session: AsyncSession) -> None:
+    existing = await session.scalar(
+        select(func.count()).select_from(UserModel).where(UserModel.email == _WHOLESALER_EMAIL)
+    )
+    if existing and existing > 0:
+        return
+
+    hasher = BcryptPasswordHasher()
+    session.add(
+        UserModel(
+            email=_WHOLESALER_EMAIL,
+            hashed_password=hasher.hash(_WHOLESALER_PASSWORD),
+            is_active=True,
+            is_wholesaler=True,
+        )
+    )
+    await session.commit()
+    print(f"Seeded dev wholesaler customer: {_WHOLESALER_EMAIL}")
+
+
 async def seed() -> None:
     engine = create_async_engine(settings.database_url, echo=False)
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     async with session_factory() as session:
+        await _seed_admin_user(session)
+        await _seed_wholesaler_user(session)
+
         count = await session.scalar(select(func.count()).select_from(ProductModel))
         if count and count > 0:
-            print(f"Database already has {count} product(s). Skipping seed.")
+            print(f"Database already has {count} product(s). Skipping product seed.")
             await engine.dispose()
             return
 
@@ -167,11 +213,13 @@ async def seed() -> None:
             for variant in variants:
                 variant_id = uuid.uuid4()
                 in_stock = data["in_stock"]
+                wholesale_price_cents = (variant["price_cents"] * 80) // 100
                 session.add(
                     ProductVariantModel(
                         id=variant_id,
                         product_id=product_id,
                         in_stock=in_stock,
+                        wholesale_price_cents=wholesale_price_cents,
                         **variant,
                     )
                 )

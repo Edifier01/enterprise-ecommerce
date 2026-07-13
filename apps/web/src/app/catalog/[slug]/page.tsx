@@ -8,11 +8,13 @@ import { CategoryProductList } from "@/components/store/catalog/category-product
 import { PageContainer } from "@/components/store/layout/page-container";
 import { getCategories, listProducts } from "@/lib/api";
 import type { Category } from "@/lib/api";
+import { getAccessToken, getCurrentUser } from "@/lib/auth/session";
 import {
   getAllCategorySlugs,
   getBreadcrumbsForCategory,
   getCategoryBySlug,
 } from "@/lib/store/categories";
+import { toProductGridItems } from "@/lib/store/product-grid";
 import { siteConfig } from "@/lib/store/site-config";
 
 interface CategoryPageProps {
@@ -76,6 +78,9 @@ export async function generateMetadata({
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params;
+  const token = await getAccessToken();
+  const user = await getCurrentUser();
+  const isWholesaler = user?.is_wholesaler ?? false;
 
   let apiCategories: Awaited<ReturnType<typeof getCategories>> | null = null;
   try {
@@ -96,7 +101,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   try {
     // Filter by the real primary-category association (ADR-002).
-    products = await listProducts(1, 48, slug);
+    products = await listProducts(1, 48, slug, token);
   } catch {
     error =
       "Не удалось загрузить товары. Убедитесь, что API запущен и доступен.";
@@ -107,10 +112,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     apiCategory !== null
       ? allCategories.filter((c) => c.parent_id === apiCategory.id)
       : [];
-  const categoryProducts = (products?.items ?? []).map((p) => ({
-    ...p,
-    compareAtCents: p.compare_at_price_cents ?? undefined,
-  }));
+  const categoryProducts = toProductGridItems(products?.items ?? [], isWholesaler);
 
   const childCategoryCards = childCategories.map((child) => ({
     slug: child.slug,

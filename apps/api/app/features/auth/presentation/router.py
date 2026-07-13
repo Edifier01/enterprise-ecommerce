@@ -33,9 +33,11 @@ from app.features.auth.presentation.schemas import (
 )
 from app.features.checkout.domain.ports import ICheckoutRepository
 from app.features.checkout.presentation.dependencies import (
+    get_cart_service,
     get_checkout_repository,
     resolve_cart_session_token,
 )
+from app.features.checkout.application.cart_service import CartService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -63,6 +65,7 @@ async def login(
     token_service: ITokenService = Depends(get_token_service),
     cart_session_token: str | None = Depends(resolve_cart_session_token),
     checkout_repo: ICheckoutRepository = Depends(get_checkout_repository),
+    cart_service: CartService = Depends(get_cart_service),
 ) -> TokenResponse:
     use_case = LoginUserUseCase(repo, hasher, token_service)
     try:
@@ -72,11 +75,20 @@ async def login(
     if cart_session_token:
         user = await repo.get_by_email(request.email)
         if user is not None:
-            await checkout_repo.merge_guest_cart_into_user_cart(cart_session_token, user.id)
+            cart = await checkout_repo.merge_guest_cart_into_user_cart(cart_session_token, user.id)
+            if not cart.is_empty:
+                cart = await cart_service.validate_cart_for_checkout(
+                    cart, is_wholesaler=user.is_wholesaler
+                )
             await checkout_repo.commit()
     return TokenResponse(access_token=access_token)
 
 
 @router.get("/me", response_model=MeResponse, operation_id="getCurrentUser")
 async def me(current_user: User = Depends(get_current_user)) -> MeResponse:
-    return MeResponse(id=current_user.id, email=current_user.email, created_at=current_user.created_at)
+    return MeResponse(
+        id=current_user.id,
+        email=current_user.email,
+        is_wholesaler=current_user.is_wholesaler,
+        created_at=current_user.created_at,
+    )

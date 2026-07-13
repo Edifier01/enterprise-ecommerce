@@ -13,7 +13,7 @@ const env = {
   ...process.env,
   DATABASE_URL:
     process.env.DATABASE_URL ??
-    "postgresql+asyncpg://postgres:postgres@localhost:5432/ecommerce",
+    "postgresql+asyncpg://postgres:postgres@localhost:5433/ecommerce",
   PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER ?? "stub",
   ENVIRONMENT: process.env.ENVIRONMENT ?? "development",
   CORS_ORIGINS: process.env.CORS_ORIGINS ?? '["http://localhost:3000"]',

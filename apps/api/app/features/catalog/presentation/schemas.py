@@ -12,6 +12,7 @@ class ProductVariantSchema(BaseModel):
     sku: str
     name: str
     price_cents: int
+    wholesale_price_cents: int | None = None
     in_stock: bool
     is_default: bool
     sort_order: int

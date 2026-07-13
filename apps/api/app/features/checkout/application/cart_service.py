@@ -3,6 +3,8 @@
 import secrets
 import uuid
 
+from app.features.catalog.domain.entities import ProductVariant
+from app.features.catalog.domain.pricing import resolve_variant_price
 from app.features.checkout.domain.entities import Cart, CartStatus, ProductSnapshot
 from app.features.checkout.domain.ports import ICheckoutRepository
 from app.features.inventory.application.inventory_service import InventoryService
@@ -61,7 +63,28 @@ class CartService:
     ) -> tuple[Cart, str | None]:
         return await self.resolve_cart(session_token, user_id)
 
-    def _build_snapshot(self, variant, product) -> ProductSnapshot:
+    @staticmethod
+    def _variant_entity(variant_model, product_model) -> ProductVariant:
+        return ProductVariant(
+            id=variant_model.id,
+            product_id=product_model.id,
+            sku=variant_model.sku,
+            name=variant_model.name,
+            price_cents=variant_model.price_cents,
+            wholesale_price_cents=variant_model.wholesale_price_cents,
+            in_stock=variant_model.in_stock,
+            is_default=variant_model.is_default,
+            sort_order=variant_model.sort_order,
+            attributes=variant_model.attributes or {},
+        )
+
+    def _resolve_line_price(self, variant_model, product_model, *, is_wholesaler: bool):
+        return resolve_variant_price(
+            self._variant_entity(variant_model, product_model),
+            is_wholesaler=is_wholesaler,
+        )
+
+    def _build_snapshot(self, variant, product, *, price_tier: str) -> ProductSnapshot:
         return ProductSnapshot(
             variant_id=variant.id,
             sku=variant.sku,
@@ -72,6 +95,7 @@ class CartService:
             attributes=variant.attributes or {},
             price_cents=variant.price_cents,
             currency=product.currency,
+            price_tier=price_tier,
         )
 
     def _validate_purchasable(self, variant, product) -> None:
@@ -83,6 +107,8 @@ class CartService:
         cart: Cart,
         variant_id: uuid.UUID,
         quantity: int,
+        *,
+        is_wholesaler: bool = False,
     ) -> Cart:
         if quantity <= 0:
             raise ValueError("Quantity must be positive")
@@ -94,13 +120,14 @@ class CartService:
         variant, product = row
         self._validate_purchasable(variant, product)
         await self._inventory_service.ensure_available(variant_id, quantity)
-        snapshot = self._build_snapshot(variant, product)
+        resolved = self._resolve_line_price(variant, product, is_wholesaler=is_wholesaler)
+        snapshot = self._build_snapshot(variant, product, price_tier=resolved.tier.value)
 
         await self._repo.upsert_cart_line(
             cart_id=cart.id,
             variant_id=variant_id,
             quantity=quantity,
-            unit_price_cents=variant.price_cents,
+            unit_price_cents=resolved.unit_price_cents,
             currency=product.currency,
             snapshot=snapshot,
         )
@@ -113,6 +140,8 @@ class CartService:
         cart: Cart,
         line_id: uuid.UUID,
         quantity: int,
+        *,
+        is_wholesaler: bool = False,
     ) -> Cart:
         line = await self._repo.get_cart_line(line_id)
         if line is None or line.cart_id != cart.id:
@@ -127,7 +156,16 @@ class CartService:
             variant, product = row
             self._validate_purchasable(variant, product)
             await self._inventory_service.ensure_available(line.variant_id, quantity)
-            await self._repo.update_cart_line_quantity(line_id, quantity)
+            resolved = self._resolve_line_price(variant, product, is_wholesaler=is_wholesaler)
+            snapshot = self._build_snapshot(variant, product, price_tier=resolved.tier.value)
+            await self._repo.upsert_cart_line(
+                cart_id=cart.id,
+                variant_id=line.variant_id,
+                quantity=quantity,
+                unit_price_cents=resolved.unit_price_cents,
+                currency=product.currency,
+                snapshot=snapshot,
+            )
 
         refreshed = await self._repo.get_cart_by_id(cart.id)
         assert refreshed is not None
@@ -143,7 +181,12 @@ class CartService:
         assert refreshed is not None
         return refreshed
 
-    async def validate_cart_for_checkout(self, cart: Cart) -> Cart:
+    async def validate_cart_for_checkout(
+        self,
+        cart: Cart,
+        *,
+        is_wholesaler: bool = False,
+    ) -> Cart:
         if cart.status != CartStatus.ACTIVE:
             raise ValueError("Cart is not active")
         if cart.is_empty:
@@ -156,13 +199,14 @@ class CartService:
             variant, product = row
             self._validate_purchasable(variant, product)
             await self._inventory_service.ensure_available(line.variant_id, line.quantity)
-            if line.unit_price_cents != variant.price_cents or line.currency != product.currency:
-                snapshot = self._build_snapshot(variant, product)
+            resolved = self._resolve_line_price(variant, product, is_wholesaler=is_wholesaler)
+            if line.unit_price_cents != resolved.unit_price_cents or line.currency != product.currency:
+                snapshot = self._build_snapshot(variant, product, price_tier=resolved.tier.value)
                 await self._repo.upsert_cart_line(
                     cart_id=cart.id,
                     variant_id=line.variant_id,
                     quantity=line.quantity,
-                    unit_price_cents=variant.price_cents,
+                    unit_price_cents=resolved.unit_price_cents,
                     currency=product.currency,
                     snapshot=snapshot,
                 )

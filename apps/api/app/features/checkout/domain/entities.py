@@ -29,6 +29,7 @@ class PaymentRecordStatus(StrEnum):
 
 class OrderStatus(StrEnum):
     CONFIRMED = "confirmed"
+    SHIPPED = "shipped"
     CANCELED = "canceled"
 
 
@@ -43,6 +44,7 @@ class ProductSnapshot:
     attributes: dict[str, str]
     price_cents: int
     currency: str
+    price_tier: str = "retail"
 
     def to_dict(self) -> dict:
         return {
@@ -55,6 +57,7 @@ class ProductSnapshot:
             "attributes": self.attributes,
             "price_cents": self.price_cents,
             "currency": self.currency,
+            "price_tier": self.price_tier,
         }
 
     @classmethod
@@ -69,6 +72,7 @@ class ProductSnapshot:
             attributes=data.get("attributes", {}),
             price_cents=data["price_cents"],
             currency=data["currency"],
+            price_tier=data.get("price_tier", "retail"),
         )
 
 
@@ -177,6 +181,17 @@ class Order:
     payment_record_id: UUID
     created_at: datetime
     updated_at: datetime
+
+
+@dataclass(frozen=True)
+class OrderLine:
+    id: UUID
+    order_id: UUID
+    variant_id: UUID
+    quantity: int
+    unit_price_cents: int
+    line_total_cents: int
+    product_snapshot: ProductSnapshot
 
 
 @dataclass(frozen=True)

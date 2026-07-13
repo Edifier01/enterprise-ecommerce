@@ -29,6 +29,10 @@ class IInventoryRepository(ABC):
         pass
 
     @abstractmethod
+    async def restore_on_hand(self, variant_id: UUID, quantity: int) -> None:
+        pass
+
+    @abstractmethod
     async def get_active_reservations(
         self, reference_type: str, reference_id: UUID
     ) -> list[InventoryReservation]:

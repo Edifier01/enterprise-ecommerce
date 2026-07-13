@@ -1,5 +1,9 @@
 """Pytest configuration — CI-safe fixtures using in-memory SQLite."""
 
+import os
+
+os.environ.setdefault("INVENTORY_RESERVATION_SWEEP_ENABLED", "false")
+
 from collections.abc import AsyncGenerator
 
 import pytest

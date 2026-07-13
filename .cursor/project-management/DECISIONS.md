@@ -432,6 +432,95 @@ even though backend tests already prove the lifecycle with an in-memory gateway.
 
 ---
 
+## ADR-007
+
+| Field | Value |
+|-------|-------|
+| **Decision ID** | ADR-007 |
+| **Date** | 2026-07-09 |
+| **Status** | Accepted |
+| **Full ADR** | `docs/adr/ADR-007-admin-panel-architecture.md` |
+
+**Context:**
+
+Phase 24 storefront is complete for customers. Operations need a separate backoffice
+without sharing customer credentials or JWT scope. Sprint A establishes admin
+identity, RBAC, layout shell, and read-only dashboard.
+
+**Decision:**
+
+- Separate `admin_users` table and `AdminUser` entity (not roles on `users`).
+- Admin JWT with `scope: admin` and `permissions` claim; `AdminJwtTokenService`.
+- API namespace `/api/v1/admin/*`; RBAC `require_permission()` default-deny.
+- Frontend `/admin/*` route group with separate `admin_access_token` cookie.
+- Sprint A endpoints: login, me, dashboard summary. MFA deferred to production gate.
+
+**Alternatives Considered:**
+
+| Alternative | Reason Rejected |
+|-------------|-----------------|
+| Roles on existing `users` table | Risk of customer account elevation; violates separation |
+| Shared JWT between customer and admin | Scope confusion; security boundary violation |
+| MFA in Sprint A | Blocks delivery; documented hook for production |
+
+**Consequences:**
+
+- Positive: clear security boundary; foundation for Sprints B–D (catalog, inventory, orders admin).
+- Negative: duplicate auth infrastructure; MFA still required before production admin use.
+
+**Related Rules:**
+
+- `ecommerce/00-ecommerce`
+- `security/01-auth`
+- `frontend/03-routing`
+
+---
+
+## ADR-008
+
+| Field | Value |
+|-------|-------|
+| **Decision ID** | ADR-008 |
+| **Date** | 2026-07-10 |
+| **Status** | Accepted |
+| **Full ADR** | `docs/adr/ADR-008-wholesale-retail-pricing.md` |
+
+**Context:**
+
+Business requires retail and wholesale prices per sellable SKU. Wholesalers (admin-assigned,
+permanent status) see both prices and purchase at wholesale; retail customers see and pay
+retail only. Checkout already prices at variant level (ADR-002).
+
+**Decision:**
+
+- `product_variants.price_cents` = retail; add `wholesale_price_cents` with
+  `wholesale <= retail` CHECK.
+- `users.is_wholesaler` flag; admin-only grant/revoke (`customers:write`).
+- Server-side `resolve_unit_price_cents`; wholesale omitted from public API for non-wholesalers.
+- Order snapshots immutable; `price_tier` recorded on lines.
+- Delivered as **Sprint E**, before YooKassa final gate.
+
+**Alternatives Considered:**
+
+| Alternative | Reason Rejected |
+|-------------|-----------------|
+| Product-level wholesale only | Checkout uses variant price |
+| Wholesale visible to all | Violates requirement |
+| Recalculate past orders on status change | Violates requirement |
+
+**Consequences:**
+
+- Positive: B2B/B2C separation; aligns with variant-first checkout.
+- Negative: catalog, cart, checkout, admin customers UI, OpenAPI all need coordinated update.
+
+**Related Rules:**
+
+- `ecommerce/01-catalog`, `ecommerce/02-checkout`, `ecommerce/04-orders`
+- `database/01-schema`, `database/02-migrations`
+- ADR-002, ADR-007
+
+---
+
 ## Decision Log Template
 
 Use when recording new decisions:

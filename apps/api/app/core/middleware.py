@@ -38,6 +38,7 @@ class CheckoutRateLimitMiddleware(BaseHTTPMiddleware):
 
     WINDOW_SECONDS = 60
     DEFAULT_LIMIT = 60
+    SEARCH_LIMIT = 60
     WEBHOOK_LIMIT = 100
     PAYMENT_INTENT_LIMIT = 10
     MUTATING_METHODS = {"POST", "PATCH", "DELETE"}
@@ -58,6 +59,8 @@ class CheckoutRateLimitMiddleware(BaseHTTPMiddleware):
             return self.PAYMENT_INTENT_LIMIT
         if path.startswith(("/api/v1/cart", "/api/v1/checkout")) and request.method in self.MUTATING_METHODS:
             return self.DEFAULT_LIMIT
+        if path == "/api/v1/products/search" and request.method == "GET":
+            return self.SEARCH_LIMIT
         return None
 
     @staticmethod

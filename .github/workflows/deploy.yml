@@ -1,13 +1,12 @@
 name: Deploy
 
-# Run manually from GitHub → Actions → Deploy.
-# To enable deploy on every push, add secrets (DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY)
-# and uncomment the push trigger below.
+# Auto-deploy on push to master after secrets are configured:
+# DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY
 on:
   workflow_dispatch:
-  # push:
-  #   branches:
-  #     - master
+  push:
+    branches:
+      - master
 
 jobs:
   deploy:

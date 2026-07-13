@@ -27,6 +27,16 @@ class IUserRepository(ABC):
         """Persist a new user (flush only — caller must commit)."""
         ...
 
+    @abstractmethod
+    async def list_customers(self, page: int, limit: int) -> tuple[list[User], int]:
+        """Return paginated customer users and total count."""
+        ...
+
+    @abstractmethod
+    async def set_wholesaler(self, user_id: UUID, *, is_wholesaler: bool) -> User | None:
+        """Grant or revoke wholesaler status; None if user not found."""
+        ...
+
 
 class IPasswordHasher(ABC):
     @abstractmethod

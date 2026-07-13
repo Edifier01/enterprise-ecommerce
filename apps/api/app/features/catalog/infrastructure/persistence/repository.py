@@ -1,6 +1,6 @@
 """Product repository — SQLAlchemy implementation of IProductRepository."""
 
-from sqlalchemy import func, select
+from sqlalchemy import case, exists, func, or_, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,7 +9,10 @@ from app.features.catalog.domain.ports import IProductRepository
 from app.features.catalog.infrastructure.persistence.models import (
     CategoryModel,
     ProductModel,
+    ProductVariantModel,
 )
+
+_ACTIVE_STATUS = "active"
 
 
 class ProductRepository(IProductRepository):
@@ -24,8 +27,15 @@ class ProductRepository(IProductRepository):
     ) -> tuple[list[Product], int]:
         offset = (page - 1) * limit
 
-        count_stmt = select(func.count()).select_from(ProductModel)
-        stmt = select(ProductModel).order_by(ProductModel.created_at.desc())
+        count_stmt = select(func.count()).select_from(ProductModel).where(
+            ProductModel.status == _ACTIVE_STATUS
+        )
+        stmt = (
+            select(ProductModel)
+            .where(ProductModel.status == _ACTIVE_STATUS)
+            .options(selectinload(ProductModel.variants))
+            .order_by(ProductModel.created_at.desc())
+        )
 
         if category_slug is not None:
             category_filter = ProductModel.category_id.in_(
@@ -37,13 +47,56 @@ class ProductRepository(IProductRepository):
         total = int((await self._session.scalar(count_stmt)) or 0)
         stmt = stmt.offset(offset).limit(limit)
         rows = (await self._session.scalars(stmt)).all()
-        products = [self._to_domain(row) for row in rows]
+        products = [self._to_domain(row, include_variants=True) for row in rows]
+        return products, total
+
+    async def search_products(
+        self,
+        query: str,
+        page: int,
+        limit: int,
+    ) -> tuple[list[Product], int]:
+        offset = (page - 1) * limit
+        term = f"%{query.casefold()}%"
+
+        name_match = func.lower(ProductModel.name).like(term)
+        sku_match = exists(
+            select(1).where(
+                ProductVariantModel.product_id == ProductModel.id,
+                func.lower(ProductVariantModel.sku).like(term),
+            )
+        )
+        search_filter = or_(name_match, sku_match)
+
+        relevance = case(
+            (func.lower(ProductModel.name) == query.casefold(), 0),
+            (func.lower(ProductModel.name).like(f"{query.casefold()}%"), 1),
+            else_=2,
+        )
+
+        count_stmt = (
+            select(func.count())
+            .select_from(ProductModel)
+            .where(search_filter, ProductModel.status == _ACTIVE_STATUS)
+        )
+        stmt = (
+            select(ProductModel)
+            .where(search_filter, ProductModel.status == _ACTIVE_STATUS)
+            .options(selectinload(ProductModel.variants))
+            .order_by(relevance, ProductModel.name.asc())
+            .offset(offset)
+            .limit(limit)
+        )
+
+        total = int((await self._session.scalar(count_stmt)) or 0)
+        rows = (await self._session.scalars(stmt)).all()
+        products = [self._to_domain(row, include_variants=True) for row in rows]
         return products, total
 
     async def get_by_slug(self, slug: str) -> Product | None:
         stmt = (
             select(ProductModel)
-            .where(ProductModel.slug == slug)
+            .where(ProductModel.slug == slug, ProductModel.status == _ACTIVE_STATUS)
             .options(selectinload(ProductModel.variants))
         )
         row = (await self._session.scalars(stmt)).first()
@@ -62,6 +115,7 @@ class ProductRepository(IProductRepository):
                     sku=v.sku,
                     name=v.name,
                     price_cents=v.price_cents,
+                    wholesale_price_cents=v.wholesale_price_cents,
                     in_stock=v.in_stock,
                     is_default=v.is_default,
                     sort_order=v.sort_order,
@@ -76,6 +130,7 @@ class ProductRepository(IProductRepository):
             price_cents=row.price_cents,
             currency=row.currency,
             in_stock=row.in_stock,
+            status=row.status,
             compare_at_price_cents=row.compare_at_price_cents,
             category_id=row.category_id,
             variants=variants,

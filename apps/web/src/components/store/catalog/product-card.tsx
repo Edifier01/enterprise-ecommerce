@@ -21,6 +21,8 @@ export interface ProductCardProps {
   compareAtCents?: number;
   imageSrc?: string;
   className?: string;
+  isWholesaler?: boolean;
+  wholesalePriceCents?: number;
 }
 
 export function ProductCard({
@@ -28,6 +30,8 @@ export function ProductCard({
   compareAtCents,
   imageSrc,
   className,
+  isWholesaler = false,
+  wholesalePriceCents,
 }: ProductCardProps) {
   const discount = compareAtCents
     ? getDiscountPercent(product.price_cents, compareAtCents)
@@ -70,7 +74,19 @@ export function ProductCard({
 
         <div className="mt-auto space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            {onSale && compareAtCents ? (
+            {isWholesaler && wholesalePriceCents != null ? (
+              <div className="flex flex-col gap-0.5 text-sm">
+                <span className="text-muted-foreground">
+                  Розница:{" "}
+                  <span className="font-medium text-foreground">
+                    {formatPrice(product.price_cents, product.currency)}
+                  </span>
+                </span>
+                <span className="store-price-sale">
+                  Опт: {formatPrice(wholesalePriceCents, product.currency)}
+                </span>
+              </div>
+            ) : onSale && compareAtCents ? (
               <>
                 <span className="store-price-sale">
                   {formatPrice(product.price_cents, product.currency)}

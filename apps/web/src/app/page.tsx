@@ -6,6 +6,8 @@ import { PageContainer } from "@/components/store/layout/page-container";
 import { PromoBanner } from "@/components/store/marketing/promo-banner";
 import { SeoContentBlock } from "@/components/store/marketing/seo-content-block";
 import { listProducts } from "@/lib/api";
+import { getAccessToken, getCurrentUser } from "@/lib/auth/session";
+import { toProductGridItems } from "@/lib/store/product-grid";
 import { siteConfig } from "@/lib/store/site-config";
 
 export const metadata: Metadata = {
@@ -14,18 +16,23 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
+  const token = await getAccessToken();
+  const user = await getCurrentUser();
+  const isWholesaler = user?.is_wholesaler ?? false;
+
   let products: Awaited<ReturnType<typeof listProducts>> | null = null;
   let error: string | null = null;
 
   try {
-    products = await listProducts(1, 24);
+    products = await listProducts(1, 24, undefined, token);
   } catch {
     error =
       "Не удалось загрузить товары. Убедитесь, что API запущен и доступен.";
   }
 
   const items = products?.items ?? [];
-  const newArrivals = [...items].reverse().slice(0, 8);
+  const gridItems = toProductGridItems(items, isWholesaler);
+  const newArrivals = [...gridItems].reverse().slice(0, 8);
 
   return (
     <PageContainer as="div" className="space-y-10 sm:space-y-12">
@@ -69,7 +76,7 @@ export default async function HomePage() {
           <h2 id="catalog-tabs-heading" className="store-section-title">
             Каталог
           </h2>
-          <SectionTabs products={items} limit={8} />
+          <SectionTabs products={gridItems} limit={8} />
         </section>
       ) : null}
 

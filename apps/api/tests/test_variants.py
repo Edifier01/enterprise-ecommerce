@@ -183,12 +183,14 @@ async def test_product_variant_attributes_shape(catalog_client: AsyncClient) -> 
 
 
 @pytest.mark.asyncio
-async def test_list_products_omits_variants(catalog_client: AsyncClient) -> None:
-    """List path stays lightweight — variants are only loaded on detail."""
+async def test_list_products_includes_variants(catalog_client: AsyncClient) -> None:
+    """List path includes variants for wholesale-aware catalog cards (Sprint E)."""
     response = await catalog_client.get("/api/v1/products")
     assert response.status_code == 200
-    for item in response.json()["items"]:
-        assert item["variants"] == []
+    tshirt = next(i for i in response.json()["items"] if i["slug"] == "classic-white-t-shirt")
+    assert len(tshirt["variants"]) == 2
+    earbuds = next(i for i in response.json()["items"] if i["slug"] == "wireless-earbuds")
+    assert earbuds["variants"] == []
 
 
 # --- sale (compare-at) pricing ---------------------------------------------
@@ -209,7 +211,7 @@ async def test_product_detail_null_compare_at_when_no_sale(catalog_client: Async
     """A non-discounted product returns compare_at_price_cents = null."""
     response = await catalog_client.get("/api/v1/products/slim-fit-jeans")
     assert response.status_code == 200
-    assert response.json()["compare_at_price_cents"] is None
+    assert response.json().get("compare_at_price_cents") is None
 
 
 # --- primary-category filtering (ADR-002) ----------------------------------

@@ -11,4 +11,5 @@ class User:
     email: str
     hashed_password: str
     is_active: bool
+    is_wholesaler: bool
     created_at: datetime

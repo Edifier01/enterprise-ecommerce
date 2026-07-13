@@ -1,5 +1,7 @@
 """Checkout FastAPI dependencies."""
 
+from datetime import timedelta
+
 from fastapi import Cookie, Depends, Header
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,7 +44,10 @@ def get_inventory_repository(
 def get_inventory_service(
     repo: IInventoryRepository = Depends(get_inventory_repository),
 ) -> InventoryService:
-    return InventoryService(repo)
+    return InventoryService(
+        repo,
+        reservation_ttl=timedelta(minutes=settings.inventory_reservation_ttl_minutes),
+    )
 
 
 def get_stripe_gateway() -> IStripeGateway:

@@ -29,6 +29,16 @@ class IProductRepository(ABC):
         """Return a single product with its variants by slug, or None if not found."""
         ...
 
+    @abstractmethod
+    async def search_products(
+        self,
+        query: str,
+        page: int,
+        limit: int,
+    ) -> tuple[list[Product], int]:
+        """Return products matching the query by name or variant SKU."""
+        ...
+
 
 class ICategoryRepository(ABC):
     @abstractmethod

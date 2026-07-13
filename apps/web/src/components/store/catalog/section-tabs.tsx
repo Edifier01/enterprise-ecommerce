@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import type { ProductCardProduct } from "@/components/store/catalog/product-card";
+import type { ProductGridItem } from "@/components/store/catalog/product-grid";
 import { ProductGrid } from "@/components/store/catalog/product-grid";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +19,7 @@ export const SECTION_TAB_LABELS: Record<SectionTabId, string> = {
 export type SectionTabCompareAtMap = Record<string, number | undefined>;
 
 export interface SectionTabsProps {
-  products: ProductCardProduct[];
+  products: ProductGridItem[];
   /** Optional mock compare-at prices keyed by product slug (sale UI). */
   compareAtBySlug?: SectionTabCompareAtMap;
   limit?: number;
@@ -27,10 +27,10 @@ export interface SectionTabsProps {
 }
 
 function filterProductsForTab(
-  products: ProductCardProduct[],
+  products: ProductGridItem[],
   tab: SectionTabId,
   limit: number
-): ProductCardProduct[] {
+): ProductGridItem[] {
   switch (tab) {
     case "recommended":
       return [...products]
@@ -46,7 +46,7 @@ function filterProductsForTab(
 }
 
 function buildCompareAtMap(
-  products: ProductCardProduct[],
+  products: ProductGridItem[],
   tab: SectionTabId,
   compareAtBySlug?: SectionTabCompareAtMap
 ): SectionTabCompareAtMap | undefined {
@@ -120,7 +120,7 @@ export function SectionTabs({
         <ProductGrid
           products={visibleProducts.map((product) => ({
             ...product,
-            compareAtCents: activeCompareAt?.[product.slug],
+            compareAtCents: activeCompareAt?.[product.slug] ?? product.compareAtCents,
           }))}
           emptyMessage="В этом разделе пока нет товаров."
         />

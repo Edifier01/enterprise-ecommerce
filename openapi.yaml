@@ -80,6 +80,44 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProductListResponse"
 
+  /api/v1/products/search:
+    get:
+      summary: Search products by name or SKU
+      operationId: searchProducts
+      tags: [catalog]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query (product name or variant SKU)
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 24
+      responses:
+        "200":
+          description: Paginated search results ordered by relevance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+        "422":
+          description: Validation error (empty or too long query)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /api/v1/products/{slug}:
     get:
       summary: Get product by slug
@@ -407,6 +445,435 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/orders:
+    get:
+      summary: List authenticated customer orders
+      operationId: listOrders
+      tags: [orders]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Paginated order list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderListResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/orders/{order_number}:
+    get:
+      summary: Get order detail by order number
+      operationId: getOrder
+      tags: [orders]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: order_number
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order detail with line items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetail"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/admin/auth/login:
+    post:
+      summary: Admin login
+      operationId: adminLogin
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginRequest"
+      responses:
+        "200":
+          description: Admin access token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTokenResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/admin/auth/me:
+    get:
+      summary: Get current admin user
+      operationId: getCurrentAdmin
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current admin profile and permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminMeResponse"
+        "401":
+          description: Not authenticated or invalid admin token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/admin/dashboard/summary:
+    get:
+      summary: Admin dashboard summary metrics
+      operationId: getAdminDashboardSummary
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Read-only operational metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummaryResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Missing admin:read permission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/admin/catalog/products:
+    get:
+      summary: Admin list products (all statuses)
+      operationId: adminListProducts
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, active, archived]
+      responses:
+        "200":
+          description: Paginated admin product list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminProductListResponse"
+    post:
+      summary: Admin create product
+      operationId: adminCreateProduct
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreateProductRequest"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminProductSchema"
+
+  /api/v1/admin/catalog/categories:
+    get:
+      summary: Admin list categories (all)
+      operationId: adminListCategories
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Category list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCategoryListResponse"
+    post:
+      summary: Admin create category
+      operationId: adminCreateCategory
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreateCategoryRequest"
+      responses:
+        "201":
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
+  /api/v1/admin/inventory:
+    get:
+      summary: Admin list inventory items
+      operationId: adminListInventory
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: low_stock
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Inventory list with variant SKU and availability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminInventoryListResponse"
+
+  /api/v1/admin/inventory/{variant_id}:
+    patch:
+      summary: Admin adjust inventory on-hand quantity
+      operationId: adminAdjustInventory
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: variant_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminAdjustInventoryRequest"
+      responses:
+        "200":
+          description: Updated inventory item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminInventoryItemSchema"
+        "409":
+          description: Version conflict
+        "422":
+          description: on_hand below reserved quantity
+
+  /api/v1/admin/orders:
+    get:
+      summary: Admin list orders
+      operationId: adminListOrders
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [confirmed, shipped, canceled]
+      responses:
+        "200":
+          description: Paginated order list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOrderListResponse"
+
+  /api/v1/admin/orders/{order_number}:
+    get:
+      summary: Admin get order detail
+      operationId: adminGetOrder
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: order_number
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order detail with lines and status history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOrderDetailSchema"
+        "404":
+          description: Order not found
+
+  /api/v1/admin/orders/{order_number}/status:
+    patch:
+      summary: Admin update order status (ship or cancel)
+      operationId: adminUpdateOrderStatus
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: order_number
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateOrderStatusRequest"
+      responses:
+        "200":
+          description: Updated order detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOrderDetailSchema"
+        "404":
+          description: Order not found
+        "422":
+          description: Invalid status transition
+
+  /api/v1/admin/customers:
+    get:
+      summary: Admin list customers
+      operationId: adminListCustomers
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Paginated customer list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCustomerListResponse"
+
+  /api/v1/admin/customers/{customer_id}/wholesaler:
+    patch:
+      summary: Admin grant or revoke wholesaler status
+      operationId: adminUpdateCustomerWholesaler
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateWholesalerRequest"
+      responses:
+        "200":
+          description: Updated customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCustomerSchema"
+        "404":
+          description: Customer not found
+
 components:
   securitySchemes:
     bearerAuth:
@@ -427,6 +894,9 @@ components:
           type: string
         price_cents:
           type: integer
+        wholesale_price_cents:
+          type: integer
+          description: Omitted for non-wholesaler API consumers
         in_stock:
           type: boolean
         is_default:
@@ -562,13 +1032,15 @@ components:
 
     MeResponse:
       type: object
-      required: [id, email, created_at]
+      required: [id, email, is_wholesaler, created_at]
       properties:
         id:
           type: string
           format: uuid
         email:
           type: string
+        is_wholesaler:
+          type: boolean
         created_at:
           type: string
           format: date-time
@@ -599,6 +1071,31 @@ components:
           type: string
         product_snapshot:
           type: object
+          description: Immutable product/variant snapshot at line creation time
+          properties:
+            variant_id:
+              type: string
+              format: uuid
+            sku:
+              type: string
+            name:
+              type: string
+            product_id:
+              type: string
+              format: uuid
+            product_name:
+              type: string
+            product_slug:
+              type: string
+            price_cents:
+              type: integer
+              description: Retail reference price at snapshot time
+            currency:
+              type: string
+            price_tier:
+              type: string
+              enum: [retail, wholesale]
+              description: Commercial tier applied to unit_price_cents (ADR-008)
 
     CartResponse:
       type: object
@@ -692,6 +1189,530 @@ components:
         status:
           type: string
 
+    OrderSummary:
+      type: object
+      required: [id, order_number, status, currency, total_cents, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        order_number:
+          type: string
+        status:
+          type: string
+        currency:
+          type: string
+        total_cents:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    OrderLine:
+      type: object
+      required: [id, variant_id, quantity, unit_price_cents, line_total_cents, product_snapshot]
+      properties:
+        id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+        unit_price_cents:
+          type: integer
+        line_total_cents:
+          type: integer
+        product_snapshot:
+          type: object
+          description: Immutable product/variant snapshot at line creation time
+          properties:
+            variant_id:
+              type: string
+              format: uuid
+            sku:
+              type: string
+            name:
+              type: string
+            product_id:
+              type: string
+              format: uuid
+            product_name:
+              type: string
+            product_slug:
+              type: string
+            price_cents:
+              type: integer
+              description: Retail reference price at snapshot time
+            currency:
+              type: string
+            price_tier:
+              type: string
+              enum: [retail, wholesale]
+              description: Commercial tier applied to unit_price_cents (ADR-008)
+
+    OrderDetail:
+      type: object
+      required:
+        - id
+        - order_number
+        - status
+        - currency
+        - subtotal_cents
+        - discount_cents
+        - shipping_cents
+        - tax_cents
+        - total_cents
+        - created_at
+        - updated_at
+        - lines
+      properties:
+        id:
+          type: string
+          format: uuid
+        order_number:
+          type: string
+        status:
+          type: string
+        currency:
+          type: string
+        subtotal_cents:
+          type: integer
+        discount_cents:
+          type: integer
+        shipping_cents:
+          type: integer
+        tax_cents:
+          type: integer
+        total_cents:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderLine"
+
+    OrderListResponse:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderSummary"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    AdminLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+
+    AdminTokenResponse:
+      type: object
+      required: [access_token, token_type]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          example: bearer
+
+    AdminMeResponse:
+      type: object
+      required: [id, email, role, permissions, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    DashboardSummaryResponse:
+      type: object
+      required:
+        - orders_today
+        - orders_last_7_days
+        - revenue_last_7_days_cents
+        - low_stock_count
+        - orders_by_status
+      properties:
+        orders_today:
+          type: integer
+        orders_last_7_days:
+          type: integer
+        revenue_last_7_days_cents:
+          type: integer
+        low_stock_count:
+          type: integer
+        orders_by_status:
+          type: object
+          additionalProperties:
+            type: integer
+
+    AdminProductSchema:
+      type: object
+      required: [id, name, slug, price_cents, currency, in_stock, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        price_cents:
+          type: integer
+        compare_at_price_cents:
+          type: integer
+          nullable: true
+        currency:
+          type: string
+        in_stock:
+          type: boolean
+        status:
+          type: string
+          enum: [draft, active, archived]
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductVariant"
+
+    AdminProductListResponse:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminProductSchema"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    AdminCreateProductRequest:
+      type: object
+      required: [name, slug, sku, price_cents]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        sku:
+          type: string
+        price_cents:
+          type: integer
+        currency:
+          type: string
+          default: USD
+        status:
+          type: string
+          enum: [draft, active, archived]
+          default: draft
+        compare_at_price_cents:
+          type: integer
+          nullable: true
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    AdminCategoryListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
+        total:
+          type: integer
+
+    AdminCreateCategoryRequest:
+      type: object
+      required: [slug, name]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        is_active:
+          type: boolean
+          default: true
+        sort_order:
+          type: integer
+          default: 0
+
+    AdminInventoryItemSchema:
+      type: object
+      required:
+        - variant_id
+        - sku
+        - product_name
+        - quantity_on_hand
+        - quantity_reserved
+        - available
+        - version
+        - is_low_stock
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        product_name:
+          type: string
+        quantity_on_hand:
+          type: integer
+        quantity_reserved:
+          type: integer
+        available:
+          type: integer
+        version:
+          type: integer
+        is_low_stock:
+          type: boolean
+
+    AdminInventoryListResponse:
+      type: object
+      required: [items, total, page, limit, low_stock_threshold]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminInventoryItemSchema"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        low_stock_threshold:
+          type: integer
+
+    AdminAdjustInventoryRequest:
+      type: object
+      required: [quantity_on_hand, reason, version]
+      properties:
+        quantity_on_hand:
+          type: integer
+          minimum: 0
+        reason:
+          type: string
+          enum: [restock, damage, correction, return]
+        version:
+          type: integer
+          minimum: 0
+
+    AdminOrderSummarySchema:
+      type: object
+      required:
+        - id
+        - order_number
+        - status
+        - currency
+        - total_cents
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        order_number:
+          type: string
+        status:
+          type: string
+          enum: [confirmed, shipped, canceled]
+        currency:
+          type: string
+        total_cents:
+          type: integer
+        customer_email:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    AdminOrderStatusHistorySchema:
+      type: object
+      required: [id, to_status, changed_by, changed_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        from_status:
+          type: string
+          nullable: true
+        to_status:
+          type: string
+        changed_by:
+          type: string
+        reason:
+          type: string
+          nullable: true
+        changed_at:
+          type: string
+          format: date-time
+
+    AdminOrderDetailSchema:
+      type: object
+      required:
+        - id
+        - order_number
+        - status
+        - currency
+        - subtotal_cents
+        - discount_cents
+        - shipping_cents
+        - tax_cents
+        - total_cents
+        - created_at
+        - updated_at
+        - lines
+        - status_history
+      properties:
+        id:
+          type: string
+          format: uuid
+        order_number:
+          type: string
+        status:
+          type: string
+          enum: [confirmed, shipped, canceled]
+        currency:
+          type: string
+        subtotal_cents:
+          type: integer
+        discount_cents:
+          type: integer
+        shipping_cents:
+          type: integer
+        tax_cents:
+          type: integer
+        total_cents:
+          type: integer
+        customer_email:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderLine"
+        status_history:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminOrderStatusHistorySchema"
+
+    AdminOrderListResponse:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminOrderSummarySchema"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    AdminUpdateOrderStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [shipped, canceled]
+        reason:
+          type: string
+          maxLength: 500
+
+    AdminCustomerSchema:
+      type: object
+      required: [id, email, is_wholesaler, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        is_wholesaler:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    AdminCustomerListResponse:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminCustomerSchema"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    AdminUpdateWholesalerRequest:
+      type: object
+      required: [is_wholesaler]
+      properties:
+        is_wholesaler:
+          type: boolean
+
 tags:
   - name: catalog
     description: Product catalog
@@ -703,3 +1724,5 @@ tags:
     description: Order management
   - name: payments
     description: Payment processing
+  - name: admin
+    description: Admin backoffice (RBAC-protected)

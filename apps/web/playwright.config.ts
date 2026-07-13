@@ -28,7 +28,7 @@ export default defineConfig({
         E2E_API_PORT: String(apiPort),
         DATABASE_URL:
           process.env.DATABASE_URL ??
-          "postgresql+asyncpg://postgres:postgres@localhost:5432/ecommerce",
+          "postgresql+asyncpg://postgres:postgres@localhost:5433/ecommerce",
         PAYMENT_PROVIDER: "stub",
         ENVIRONMENT: "development",
         CORS_ORIGINS: `["http://localhost:${webPort}"]`,

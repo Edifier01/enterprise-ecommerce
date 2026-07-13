@@ -39,6 +39,8 @@ class CheckoutService:
         cart: Cart,
         user_id: uuid.UUID | None,
         idempotency_key: str | None,
+        *,
+        is_wholesaler: bool = False,
     ) -> CheckoutSession:
         if idempotency_key:
             existing = await self._repo.get_checkout_session_by_idempotency_key(idempotency_key)
@@ -53,7 +55,7 @@ class CheckoutService:
                 )
                 return existing
 
-        cart = await self._cart_service.validate_cart_for_checkout(cart)
+        cart = await self._cart_service.validate_cart_for_checkout(cart, is_wholesaler=is_wholesaler)
 
         subtotal = cart.subtotal_cents
         currency = cart.currency
@@ -129,6 +131,8 @@ class CheckoutService:
         idempotency_key: str,
         user_id: uuid.UUID | None = None,
         cart_session_token: str | None = None,
+        *,
+        is_wholesaler: bool = False,
     ) -> tuple[str, str]:
         session = await self.get_checkout_session(
             session_id,
@@ -152,7 +156,7 @@ class CheckoutService:
         if cart is None:
             raise CheckoutSessionNotFoundError("Cart not found")
 
-        cart = await self._cart_service.validate_cart_for_checkout(cart)
+        cart = await self._cart_service.validate_cart_for_checkout(cart, is_wholesaler=is_wholesaler)
 
         if cart.subtotal_cents != session.total_cents or cart.currency != session.currency:
             raise ValueError("Cart total changed after checkout session creation")

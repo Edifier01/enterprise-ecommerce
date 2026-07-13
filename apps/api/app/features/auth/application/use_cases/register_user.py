@@ -33,6 +33,7 @@ class RegisterUserUseCase:
             email=email,
             hashed_password=hashed_password,
             is_active=True,
+            is_wholesaler=False,
             created_at=datetime.now(timezone.utc),
         )
         saved_user = await self._repository.create(user)

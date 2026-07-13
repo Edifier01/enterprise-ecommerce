@@ -273,6 +273,267 @@
 - [x] E2E bootstrap (`scripts/start-e2e-api.mjs`) + `reset_e2e_checkout.py` for isolated DB state
 - [x] `.env.example` updated with payment provider env vars
 
+### Feature: Catalog Search
+
+**Status:** COMPLETED (2026-07-09)
+
+- [x] `SearchProductsUseCase` + `IProductRepository.search_products()` (name + variant SKU, case-insensitive ILIKE)
+- [x] `GET /api/v1/products/search?q=&page=&limit=` with relevance ordering
+- [x] Search rate limit (60 req/min) in `CheckoutRateLimitMiddleware`
+- [x] `openapi.yaml`: `/api/v1/products/search` endpoint
+- [x] Frontend `searchProducts()` API client + `/search?q=` Server Component with `ProductGrid`
+- [x] `CatalogSearchForm` replaces `SearchPlaceholder`
+- [x] Backend tests: `tests/test_search.py` (6 tests)
+- [x] Playwright E2E `search-smoke.spec.ts`
+- [x] Quality gate: 60/60 pytest, ruff clean, tsc clean
+
+### Feature: Order History UI
+
+**Status:** COMPLETED (2026-07-09)
+
+- [x] `ListOrdersUseCase` + `GetOrderUseCase` with customer-scoped repository queries
+- [x] `GET /api/v1/orders` — paginated list (JWT required)
+- [x] `GET /api/v1/orders/{order_number}` — detail with line snapshots
+- [x] `openapi.yaml`: orders endpoints + schemas
+- [x] Frontend `/account/orders` list + `/account/orders/[orderNumber]` detail
+- [x] `lib/orders.ts` authenticated API client
+- [x] Account profile link to order history
+- [x] Backend tests: `tests/test_orders.py` (5 tests)
+- [x] Quality gate: 65/65 pytest, ruff clean, tsc clean
+
+### Feature: Inventory Reservation TTL Background Job
+
+**Status:** COMPLETED (2026-07-09)
+
+- [x] Config: `inventory_reservation_ttl_minutes`, `inventory_reservation_sweep_enabled`, `inventory_reservation_sweep_interval_seconds`
+- [x] `sweep_expired_reservations` use case + `run_reservation_expiry_sweep()` entrypoint
+- [x] Asyncio periodic scheduler wired in FastAPI lifespan (`reservation_sweep_scheduler.py`)
+- [x] One-shot CLI: `python -m scripts.expire_inventory_reservations`
+- [x] Checkout `InventoryService` uses configurable TTL from settings
+- [x] Pytest disables background sweep via `INVENTORY_RESERVATION_SWEEP_ENABLED=false`
+- [x] Tests: `tests/test_reservation_sweep.py` (4 tests)
+- [x] `.env.example` updated
+- [x] Quality gate: 69/69 pytest, ruff clean
+
+### Sprint A — Admin Foundation
+
+**Status:** COMPLETED (2026-07-09)
+
+- [x] ADR-007 — admin panel architecture (separate `admin_users`, RBAC, `/api/v1/admin/*`)
+- [x] Migration `008_add_admin_users`
+- [x] Admin auth: `POST /api/v1/admin/auth/login`, `GET /api/v1/admin/auth/me`
+- [x] RBAC: `require_permission()`, roles `superadmin` / `viewer`
+- [x] Dashboard: `GET /api/v1/admin/dashboard/summary` (orders, revenue, low stock)
+- [x] Frontend: `/admin/login`, admin layout (Sidebar), dashboard page
+- [x] Middleware guard for `/admin/*` (separate `admin_access_token` cookie)
+- [x] Dev seed: `admin@localhost` via `seed_dev.py`
+- [x] Tests: `tests/test_admin.py` (8 tests)
+- [x] Playwright E2E `admin-login-smoke.spec.ts`
+- [x] `openapi.yaml`: admin endpoints + schemas
+- [x] `.env.example`: `ADMIN_DEV_EMAIL`, `ADMIN_DEV_PASSWORD`, `ADMIN_LOW_STOCK_THRESHOLD`
+
+### Sprint B — Catalog Admin
+
+**Status:** COMPLETED (2026-07-09)
+
+- [x] Migration `009_add_product_status` (`draft` | `active` | `archived`)
+- [x] Public catalog filters `status=active` only (list, search, detail)
+- [x] Admin API `/api/v1/admin/catalog/*` — products, variants, categories CRUD
+- [x] RBAC: `catalog:write` on mutations, `admin:read` on lists
+- [x] Frontend `/admin/catalog` — list, create, edit, categories
+- [x] Sidebar «Каталог» enabled
+- [x] Tests: `tests/test_admin_catalog.py` (7 tests)
+- [x] Playwright E2E `admin-catalog-smoke.spec.ts`
+- [x] `openapi.yaml` admin catalog endpoints synced
+
+### Sprint C — Inventory Admin
+
+**Status:** COMPLETED (2026-07-09)
+
+- [x] Admin API `GET/PATCH /api/v1/admin/inventory`
+- [x] List with SKU, product name, on_hand, reserved, available
+- [x] Filter `low_stock` via global `ADMIN_LOW_STOCK_THRESHOLD`
+- [x] Adjust `quantity_on_hand` with reason + optimistic version
+- [x] RBAC: `inventory:write` on PATCH
+- [x] Frontend `/admin/inventory` table + inline adjustment form
+- [x] Sidebar «Склад» enabled
+- [x] Tests: `tests/test_admin_inventory.py` (6 tests)
+- [x] `openapi.yaml` admin inventory endpoints synced
+
+### Sprint D — Orders Admin
+
+**Status:** COMPLETED (2026-07-09)
+
+- [x] `OrderStatus.SHIPPED` + transition rules (confirmed → shipped/canceled, shipped → canceled)
+- [x] Admin API `GET/PATCH /api/v1/admin/orders/*`
+- [x] List with customer email, filter by status, pagination
+- [x] Detail with lines + status history
+- [x] Cancel restores inventory (`restore_on_hand`)
+- [x] RBAC: `admin:read` list/detail, `orders:write` on PATCH
+- [x] Frontend `/admin/orders` list + `/admin/orders/[orderNumber]` detail
+- [x] Sidebar «Заказы» enabled
+- [x] Tests: `tests/test_admin_orders.py` (7 tests)
+- [x] Playwright E2E `admin-orders-smoke.spec.ts`
+- [x] `openapi.yaml` admin orders endpoints synced
+
+### Sprint E — Wholesale Pricing (Опт / Розница)
+
+**Status:** COMPLETED (2026-07-10)
+
+**ADR:** `docs/adr/ADR-008-wholesale-retail-pricing.md`
+
+**Goal:** Two prices per SKU (retail + wholesale). Wholesalers see both and buy at
+wholesale; retail customers see and pay retail only. Wholesaler status is permanent,
+admin-assigned. Existing orders are never repriced.
+
+#### E1 — Architecture & Schema — COMPLETED
+
+#### E2 — Public Catalog & Customer API — COMPLETED
+
+#### E3 — Cart, Checkout & Orders — COMPLETED
+
+#### E4 — Admin API & RBAC — COMPLETED
+
+#### E5 — Storefront UX — COMPLETED
+
+#### E6 — Admin UI — COMPLETED
+
+#### E7 — Quality Gate — COMPLETED
+
+**Out of scope (Sprint E):** volume tiers, temporary wholesaler contracts, multi-currency wholesale, automatic wholesaler self-registration.
+
+---
+
+### Sprint E — Wholesale Pricing (Опт / Розница) — ARCHIVED DETAIL
+
+**Status:** COMPLETED (2026-07-10)
+
+- [ ] ADR-008 accepted and indexed in `DECISIONS.md`
+- [ ] Migration `010_wholesale_pricing`: `product_variants.wholesale_price_cents` (nullable), `users.is_wholesaler` (default false)
+- [ ] DB CHECK: `wholesale_price_cents IS NULL OR wholesale_price_cents <= price_cents`
+- [ ] Domain: document `price_cents` as retail; `PriceTier` enum (`retail` | `wholesale`)
+- [ ] `IPriceTierResolver` (or catalog port): resolve unit price from variant + buyer tier
+- [ ] Order/cart line snapshot: persist `price_tier` on new orders (additive column or JSON snapshot field)
+- [ ] `seed_dev.py`: sample wholesale prices + one wholesaler test customer
+
+#### E2 — Customer Tier API
+
+**Status:** PLANNED
+
+- [ ] `GET /api/v1/auth/me` → `is_wholesaler: boolean`
+- [ ] Admin `GET /api/v1/admin/customers` — paginated list (email, created_at, is_wholesaler)
+- [ ] Admin `PATCH /api/v1/admin/customers/{id}/wholesaler` — grant/revoke (RBAC: `customers:write`, superadmin in Sprint E)
+- [ ] Revoking tier does not touch existing `orders` / `order_lines`
+- [ ] Tests: grant/revoke, non-admin forbidden, me endpoint shape
+
+#### E3 — Catalog, Cart & Checkout Integration
+
+**Status:** PLANNED
+
+- [ ] Public/customer catalog + search: **omit** `wholesale_price_cents` for non-wholesalers
+- [ ] Wholesaler-authenticated catalog + search: expose both `price_cents` and `wholesale_price_cents`
+- [ ] `cart_service` / checkout revalidation: charge via resolver (wholesale for wholesalers when set)
+- [ ] Checkout 409 when wholesaler buys variant with null wholesale (explicit error message)
+- [ ] Tests: price leak prevention (regular JWT never receives wholesale field)
+- [ ] Tests: wholesaler cart totals use wholesale; guest/regular use retail
+- [ ] Tests: order line stores correct `unit_price_cents` + `price_tier`
+
+#### E4 — Admin & Storefront UI
+
+**Status:** PLANNED
+
+- [ ] Admin catalog forms: wholesale price per variant (validation ≤ retail)
+- [ ] Admin `/admin/customers` — list + wholesaler toggle + badge «Оптовик»
+- [ ] Sidebar «Клиенты» (or under existing admin nav)
+- [ ] Storefront PDP/catalog: regular — retail only; wholesaler — both prices labeled «Розница» / «Опт»
+- [ ] Account page: wholesaler badge when `is_wholesaler`
+- [ ] Cart/checkout summary uses tier-appropriate price (no wholesale label for regular users)
+
+#### E5 — Quality Gate
+
+**Status:** PLANNED
+
+- [ ] `openapi.yaml` synced (me, catalog conditional fields, admin customers)
+- [ ] pytest: full wholesale regression suite green
+- [ ] Playwright: `wholesale-pricing-smoke.spec.ts` — regular user cannot see wholesale; wholesaler can buy at wholesale
+- [ ] Playwright: admin grant wholesaler → storefront reflects dual pricing
+- [ ] Ruff + `tsc --noEmit` clean
+
+**Sprint E exit criteria:** All E1–E5 checkboxes complete; no wholesale price in API responses for non-wholesaler tokens; one E2E path wholesaler checkout → order at wholesale `unit_price_cents`.
+
+---
+
+### Sprint E — Wholesale Pricing (Опт / Розница)
+
+**Status:** COMPLETED (2026-07-10) (2026-07-10)
+
+**Goal:** Two prices per SKU (retail + wholesale). Wholesalers see both and buy at
+wholesale; retail customers see and pay retail only. Wholesaler status is permanent,
+admin-assigned. Existing orders are never repriced.
+
+**ADR:** `docs/adr/ADR-008-wholesale-retail-pricing.md`
+
+#### E1 — Architecture & Schema
+
+- [ ] ADR-008 accepted and indexed in `DECISIONS.md`
+- [ ] Migration `010_add_wholesale_pricing`: `product_variants.wholesale_price_cents` + CHECK (`>= 0`, `<= price_cents`)
+- [ ] Migration: `users.is_wholesaler` boolean (default `false`, NOT NULL)
+- [ ] Domain: variant entity + invariants; `User.is_wholesaler` on customer entity
+- [ ] `PricingService` / port: `resolve_unit_price_cents(variant, buyer)` — single authority
+- [ ] Order line snapshot records `price_tier` (`retail` | `wholesale`) for audit
+- [ ] Backfill seed: `wholesale_price_cents` for all variants in `seed_dev.py` (~80% of retail)
+
+#### E2 — Public Catalog & Customer API
+
+- [ ] Public product/list/search/detail schemas: `wholesale_price_cents` **omitted** unless buyer `is_wholesaler`
+- [ ] Authenticated retail customer: same as anonymous (no wholesale leak)
+- [ ] Authenticated wholesaler: both prices in API responses
+- [ ] `GET /api/v1/auth/me` exposes `is_wholesaler` for storefront badge/UX
+- [ ] Tests: retail vs wholesaler API visibility (`tests/test_wholesale_pricing.py`)
+
+#### E3 — Cart, Checkout & Orders
+
+- [ ] `cart_service`: use `resolve_unit_price_cents` on add/update/revalidate
+- [ ] Checkout session totals and payment intent amount use resolved tier
+- [ ] Order creation snapshots resolved price + tier; **no retroactive changes**
+- [ ] Removing wholesaler status does not alter existing orders or order history UI
+- [ ] Tests: wholesaler checkout at wholesale; retail at retail; price tamper resistance
+
+#### E4 — Admin API & RBAC
+
+- [ ] Admin catalog write: `wholesale_price_cents` on variant create/update
+- [ ] `GET /api/v1/admin/customers` — paginated customer list (email, `is_wholesaler`, created_at)
+- [ ] `PATCH /api/v1/admin/customers/{id}/wholesaler` — grant/revoke (permission `customers:write`)
+- [ ] RBAC: `superadmin` has `customers:write`; `viewer` read-only
+- [ ] Tests: `tests/test_admin_customers.py`, extend `test_admin_catalog.py` for wholesale fields
+- [ ] `openapi.yaml` synced
+
+#### E5 — Storefront UX
+
+- [ ] PDP / catalog cards: retail only for default users
+- [ ] Wholesaler: dual-price display (“Розница” / “Опт”) on PDP and cards
+- [ ] Account profile: wholesaler badge when `is_wholesaler`
+- [ ] Cart & checkout summary uses correct tier (server-driven; no client price pick)
+- [ ] TypeScript types updated; no wholesale fields in retail-facing types unless narrowed
+
+#### E6 — Admin UI
+
+- [ ] Catalog admin: wholesale price field on product create/edit (per variant)
+- [ ] New `/admin/customers` — list + toggle wholesaler status
+- [ ] Admin sidebar: «Клиенты» link
+- [ ] Playwright E2E: `admin-wholesale-smoke.spec.ts` (toggle wholesaler + verify dual price)
+- [ ] Playwright E2E: `wholesale-checkout-smoke.spec.ts` (wholesaler pays wholesale)
+
+#### E7 — Quality Gate
+
+- [ ] Full pytest green; ruff clean; `tsc --noEmit` clean
+- [ ] Manual smoke: retail user cannot see wholesale in network responses
+- [ ] PM files updated on sprint closeout
+
+**Out of scope (Sprint E):** volume tiers, temporary wholesaler contracts, multi-currency wholesale, automatic wholesaler self-registration.
+
+---
+
 ### Final Project Gate — YooKassa Payment Integration
 
 **Status:** PLANNED

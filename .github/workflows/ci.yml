@@ -26,6 +26,9 @@ jobs:
 
       - name: Run tests
         working-directory: apps/api
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///:memory:
+          INVENTORY_RESERVATION_SWEEP_ENABLED: "false"
         run: pytest tests/ -v
 
   frontend:

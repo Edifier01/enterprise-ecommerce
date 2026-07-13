@@ -1,5 +1,6 @@
 """FastAPI application entrypoint."""
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -19,11 +20,17 @@ from app.core.errors import (
     validation_exception_handler,
 )
 from app.core.middleware import CheckoutRateLimitMiddleware, RequestIdMiddleware
+from app.features.admin.presentation.router import router as admin_router
 from app.features.auth.presentation.router import router as auth_router
 from app.features.catalog.presentation.categories_router import router as categories_router
 from app.features.catalog.presentation.router import router as catalog_router
 from app.features.checkout.presentation.dev_router import router as checkout_dev_router
+from app.features.checkout.presentation.orders_router import router as orders_router
 from app.features.checkout.presentation.router import router as checkout_router
+from app.features.inventory.infrastructure.background.reservation_sweep_scheduler import (
+    start_reservation_sweep,
+    stop_reservation_sweep,
+)
 
 _LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] [request_id=%(request_id)s] %(message)s"
 
@@ -53,8 +60,13 @@ _configure_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    yield
-    await engine.dispose()
+    stop_event = asyncio.Event()
+    sweep_task = start_reservation_sweep(stop_event)
+    try:
+        yield
+    finally:
+        await stop_reservation_sweep(sweep_task, stop_event)
+        await engine.dispose()
 
 
 app = FastAPI(
@@ -100,5 +112,7 @@ async def health_ready() -> JSONResponse:
 app.include_router(catalog_router, prefix="/api/v1")
 app.include_router(categories_router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(admin_router, prefix="/api/v1")
 app.include_router(checkout_router, prefix="/api/v1")
+app.include_router(orders_router, prefix="/api/v1")
 app.include_router(checkout_dev_router, prefix="/api/v1")

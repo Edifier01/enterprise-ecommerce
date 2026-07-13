@@ -57,3 +57,43 @@ class PaymentIntentResponse(BaseModel):
 
 class WebhookResponse(BaseModel):
     status: str
+
+
+class OrderSummarySchema(BaseModel):
+    id: UUID
+    order_number: str
+    status: str
+    currency: str
+    total_cents: int
+    created_at: datetime
+
+
+class OrderLineSchema(BaseModel):
+    id: UUID
+    variant_id: UUID
+    quantity: int
+    unit_price_cents: int
+    line_total_cents: int
+    product_snapshot: dict
+
+
+class OrderDetailSchema(BaseModel):
+    id: UUID
+    order_number: str
+    status: str
+    currency: str
+    subtotal_cents: int
+    discount_cents: int
+    shipping_cents: int
+    tax_cents: int
+    total_cents: int
+    created_at: datetime
+    updated_at: datetime
+    lines: list[OrderLineSchema]
+
+
+class OrderListResponse(BaseModel):
+    items: list[OrderSummarySchema]
+    total: int
+    page: int
+    limit: int

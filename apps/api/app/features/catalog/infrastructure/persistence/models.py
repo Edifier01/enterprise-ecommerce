@@ -28,6 +28,10 @@ class ProductModel(Base):
             "compare_at_price_cents IS NULL OR compare_at_price_cents > price_cents",
             name="ck_products_compare_at_gt_price",
         ),
+        CheckConstraint(
+            "status IN ('draft', 'active', 'archived')",
+            name="ck_products_status",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -37,6 +41,7 @@ class ProductModel(Base):
     compare_at_price_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="USD")
     in_stock: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
     category_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("categories.id", ondelete="SET NULL"),
@@ -61,6 +66,11 @@ class ProductVariantModel(Base):
     __tablename__ = "product_variants"
     __table_args__ = (
         CheckConstraint("price_cents >= 0", name="ck_product_variants_price_non_negative"),
+        CheckConstraint(
+            "wholesale_price_cents IS NULL OR "
+            "(wholesale_price_cents >= 0 AND wholesale_price_cents <= price_cents)",
+            name="ck_product_variants_wholesale_lte_retail",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -74,6 +84,7 @@ class ProductVariantModel(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     attributes: Mapped[dict[str, str]] = mapped_column(JSON, nullable=False, default=dict)
     price_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    wholesale_price_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
     in_stock: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

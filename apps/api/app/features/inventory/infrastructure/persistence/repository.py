@@ -100,6 +100,14 @@ class InventoryRepository(IInventoryRepository):
         model.version += 1
         await self._session.flush()
 
+    async def restore_on_hand(self, variant_id: UUID, quantity: int) -> None:
+        model = await self._get_item_model(variant_id)
+        if model is None:
+            return
+        model.quantity_on_hand += quantity
+        model.version += 1
+        await self._session.flush()
+
     async def get_active_reservations(
         self, reference_type: str, reference_id: UUID
     ) -> list[InventoryReservation]:

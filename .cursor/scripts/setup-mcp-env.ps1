@@ -4,7 +4,7 @@
 $ErrorActionPreference = "Stop"
 
 $vars = @{
-    DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/ecommerce"
+    DATABASE_URL = "postgresql://postgres:postgres@localhost:5433/ecommerce"
 }
 
 foreach ($name in $vars.Keys) {

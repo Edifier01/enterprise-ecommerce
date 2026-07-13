@@ -57,7 +57,7 @@ Agent index: `.cursor/agents/README.md`
    |----------|----------|---------|
    | `CONTEXT7_API_KEY` | Yes | context7 |
    | `GITHUB_PAT` | Yes | github |
-   | `DATABASE_URL` | Yes | postgres — `postgresql://postgres:postgres@localhost:5432/ecommerce` (no `+asyncpg`) |
+   | `DATABASE_URL` | Yes | postgres MCP — `postgresql://postgres:postgres@localhost:5433/ecommerce` (port **5433** — see `docker-compose.yml`). API/Alembic accept this or `postgresql+asyncpg://…` (auto-normalized to asyncpg). |
    | `SENTRY_AUTH_TOKEN` | No | sentry (optional — not in default `mcp.json`) |
 
 4. Start PostgreSQL: `docker compose up -d postgres`
@@ -89,6 +89,27 @@ Agent index: `.cursor/agents/README.md`
 | docker | Start Docker Desktop; run `docker ps` |
 | fetch / shadcn | Wait for first `npx` download; check network |
 | project-files | Update path in `.cursor/mcp.json` if repo moved |
+
+### Troubleshooting `alembic upgrade head`
+
+Local Docker maps Postgres to port **5433** (`docker-compose.yml`), not 5432. If you see `ConnectionDoesNotExistError` or connection reset:
+
+1. Confirm Postgres is up: `docker compose ps` (port `5433->5432`)
+2. Update your user `DATABASE_URL` (setup script only sets it once):
+
+   ```powershell
+   [Environment]::SetEnvironmentVariable(
+     "DATABASE_URL",
+     "postgresql://postgres:postgres@localhost:5433/ecommerce",
+     "User"
+   )
+   ```
+
+3. Restart the terminal (or Cursor) and rerun from `apps/api`:
+
+   ```powershell
+   alembic upgrade head
+   ```
 
 ## Connect to Store Repo
 

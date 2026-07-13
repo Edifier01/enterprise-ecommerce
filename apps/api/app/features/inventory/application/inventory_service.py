@@ -65,6 +65,16 @@ class InventoryService:
     async def release_checkout_session(self, checkout_session_id: UUID) -> None:
         await self.release_reference(self.CHECKOUT_REFERENCE_TYPE, checkout_session_id)
 
+    async def restore_order_lines(self, lines: list[tuple[UUID, int]]) -> None:
+        """Return previously deducted stock to on_hand after admin order cancellation."""
+        if not lines:
+            return
+        variant_ids = [variant_id for variant_id, _ in lines]
+        await self._repo.lock_items_by_variant_ids(variant_ids)
+        for variant_id, quantity in lines:
+            if quantity > 0:
+                await self._repo.restore_on_hand(variant_id, quantity)
+
     async def reserve_reference(
         self,
         *,

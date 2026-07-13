@@ -1,6 +1,6 @@
 """Auth FastAPI dependencies — DI providers and JWT verification."""
 
-from fastapi import Depends, HTTPException
+from fastapi import Cookie, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +20,7 @@ from app.features.auth.infrastructure.security.bcrypt_hasher import BcryptPasswo
 from app.features.auth.infrastructure.security.jwt_token_service import JwtTokenService
 
 _bearer = HTTPBearer(auto_error=False)
+ACCESS_TOKEN_COOKIE = "access_token"
 
 
 def get_user_repository(
@@ -63,4 +64,23 @@ async def get_current_user(
     if user is None or not user.is_active:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
+    return user
+
+
+async def get_optional_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    access_token_cookie: str | None = Cookie(default=None, alias=ACCESS_TOKEN_COOKIE),
+    repo: IUserRepository = Depends(get_user_repository),
+    token_service: ITokenService = Depends(get_token_service),
+) -> User | None:
+    token = credentials.credentials if credentials is not None else access_token_cookie
+    if token is None:
+        return None
+    try:
+        claims = token_service.verify_access_token(token)
+    except InvalidTokenError:
+        return None
+    user = await repo.get_by_id(claims.user_id)
+    if user is None or not user.is_active:
+        return None
     return user

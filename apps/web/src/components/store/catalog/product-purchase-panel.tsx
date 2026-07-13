@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 
 export interface ProductPurchasePanelProps {
   product: Product;
+  isWholesaler?: boolean;
 }
 
 function pickDefaultVariant(variants: ProductVariant[]): ProductVariant | null {
@@ -24,7 +25,10 @@ function pickDefaultVariant(variants: ProductVariant[]): ProductVariant | null {
   return variants.find((variant) => variant.is_default) ?? variants[0];
 }
 
-export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
+export function ProductPurchasePanel({
+  product,
+  isWholesaler = false,
+}: ProductPurchasePanelProps) {
   const router = useRouter();
   const variants = [...product.variants].sort(
     (a, b) => a.sort_order - b.sort_order
@@ -39,6 +43,10 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   const [isPending, startTransition] = useTransition();
 
   const currentPrice = selected?.price_cents ?? product.price_cents;
+  const wholesalePrice =
+    isWholesaler && selected?.wholesale_price_cents != null
+      ? selected.wholesale_price_cents
+      : null;
   const inStock = selected ? selected.in_stock : product.in_stock;
   const compareAt = product.compare_at_price_cents;
   const discount = compareAt ? getDiscountPercent(currentPrice, compareAt) : null;
@@ -64,7 +72,24 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center gap-3">
-        {onSale && compareAt ? (
+        {wholesalePrice != null ? (
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>
+                Розница:{" "}
+                <span className="font-medium text-foreground">
+                  {formatPrice(currentPrice, product.currency)}
+                </span>
+              </span>
+              <span>
+                Опт:{" "}
+                <span className="store-price-sale text-lg font-semibold">
+                  {formatPrice(wholesalePrice, product.currency)}
+                </span>
+              </span>
+            </div>
+          </div>
+        ) : onSale && compareAt ? (
           <>
             <span className="store-price-sale text-2xl sm:text-3xl">
               {formatPrice(currentPrice, product.currency)}

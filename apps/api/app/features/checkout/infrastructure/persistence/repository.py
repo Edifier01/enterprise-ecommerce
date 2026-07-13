@@ -4,7 +4,7 @@ import secrets
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -17,6 +17,7 @@ from app.features.checkout.domain.entities import (
     CheckoutSessionLine,
     CheckoutSessionStatus,
     Order,
+    OrderLine,
     OrderStatus,
     PaymentRecord,
     PaymentRecordStatus,
@@ -126,6 +127,18 @@ def _order_from_model(model: OrderModel) -> Order:
         payment_record_id=model.payment_record_id,
         created_at=model.created_at,
         updated_at=model.updated_at,
+    )
+
+
+def _order_line_from_model(model: OrderLineModel) -> OrderLine:
+    return OrderLine(
+        id=model.id,
+        order_id=model.order_id,
+        variant_id=model.variant_id,
+        quantity=model.quantity,
+        unit_price_cents=model.unit_price_cents,
+        line_total_cents=model.line_total_cents,
+        product_snapshot=ProductSnapshot.from_dict(model.product_snapshot),
     )
 
 
@@ -432,6 +445,46 @@ class CheckoutRepository(ICheckoutRepository):
         )
         model = result.scalar_one_or_none()
         return _order_from_model(model) if model else None
+
+    async def list_orders_by_customer(
+        self,
+        customer_id: uuid.UUID,
+        page: int,
+        limit: int,
+    ) -> tuple[list[Order], int]:
+        offset = (page - 1) * limit
+        filter_clause = OrderModel.customer_id == customer_id
+
+        count_stmt = select(func.count()).select_from(OrderModel).where(filter_clause)
+        stmt = (
+            select(OrderModel)
+            .where(filter_clause)
+            .order_by(OrderModel.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+
+        total = int((await self._session.scalar(count_stmt)) or 0)
+        rows = (await self._session.scalars(stmt)).all()
+        return [_order_from_model(row) for row in rows], total
+
+    async def get_order_with_lines_by_number_for_customer(
+        self,
+        order_number: str,
+        customer_id: uuid.UUID,
+    ) -> tuple[Order, list[OrderLine]] | None:
+        result = await self._session.execute(
+            select(OrderModel)
+            .where(
+                OrderModel.order_number == order_number,
+                OrderModel.customer_id == customer_id,
+            )
+            .options(selectinload(OrderModel.lines))
+        )
+        model = result.scalar_one_or_none()
+        if model is None:
+            return None
+        return _order_from_model(model), [_order_line_from_model(line) for line in model.lines]
 
     async def create_order(
         self,

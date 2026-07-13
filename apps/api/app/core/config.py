@@ -1,6 +1,6 @@
 """Application configuration."""
 
-from pydantic import SecretStr, model_validator
+from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _JWT_DEV_DEFAULT = "dev-secret-change-in-production"
@@ -9,7 +9,7 @@ _JWT_DEV_DEFAULT = "dev-secret-change-in-production"
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/ecommerce"
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5433/ecommerce"
     cors_origins: list[str] = ["http://localhost:3000"]
     payment_provider: str = "auto"
     stripe_secret_key: SecretStr = SecretStr("")
@@ -18,6 +18,24 @@ class Settings(BaseSettings):
     jwt_secret_key: SecretStr = SecretStr(_JWT_DEV_DEFAULT)
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
+    inventory_reservation_ttl_minutes: int = 15
+    inventory_reservation_sweep_enabled: bool = True
+    inventory_reservation_sweep_interval_seconds: int = 60
+    admin_low_stock_threshold: int = 5
+    admin_dev_email: str = "admin@localhost"
+    admin_dev_password: str = "admin12345"
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_database_url(cls, value: object) -> object:
+        """Ensure async SQLAlchemy uses asyncpg, not psycopg2."""
+        if not isinstance(value, str):
+            return value
+        if value.startswith("postgresql://"):
+            return "postgresql+asyncpg://" + value.removeprefix("postgresql://")
+        if value.startswith("postgres://"):
+            return "postgresql+asyncpg://" + value.removeprefix("postgres://")
+        return value
 
     def get_payment_provider(self) -> str:
         """Resolve payment provider: auto picks stub when Stripe is not configured."""
