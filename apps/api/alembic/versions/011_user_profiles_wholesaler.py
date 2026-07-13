@@ -41,11 +41,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("user_id"),
         sa.UniqueConstraint("inn", name="uq_wholesaler_profiles_inn"),
     )
-    op.create_index("ix_wholesaler_profiles_inn", "wholesaler_profiles", ["inn"], unique=True)
 
 
 def downgrade() -> None:
-    op.drop_index("ix_wholesaler_profiles_inn", table_name="wholesaler_profiles")
     op.drop_table("wholesaler_profiles")
     op.drop_column("users", "last_name")
     op.drop_column("users", "first_name")

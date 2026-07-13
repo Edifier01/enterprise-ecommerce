@@ -44,7 +44,7 @@ class WholesalerProfileModel(Base):
     edo_provider: Mapped[str] = mapped_column(String(255), nullable=False)
     edo_id: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[str] = mapped_column(String(32), nullable=False)
-    inn: Mapped[str] = mapped_column(String(12), nullable=False, unique=True, index=True)
+    inn: Mapped[str] = mapped_column(String(12), nullable=False, unique=True)
     ogrnip: Mapped[str] = mapped_column(String(15), nullable=False)
     legal_address: Mapped[str] = mapped_column(String(500), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
