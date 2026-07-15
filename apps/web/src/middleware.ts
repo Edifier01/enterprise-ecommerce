@@ -53,5 +53,14 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/account/:path*", "/login", "/register", "/register/wholesale", "/admin/:path*"],
+  matcher: [
+    "/account/:path*",
+    "/login",
+    "/register",
+    "/register/:path*",
+    "/forgot-password",
+    "/reset-password",
+    "/verify-email",
+    "/admin/:path*",
+  ],
 };

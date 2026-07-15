@@ -46,6 +46,8 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
+- [ ] Real product/category photography — BACKLOG
+- [ ] SMTP email delivery (production)
 - [ ] Final YooKassa payment integration
 
 ---
@@ -58,18 +60,18 @@ None.
 
 ## Next Actions
 
-1. YooKassa provider integration (replace/refactor Stripe paths).
-2. Full browser payment smoke in YooKassa test mode.
-3. Production admin MFA hardening (pre-prod gate per ADR-007).
+1. Re-run `seed_dev.py` on dev DB for tactical category names in API.
+2. Phase 2 design: filters, mega-menu, PDP improvements.
+3. YooKassa provider integration (replace/refactor Stripe paths).
 
 ---
 
 ## Last Updated
 
-2026-07-13 (СУХОПУТ UX + registration)
+2026-07-15 (tactical design roadmap Phase 1)
 
 ---
 
 ## Last Agent
 
-Implementation Agent (Sprint E closeout)
+Implementation Agent (tactical storefront design)

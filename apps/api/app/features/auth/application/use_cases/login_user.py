@@ -7,6 +7,10 @@ class InvalidCredentialsError(Exception):
     """Raised when email/password combination is invalid."""
 
 
+class EmailNotVerifiedError(Exception):
+    """Raised when credentials are valid but email is not verified yet."""
+
+
 class LoginUserUseCase:
     def __init__(
         self,
@@ -28,6 +32,9 @@ class LoginUserUseCase:
 
         if user is None or not password_valid or not user.is_active:
             raise InvalidCredentialsError()
+
+        if not user.is_email_verified:
+            raise EmailNotVerifiedError()
 
         return self._token_service.create_access_token(
             user_id=str(user.id),

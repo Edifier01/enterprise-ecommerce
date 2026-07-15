@@ -40,6 +40,13 @@ class ProductListResponse(BaseModel):
     limit: int
 
 
+class ProductFacetsResponse(BaseModel):
+    sizes: list[str]
+    colors: list[str]
+    price_min_cents: int
+    price_max_cents: int
+
+
 class CategorySchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

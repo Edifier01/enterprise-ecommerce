@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { PageContainer } from "@/components/store/layout/page-container";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Вход",
@@ -14,7 +15,9 @@ export default function LoginPage() {
       as="main"
       className="flex min-h-[50vh] items-center justify-center"
     >
-      <LoginForm />
+      <Suspense>
+        <LoginForm />
+      </Suspense>
     </PageContainer>
   );
 }

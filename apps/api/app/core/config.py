@@ -18,6 +18,16 @@ class Settings(BaseSettings):
     jwt_secret_key: SecretStr = SecretStr(_JWT_DEV_DEFAULT)
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
+    storefront_url: str = "http://localhost:3000"
+    email_provider: str = "console"
+    email_from: str = "noreply@example.com"
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: SecretStr = SecretStr("")
+    smtp_use_tls: bool = True
+    auth_verification_token_expire_hours: int = 24
+    auth_reset_token_expire_hours: int = 1
     inventory_reservation_ttl_minutes: int = 15
     inventory_reservation_sweep_enabled: bool = True
     inventory_reservation_sweep_interval_seconds: int = 60

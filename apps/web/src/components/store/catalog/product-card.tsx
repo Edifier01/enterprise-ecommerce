@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { AddToCartButton } from "@/components/store/catalog/add-to-cart-button";
 import type { Product } from "@/lib/api";
 import {
   formatCompareAtPrice,
@@ -23,6 +23,7 @@ export interface ProductCardProps {
   className?: string;
   isWholesaler?: boolean;
   wholesalePriceCents?: number;
+  defaultVariantId?: string;
 }
 
 export function ProductCard({
@@ -32,6 +33,7 @@ export function ProductCard({
   className,
   isWholesaler = false,
   wholesalePriceCents,
+  defaultVariantId,
 }: ProductCardProps) {
   const discount = compareAtCents
     ? getDiscountPercent(product.price_cents, compareAtCents)
@@ -42,7 +44,7 @@ export function ProductCard({
   return (
     <article
       className={cn(
-        "group flex h-full flex-col overflow-hidden rounded-xl border bg-card ring-1 ring-foreground/5 transition-shadow hover:shadow-md",
+        "group flex h-full flex-col overflow-hidden rounded-lg border bg-card ring-1 ring-foreground/5 transition-shadow hover:shadow-md",
         className
       )}
     >
@@ -113,18 +115,21 @@ export function ProductCard({
               </span>
             )}
 
-            <Button
-              size="sm"
-              disabled={!product.in_stock}
-              className="bg-store-cta text-store-cta-foreground hover:bg-store-cta/90 disabled:opacity-50"
-              render={
-                product.in_stock ? (
-                  <Link href={`/cart?add=${product.slug}`} />
-                ) : undefined
-              }
-            >
-              Купить
-            </Button>
+            {defaultVariantId ? (
+              <AddToCartButton
+                variantId={defaultVariantId}
+                productName={product.name}
+                disabled={!product.in_stock}
+                size="sm"
+              />
+            ) : (
+              <Link
+                href={`/products/${product.slug}`}
+                className="inline-flex h-8 items-center justify-center rounded-md bg-store-cta px-3 text-xs font-medium text-store-cta-foreground hover:bg-store-cta/90"
+              >
+                Купить
+              </Link>
+            )}
           </div>
         </div>
       </div>

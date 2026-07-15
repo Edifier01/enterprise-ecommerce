@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncGenerator
 
+from tests.auth_helpers import mark_user_email_verified
 from tests.auth_payloads import retail_register_payload
 
 import pytest
@@ -130,18 +131,22 @@ async def test_admin_me_without_token_returns_401(admin_client: AsyncClient) -> 
 
 
 @pytest.mark.asyncio
-async def test_admin_me_with_customer_token_returns_401(admin_client: AsyncClient) -> None:
-    await admin_client.post(
+async def test_admin_me_with_customer_token_returns_401(
+    admin_client_with_db: tuple[AsyncClient, async_sessionmaker],
+) -> None:
+    client, session_factory = admin_client_with_db
+    await client.post(
         "/api/v1/auth/register",
         json=retail_register_payload("customer@example.com", password="customer12"),
     )
-    login = await admin_client.post(
+    await mark_user_email_verified(session_factory, "customer@example.com")
+    login = await client.post(
         "/api/v1/auth/login",
         json={"email": "customer@example.com", "password": "customer12"},
     )
     customer_token = login.json()["access_token"]
 
-    response = await admin_client.get(
+    response = await client.get(
         "/api/v1/admin/auth/me",
         headers={"Authorization": f"Bearer {customer_token}"},
     )

@@ -25,6 +25,7 @@ export function toProductGridItems(
       compareAtCents: product.compare_at_price_cents ?? undefined,
       isWholesaler: wholesalePriceCents != null,
       wholesalePriceCents,
+      defaultVariantId: variant?.id,
     };
   });
 }

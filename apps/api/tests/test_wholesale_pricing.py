@@ -9,6 +9,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from tests.auth_helpers import mark_user_email_verified
 from tests.auth_payloads import retail_register_payload
 
 from app.core.config import settings
@@ -114,11 +115,16 @@ async def wholesale_client_with_db() -> AsyncGenerator[
     await engine.dispose()
 
 
-async def _register_and_login(client: AsyncClient, email: str) -> str:
+async def _register_and_login(
+    client: AsyncClient,
+    session_factory: async_sessionmaker,
+    email: str,
+) -> str:
     await client.post(
         "/api/v1/auth/register",
         json=retail_register_payload(email),
     )
+    await mark_user_email_verified(session_factory, email)
     login = await client.post(
         "/api/v1/auth/login",
         json={"email": email, "password": "secret123"},
@@ -131,7 +137,7 @@ async def _grant_wholesaler(
     session_factory: async_sessionmaker,
     email: str,
 ) -> str:
-    token = await _register_and_login(client, email)
+    token = await _register_and_login(client, session_factory, email)
     async with session_factory() as session:
         await session.execute(
             sa.text("UPDATE users SET is_wholesaler = 1 WHERE email = :email"),
@@ -315,6 +321,7 @@ async def test_login_revalidates_guest_cart_to_wholesale(wholesale_client_with_d
         "/api/v1/auth/register",
         json=retail_register_payload(email),
     )
+    await mark_user_email_verified(session_factory, email)
     async with session_factory() as session:
         await session.execute(
             sa.text("UPDATE users SET is_wholesaler = 1 WHERE email = :email"),

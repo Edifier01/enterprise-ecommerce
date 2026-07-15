@@ -4,6 +4,7 @@ import json
 import uuid
 from collections.abc import AsyncGenerator
 
+from tests.auth_helpers import mark_user_email_verified
 from tests.auth_payloads import retail_register_payload
 
 import pytest
@@ -67,11 +68,16 @@ def _payment_succeeded_event(payment_intent_id: str, event_id: str) -> dict:
     }
 
 
+_orders_session_factory: async_sessionmaker | None = None
+
+
 async def _place_authenticated_order(client: AsyncClient) -> tuple[str, str]:
+    assert _orders_session_factory is not None
     await client.post(
         "/api/v1/auth/register",
         json=retail_register_payload("orders-user@example.com"),
     )
+    await mark_user_email_verified(_orders_session_factory, "orders-user@example.com")
     login_response = await client.post(
         "/api/v1/auth/login",
         json={"email": "orders-user@example.com", "password": "secret123"},
@@ -110,11 +116,13 @@ async def _place_authenticated_order(client: AsyncClient) -> tuple[str, str]:
 
 @pytest.fixture
 async def orders_client() -> AsyncGenerator[AsyncClient, None]:
+    global _orders_session_factory
     settings.stripe_secret_key = type(settings.stripe_secret_key)("sk_test_fake")  # type: ignore[misc]
     settings.stripe_webhook_secret = type(settings.stripe_webhook_secret)("whsec_test_fake")  # type: ignore[misc]
 
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    _orders_session_factory = session_factory
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -214,6 +222,8 @@ async def test_get_order_detail_not_found_for_other_user(orders_client: AsyncCli
         "/api/v1/auth/register",
         json=retail_register_payload("other-user@example.com"),
     )
+    assert _orders_session_factory is not None
+    await mark_user_email_verified(_orders_session_factory, "other-user@example.com")
     other_login = await orders_client.post(
         "/api/v1/auth/login",
         json={"email": "other-user@example.com", "password": "secret123"},
@@ -233,6 +243,8 @@ async def test_list_orders_empty_for_new_user(orders_client: AsyncClient) -> Non
         "/api/v1/auth/register",
         json=retail_register_payload("empty-orders@example.com"),
     )
+    assert _orders_session_factory is not None
+    await mark_user_email_verified(_orders_session_factory, "empty-orders@example.com")
     login_response = await orders_client.post(
         "/api/v1/auth/login",
         json={"email": "empty-orders@example.com", "password": "secret123"},

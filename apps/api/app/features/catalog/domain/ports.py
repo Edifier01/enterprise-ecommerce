@@ -7,6 +7,7 @@ Infrastructure implementations must satisfy these interfaces.
 from abc import ABC, abstractmethod
 
 from app.features.catalog.domain.entities import Category, Product
+from app.features.catalog.domain.product_list_filters import ProductListFacets, ProductListFilters
 
 
 class IProductRepository(ABC):
@@ -15,13 +16,18 @@ class IProductRepository(ABC):
         self,
         page: int,
         limit: int,
-        category_slug: str | None = None,
+        filters: ProductListFilters | None = None,
     ) -> tuple[list[Product], int]:
-        """Return a paginated list of products and the total count.
+        """Return a paginated list of products and the total count."""
+        ...
 
-        When ``category_slug`` is provided, only products whose primary category
-        matches the slug are returned.
-        """
+    @abstractmethod
+    async def get_product_facets(
+        self,
+        category_slug: str | None = None,
+        search_query: str | None = None,
+    ) -> ProductListFacets:
+        """Return available filter facets for the given catalog scope."""
         ...
 
     @abstractmethod
@@ -35,6 +41,7 @@ class IProductRepository(ABC):
         query: str,
         page: int,
         limit: int,
+        filters: ProductListFilters | None = None,
     ) -> tuple[list[Product], int]:
         """Return products matching the query by name or variant SKU."""
         ...

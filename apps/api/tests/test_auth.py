@@ -1,5 +1,6 @@
 """Auth API tests with in-memory SQLite."""
 
+import re
 from tests.auth_payloads import retail_register_payload, wholesaler_register_payload
 
 import uuid
@@ -11,11 +12,37 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.database import Base, get_db_session
+from app.features.auth.infrastructure.email.recording_email_service import RecordingEmailService
+from app.features.auth.presentation.dependencies import get_email_service
 from app.features.catalog.infrastructure.persistence.models import ProductModel, ProductVariantModel
 from app.features.inventory.infrastructure.persistence.models import InventoryItemModel
 from app.main import app
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+_recording_email = RecordingEmailService()
+
+
+def _extract_token_from_email(body: str) -> str:
+    match = re.search(r"token=([A-Za-z0-9_-]+)", body)
+    assert match is not None, f"Token not found in email body: {body}"
+    return match.group(1)
+
+
+async def _verify_user_from_last_email(client: AsyncClient) -> None:
+    message = _recording_email.last
+    assert message is not None
+    token = _extract_token_from_email(message.body_text)
+    response = await client.post("/api/v1/auth/verify-email", json={"token": token})
+    assert response.status_code == 200
+
+
+@pytest.fixture(autouse=True)
+def _reset_recording_email() -> None:
+    _recording_email.clear()
+    app.dependency_overrides[get_email_service] = lambda: _recording_email
+    yield
+    app.dependency_overrides.pop(get_email_service, None)
+    _recording_email.clear()
 
 
 @pytest.fixture
@@ -71,8 +98,10 @@ async def test_register_success(auth_client: AsyncClient) -> None:
     assert data["email"] == "user@example.com"
     assert data["first_name"] == "Тест"
     assert data["last_name"] == "Пользователь"
+    assert data["email_verification_required"] is True
     assert "id" in data
     assert "created_at" in data
+    assert _recording_email.last is not None
 
 
 @pytest.mark.asyncio
@@ -89,6 +118,7 @@ async def test_login_success_returns_access_token(auth_client: AsyncClient) -> N
         "/api/v1/auth/register",
         json=retail_register_payload("login@example.com"),
     )
+    await _verify_user_from_last_email(auth_client)
     response = await auth_client.post(
         "/api/v1/auth/login",
         json=retail_register_payload("login@example.com"),
@@ -100,11 +130,76 @@ async def test_login_success_returns_access_token(auth_client: AsyncClient) -> N
 
 
 @pytest.mark.asyncio
+async def test_login_unverified_email_returns_403(auth_client: AsyncClient) -> None:
+    await auth_client.post(
+        "/api/v1/auth/register",
+        json=retail_register_payload("unverified@example.com"),
+    )
+    response = await auth_client.post(
+        "/api/v1/auth/login",
+        json=retail_register_payload("unverified@example.com"),
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Email not verified"
+
+
+@pytest.mark.asyncio
+async def test_verify_email_success(auth_client: AsyncClient) -> None:
+    await auth_client.post(
+        "/api/v1/auth/register",
+        json=retail_register_payload("verify@example.com"),
+    )
+    await _verify_user_from_last_email(auth_client)
+    login_response = await auth_client.post(
+        "/api/v1/auth/login",
+        json=retail_register_payload("verify@example.com"),
+    )
+    assert login_response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_forgot_and_reset_password(auth_client: AsyncClient) -> None:
+    await auth_client.post(
+        "/api/v1/auth/register",
+        json=retail_register_payload("reset@example.com"),
+    )
+    await _verify_user_from_last_email(auth_client)
+
+    forgot_response = await auth_client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "reset@example.com"},
+    )
+    assert forgot_response.status_code == 200
+    reset_message = _recording_email.last
+    assert reset_message is not None
+    token = _extract_token_from_email(reset_message.body_text)
+
+    reset_response = await auth_client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": token, "password": "newpassword123"},
+    )
+    assert reset_response.status_code == 200
+
+    old_login = await auth_client.post(
+        "/api/v1/auth/login",
+        json={"email": "reset@example.com", "password": "secret123"},
+    )
+    assert old_login.status_code == 401
+
+    new_login = await auth_client.post(
+        "/api/v1/auth/login",
+        json={"email": "reset@example.com", "password": "newpassword123"},
+    )
+    assert new_login.status_code == 200
+
+
+@pytest.mark.asyncio
 async def test_login_wrong_password_returns_401(auth_client: AsyncClient) -> None:
     await auth_client.post(
         "/api/v1/auth/register",
         json=retail_register_payload("badpw@example.com", password="correct123"),
     )
+    await _verify_user_from_last_email(auth_client)
     response = await auth_client.post(
         "/api/v1/auth/login",
         json={"email": "badpw@example.com", "password": "wrongpassword"},
@@ -132,6 +227,7 @@ async def test_login_inactive_user_returns_401(
         "/api/v1/auth/register",
         json=retail_register_payload("inactive@example.com"),
     )
+    await _verify_user_from_last_email(client)
 
     async with session_factory() as session:
         await session.execute(
@@ -192,6 +288,7 @@ async def test_me_with_valid_token_returns_current_user(auth_client: AsyncClient
         "/api/v1/auth/register",
         json=retail_register_payload("me@example.com"),
     )
+    await _verify_user_from_last_email(auth_client)
     login_response = await auth_client.post(
         "/api/v1/auth/login",
         json={"email": "me@example.com", "password": "secret123"},
@@ -206,6 +303,7 @@ async def test_me_with_valid_token_returns_current_user(auth_client: AsyncClient
     data = response.json()
     assert data["email"] == "me@example.com"
     assert data["is_wholesaler"] is False
+    assert data["email_verified"] is True
     assert "id" in data
     assert "created_at" in data
 
@@ -257,6 +355,7 @@ async def test_login_merges_guest_cart_into_authenticated_cart(
         "/api/v1/auth/register",
         json=retail_register_payload("merge-cart@example.com"),
     )
+    await _verify_user_from_last_email(client)
     add_response = await client.post(
         "/api/v1/cart/lines",
         json={"variant_id": str(variant_id), "quantity": 2},
@@ -290,7 +389,9 @@ async def test_register_wholesaler_success(auth_client: AsyncClient) -> None:
     assert response.status_code == 201
     data = response.json()
     assert data["email"] == "wholesale-new@example.com"
+    assert data["email_verification_required"] is True
 
+    await _verify_user_from_last_email(auth_client)
     login_response = await auth_client.post(
         "/api/v1/auth/login",
         json={"email": "wholesale-new@example.com", "password": "secret123"},
@@ -338,4 +439,3 @@ async def test_register_wholesaler_invalid_inn_returns_422(auth_client: AsyncCli
         json=wholesaler_register_payload("wholesale-bad@example.com", inn="12345"),
     )
     assert response.status_code == 422
-

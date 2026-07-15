@@ -534,6 +534,62 @@ admin-assigned. Existing orders are never repriced.
 
 ---
 
+### Feature: Tactical Storefront Design (Phase 1)
+
+**Status:** COMPLETED (2026-07-15)
+
+- [x] Olive / amber tactical palette in `globals.css`
+- [x] TrustBar with 4 USP items + StoreHeader wiring
+- [x] Category cards with icon/gradient visuals
+- [x] Homepage category section + SectionHeader «Смотреть все»
+- [x] Tactical promo banners, SEO copy, catalog copy
+- [x] Dark footer + product-grid loading skeleton
+- [x] Static categories + seed_dev tactical categories
+- [x] E2E homepage tests updated
+
+**Follow-up (Phase 2 — COMPLETED 2026-07-15):**
+- [x] Mega-menu / mobile category drawer
+- [x] Catalog filters (color, size, price, stock, sale — server-side)
+- [x] PDP specs table + mobile sticky CTA
+- [x] Add-to-cart toast
+- [ ] Real product/category photography
+
+**Follow-up (Phase 3 — IN_PROGRESS partial):**
+- [x] Server-side catalog filter API (`GET /products` query params + `/products/facets`)
+- [x] Frontend URL-synced filters on category pages
+- [x] Search page filters (server-side, URL-synced)
+- [ ] Real product/category photography
+
+---
+
+### Feature: Email Verification & Password Reset
+
+**Status:** COMPLETED (2026-07-15)
+
+- [x] Migration 012 — `email_verified_at` + `auth_tokens`
+- [x] Email verification for retail + wholesale registration
+- [x] Login blocked until email verified (403)
+- [x] Password reset flow (forgot + reset)
+- [x] ConsoleEmailService for dev; SMTP stub for prod
+- [x] Frontend pages + server actions (RU)
+- [x] OpenAPI + 19 auth pytest tests
+- [ ] **Follow-up:** SMTP production delivery (next step)
+
+---
+
+### Feature: Storefront Header Structure (stich.su layout)
+
+**Status:** COMPLETED (2026-07-15)
+
+- [x] Unified `StoreHeader` wired in `layout.tsx`
+- [x] Row 1 trimmed TopBar (no О КОМПАНИИ / ОБРАТНЫЙ ЗВОНОК)
+- [x] Row 2: logo + «Сухопут» + search + ЛК + cart
+- [x] Row 3: «Новинки» + API categories with dividers
+- [x] Sticky rows 2+3; slate palette unchanged
+- [x] E2E header structure test updated
+
+---
+
 ### Feature: СУХОПУТ Branding, Header UX & Registration
 
 **Status:** COMPLETED (2026-07-13)

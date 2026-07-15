@@ -56,6 +56,7 @@ class RegisterWholesalerUseCase:
             created_at=datetime.now(timezone.utc),
             first_name="",
             last_name="",
+            email_verified_at=None,
         )
         profile = WholesalerProfile(
             user_id=user.id,

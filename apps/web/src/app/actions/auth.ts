@@ -13,6 +13,7 @@ const CART_SESSION_COOKIE = "cart_session_id";
 
 export type AuthActionState = {
   error?: string;
+  success?: string;
 };
 
 function readRequiredString(formData: FormData, key: string): string | null {
@@ -43,6 +44,13 @@ export async function loginAction(
     headers,
     body: JSON.stringify({ email, password }),
   });
+
+  if (res.status === 403) {
+    return {
+      error:
+        "Подтвердите email перед входом. Проверьте почту или запросите повторную отправку.",
+    };
+  }
 
   if (!res.ok) {
     return { error: "Неверный email или пароль." };
@@ -89,7 +97,7 @@ export async function registerAction(
     return { error: "Не удалось зарегистрироваться. Попробуйте снова." };
   }
 
-  redirect("/login");
+  redirect(`/register/check-email?email=${encodeURIComponent(email)}`);
 }
 
 export async function registerWholesaleAction(
@@ -147,7 +155,89 @@ export async function registerWholesaleAction(
     return { error: "Не удалось зарегистрироваться. Попробуйте снова." };
   }
 
-  redirect("/login");
+  redirect(`/register/check-email?email=${encodeURIComponent(payload.email)}`);
+}
+
+export async function forgotPasswordAction(
+  _prev: AuthActionState | null,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const email = readRequiredString(formData, "email");
+  if (!email) {
+    return { error: "Укажите email." };
+  }
+
+  const res = await fetch(`${API_BASE}/api/v1/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!res.ok) {
+    return { error: "Не удалось отправить запрос. Попробуйте снова." };
+  }
+
+  return {
+    success:
+      "Если аккаунт с таким email существует, мы отправили ссылку для сброса пароля.",
+  };
+}
+
+export async function resetPasswordAction(
+  _prev: AuthActionState | null,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const token = readRequiredString(formData, "token");
+  const password = formData.get("password");
+
+  if (!token || typeof password !== "string") {
+    return { error: "Некорректные данные формы." };
+  }
+
+  const res = await fetch(`${API_BASE}/api/v1/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password }),
+  });
+
+  if (res.status === 400) {
+    return { error: "Ссылка недействительна или устарела. Запросите сброс пароля снова." };
+  }
+
+  if (res.status === 422) {
+    return { error: "Пароль должен содержать минимум 8 символов." };
+  }
+
+  if (!res.ok) {
+    return { error: "Не удалось сменить пароль. Попробуйте снова." };
+  }
+
+  redirect("/login?reset=success");
+}
+
+export async function resendVerificationAction(
+  _prev: AuthActionState | null,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const email = readRequiredString(formData, "email");
+  if (!email) {
+    return { error: "Укажите email." };
+  }
+
+  const res = await fetch(`${API_BASE}/api/v1/auth/resend-verification`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!res.ok) {
+    return { error: "Не удалось отправить письмо. Попробуйте снова." };
+  }
+
+  return {
+    success:
+      "Если аккаунт существует и email не подтверждён, мы отправили новое письмо.",
+  };
 }
 
 export async function logoutAction(): Promise<void> {

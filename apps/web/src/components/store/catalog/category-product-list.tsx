@@ -1,39 +1,33 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
-import { ProductGrid, type ProductGridItem } from "./product-grid";
-import {
-  SortToolbar,
-  sortProducts,
-  type SortOptionValue,
-} from "./sort-toolbar";
+import { FilteredProductList } from "@/components/store/catalog/filtered-product-list";
+import type { ProductGridItem } from "@/components/store/catalog/product-grid";
+import type { CatalogFilterFacets } from "@/lib/store/catalog-filters";
+import type { CatalogListQuery } from "@/lib/store/catalog-query";
 
 export interface CategoryProductListProps {
+  categorySlug: string;
   products: ProductGridItem[];
+  total: number;
+  facets: CatalogFilterFacets;
+  query: CatalogListQuery;
   emptyMessage?: string;
 }
 
 export function CategoryProductList({
   products,
-  emptyMessage = "В этом разделе пока нет товаров.",
+  total,
+  facets,
+  query,
+  emptyMessage,
 }: CategoryProductListProps) {
-  const [sort, setSort] = useState<SortOptionValue>("default");
-
-  const sortedProducts = useMemo(
-    () => sortProducts(products, sort),
-    [products, sort]
-  );
-
   return (
-    <div className="space-y-4">
-      <SortToolbar
-        value={sort}
-        onChange={setSort}
-        totalCount={sortedProducts.length}
-        disabled={products.length === 0}
-      />
-      <ProductGrid products={sortedProducts} emptyMessage={emptyMessage} />
-    </div>
+    <FilteredProductList
+      products={products}
+      total={total}
+      facets={facets}
+      query={query}
+      emptyMessage={emptyMessage}
+    />
   );
 }

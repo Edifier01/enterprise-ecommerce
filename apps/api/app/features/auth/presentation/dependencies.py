@@ -8,12 +8,17 @@ from app.core.config import settings
 from app.core.database import get_db_session
 from app.features.auth.domain.entities import User
 from app.features.auth.domain.ports import (
+    IAuthTokenRepository,
+    IEmailService,
     IPasswordHasher,
     InvalidTokenError,
     ITokenService,
     IUnitOfWork,
     IUserRepository,
 )
+from app.features.auth.infrastructure.email.console_email_service import ConsoleEmailService
+from app.features.auth.infrastructure.email.smtp_email_service import SmtpEmailService
+from app.features.auth.infrastructure.persistence.auth_token_repository import AuthTokenRepository
 from app.features.auth.infrastructure.persistence.repository import UserRepository
 from app.features.auth.infrastructure.persistence.unit_of_work import SqlAlchemyUnitOfWork
 from app.features.auth.infrastructure.security.bcrypt_hasher import BcryptPasswordHasher
@@ -33,6 +38,18 @@ def get_unit_of_work(
     session: AsyncSession = Depends(get_db_session),
 ) -> IUnitOfWork:
     return SqlAlchemyUnitOfWork(session)
+
+
+def get_auth_token_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> IAuthTokenRepository:
+    return AuthTokenRepository(session)
+
+
+def get_email_service() -> IEmailService:
+    if settings.email_provider == "smtp":
+        return SmtpEmailService()
+    return ConsoleEmailService()
 
 
 def get_password_hasher() -> IPasswordHasher:

@@ -15,6 +15,22 @@ class User:
     created_at: datetime
     first_name: str = ""
     last_name: str = ""
+    email_verified_at: datetime | None = None
+
+    @property
+    def is_email_verified(self) -> bool:
+        return self.email_verified_at is not None
+
+
+@dataclass(frozen=True, slots=True)
+class AuthToken:
+    id: UUID
+    user_id: UUID
+    token_hash: str
+    token_type: str
+    expires_at: datetime
+    used_at: datetime | None
+    created_at: datetime
 
 
 @dataclass(frozen=True, slots=True)

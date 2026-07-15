@@ -16,56 +16,24 @@ export type CategoryDefinition = {
  */
 export const categories: CategoryDefinition[] = [
   {
-    slug: "elektronika",
-    name: "Электроника",
-    description: "Гаджеты, аксессуары и техника для дома",
+    slug: "snaryazhenie",
+    name: "Снаряжение",
+    description: "Разгрузки, рюкзаки, подсумки",
   },
   {
     slug: "odezhda",
-    name: "Одежда",
-    description: "Повседневная и сезонная одежда",
+    name: "Тактическая одежда",
+    description: "Куртки, термобельё, мембрана",
   },
   {
-    slug: "odezhda-muzhskaya",
-    name: "Мужская одежда",
-    description: "Куртки, брюки, футболки",
-    parentSlug: "odezhda",
+    slug: "obuv",
+    name: "Обувь",
+    description: "Ботинки, берцы, тактические кроссовки",
   },
   {
-    slug: "odezhda-zhenskaya",
-    name: "Женская одежда",
-    description: "Платья, блузы, верхняя одежда",
-    parentSlug: "odezhda",
-  },
-  {
-    slug: "dom-i-sad",
-    name: "Дом и сад",
-    description: "Товары для дома, декор и садовый инвентарь",
-  },
-  {
-    slug: "sport",
-    name: "Спорт и отдых",
-    description: "Экипировка и товары для активного образа жизни",
-  },
-  {
-    slug: "krasota",
-    name: "Красота и здоровье",
-    description: "Уход, косметика и гигиена",
-  },
-  {
-    slug: "detskie-tovary",
-    name: "Детские товары",
-    description: "Одежда, игрушки и товары для детей",
-  },
-  {
-    slug: "avto",
-    name: "Авто",
-    description: "Аксессуары и расходники для автомобиля",
-  },
-  {
-    slug: "knigi",
-    name: "Книги",
-    description: "Художественная и деловая литература",
+    slug: "aksessuary",
+    name: "Аксессуары",
+    description: "Фонари, IFAK, ножи, оптика",
   },
 ];
 

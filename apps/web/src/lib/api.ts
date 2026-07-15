@@ -1,4 +1,5 @@
 import { getApiBase } from "@/lib/api-base";
+import type { ProductListQueryParams, ProductFacetsResponse } from "@/lib/store/catalog-query";
 
 const API_BASE = getApiBase();
 
@@ -54,19 +55,54 @@ export async function apiHealth(): Promise<{ status: string }> {
   return res.json();
 }
 
+function buildProductListSearchParams(
+  page: number,
+  limit: number,
+  categorySlug?: string,
+  filters?: ProductListQueryParams,
+): URLSearchParams {
+  const params = new URLSearchParams({
+    page: String(filters?.page ?? page),
+    limit: String(filters?.limit ?? limit),
+  });
+
+  const category = filters?.category ?? categorySlug;
+  if (category) {
+    params.set("category", category);
+  }
+  if (filters?.in_stock) {
+    params.set("in_stock", "true");
+  }
+  if (filters?.on_sale) {
+    params.set("on_sale", "true");
+  }
+  for (const size of filters?.size ?? []) {
+    params.append("size", size);
+  }
+  for (const color of filters?.color ?? []) {
+    params.append("color", color);
+  }
+  if (filters?.price_min != null) {
+    params.set("price_min", String(filters.price_min));
+  }
+  if (filters?.price_max != null) {
+    params.set("price_max", String(filters.price_max));
+  }
+  if (filters?.sort && filters.sort !== "default") {
+    params.set("sort", filters.sort.replace(/-/g, "_"));
+  }
+
+  return params;
+}
+
 export async function listProducts(
   page = 1,
   limit = 20,
   categorySlug?: string,
   accessToken?: string,
+  filters?: ProductListQueryParams,
 ): Promise<ProductListResponse> {
-  const params = new URLSearchParams({
-    page: String(page),
-    limit: String(limit),
-  });
-  if (categorySlug) {
-    params.set("category", categorySlug);
-  }
+  const params = buildProductListSearchParams(page, limit, categorySlug, filters);
   const headers: HeadersInit = {};
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
@@ -79,17 +115,42 @@ export async function listProducts(
   return res.json();
 }
 
+export async function getProductFacets(
+  options?: { categorySlug?: string; searchQuery?: string },
+  accessToken?: string,
+): Promise<ProductFacetsResponse> {
+  const params = new URLSearchParams();
+  if (options?.categorySlug) {
+    params.set("category", options.categorySlug);
+  }
+  if (options?.searchQuery) {
+    params.set("q", options.searchQuery);
+  }
+  const headers: HeadersInit = {};
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+  const query = params.toString();
+  const res = await fetch(
+    `${API_BASE}/api/v1/products/facets${query ? `?${query}` : ""}`,
+    {
+      headers,
+      ...(accessToken ? { cache: "no-store" } : { next: { revalidate: 300 } }),
+    },
+  );
+  if (!res.ok) throw new Error("Failed to fetch product facets");
+  return res.json();
+}
+
 export async function searchProducts(
   query: string,
   page = 1,
   limit = 24,
   accessToken?: string,
+  filters?: ProductListQueryParams,
 ): Promise<ProductListResponse> {
-  const params = new URLSearchParams({
-    q: query,
-    page: String(page),
-    limit: String(limit),
-  });
+  const params = buildProductListSearchParams(page, limit, undefined, filters);
+  params.set("q", query);
   const headers: HeadersInit = {};
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;

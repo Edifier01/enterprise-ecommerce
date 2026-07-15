@@ -5,7 +5,9 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.catalog.domain.entities import Product, ProductVariant
+from app.features.catalog.domain.product_list_filters import ProductListFacets, ProductListFilters
 from app.features.catalog.domain.ports import IProductRepository
+from app.features.catalog.domain.variant_filter import build_facets_from_products
 from app.features.catalog.infrastructure.persistence.models import (
     CategoryModel,
     ProductModel,
@@ -13,6 +15,7 @@ from app.features.catalog.infrastructure.persistence.models import (
 )
 
 _ACTIVE_STATUS = "active"
+_FACET_SCAN_LIMIT = 5000
 
 
 class ProductRepository(IProductRepository):
@@ -23,8 +26,9 @@ class ProductRepository(IProductRepository):
         self,
         page: int,
         limit: int,
-        category_slug: str | None = None,
+        filters: ProductListFilters | None = None,
     ) -> tuple[list[Product], int]:
+        filters = filters or ProductListFilters()
         offset = (page - 1) * limit
 
         count_stmt = select(func.count()).select_from(ProductModel).where(
@@ -34,45 +38,53 @@ class ProductRepository(IProductRepository):
             select(ProductModel)
             .where(ProductModel.status == _ACTIVE_STATUS)
             .options(selectinload(ProductModel.variants))
-            .order_by(ProductModel.created_at.desc())
         )
 
-        if category_slug is not None:
-            category_filter = ProductModel.category_id.in_(
-                select(CategoryModel.id).where(CategoryModel.slug == category_slug)
-            )
-            count_stmt = count_stmt.where(category_filter)
-            stmt = stmt.where(category_filter)
+        count_stmt, stmt = self._apply_filters(count_stmt, stmt, filters)
 
         total = int((await self._session.scalar(count_stmt)) or 0)
-        stmt = stmt.offset(offset).limit(limit)
+        stmt = self._apply_sort(stmt, filters.sort).offset(offset).limit(limit)
         rows = (await self._session.scalars(stmt)).all()
         products = [self._to_domain(row, include_variants=True) for row in rows]
         return products, total
+
+    async def get_product_facets(
+        self,
+        category_slug: str | None = None,
+        search_query: str | None = None,
+    ) -> ProductListFacets:
+        filters = ProductListFilters(category_slug=category_slug)
+        count_stmt = select(func.count()).select_from(ProductModel).where(
+            ProductModel.status == _ACTIVE_STATUS
+        )
+        stmt = (
+            select(ProductModel)
+            .where(ProductModel.status == _ACTIVE_STATUS)
+            .options(selectinload(ProductModel.variants))
+        )
+
+        if search_query:
+            search_filter = self._search_filter(search_query)
+            count_stmt = count_stmt.where(search_filter)
+            stmt = stmt.where(search_filter)
+
+        count_stmt, stmt = self._apply_filters(count_stmt, stmt, filters)
+        stmt = stmt.limit(_FACET_SCAN_LIMIT)
+        rows = (await self._session.scalars(stmt)).all()
+        products = [self._to_domain(row, include_variants=True) for row in rows]
+        return build_facets_from_products(products)
 
     async def search_products(
         self,
         query: str,
         page: int,
         limit: int,
+        filters: ProductListFilters | None = None,
     ) -> tuple[list[Product], int]:
+        filters = filters or ProductListFilters()
         offset = (page - 1) * limit
-        term = f"%{query.casefold()}%"
-
-        name_match = func.lower(ProductModel.name).like(term)
-        sku_match = exists(
-            select(1).where(
-                ProductVariantModel.product_id == ProductModel.id,
-                func.lower(ProductVariantModel.sku).like(term),
-            )
-        )
-        search_filter = or_(name_match, sku_match)
-
-        relevance = case(
-            (func.lower(ProductModel.name) == query.casefold(), 0),
-            (func.lower(ProductModel.name).like(f"{query.casefold()}%"), 1),
-            else_=2,
-        )
+        search_filter = self._search_filter(query)
+        relevance = self._search_relevance(query)
 
         count_stmt = (
             select(func.count())
@@ -83,12 +95,18 @@ class ProductRepository(IProductRepository):
             select(ProductModel)
             .where(search_filter, ProductModel.status == _ACTIVE_STATUS)
             .options(selectinload(ProductModel.variants))
-            .order_by(relevance, ProductModel.name.asc())
-            .offset(offset)
-            .limit(limit)
         )
 
+        count_stmt, stmt = self._apply_filters(count_stmt, stmt, filters)
+
         total = int((await self._session.scalar(count_stmt)) or 0)
+
+        if filters.sort == "default":
+            stmt = stmt.order_by(relevance, ProductModel.name.asc())
+        else:
+            stmt = self._apply_sort(stmt, filters.sort)
+
+        stmt = stmt.offset(offset).limit(limit)
         rows = (await self._session.scalars(stmt)).all()
         products = [self._to_domain(row, include_variants=True) for row in rows]
         return products, total
@@ -103,6 +121,131 @@ class ProductRepository(IProductRepository):
         if row is None:
             return None
         return self._to_domain(row, include_variants=True)
+
+    @staticmethod
+    def _search_filter(query: str):
+        term = f"%{query.casefold()}%"
+        name_match = func.lower(ProductModel.name).like(term)
+        sku_match = exists(
+            select(1).where(
+                ProductVariantModel.product_id == ProductModel.id,
+                func.lower(ProductVariantModel.sku).like(term),
+            )
+        )
+        return or_(name_match, sku_match)
+
+    @staticmethod
+    def _search_relevance(query: str):
+        return case(
+            (func.lower(ProductModel.name) == query.casefold(), 0),
+            (func.lower(ProductModel.name).like(f"{query.casefold()}%"), 1),
+            else_=2,
+        )
+
+    def _apply_filters(self, count_stmt, stmt, filters: ProductListFilters):
+        if filters.category_slug is not None:
+            category_filter = ProductModel.category_id.in_(
+                select(CategoryModel.id).where(CategoryModel.slug == filters.category_slug)
+            )
+            count_stmt = count_stmt.where(category_filter)
+            stmt = stmt.where(category_filter)
+
+        if filters.in_stock_only:
+            count_stmt = count_stmt.where(ProductModel.in_stock.is_(True))
+            stmt = stmt.where(ProductModel.in_stock.is_(True))
+
+        if filters.on_sale_only:
+            sale_filter = (
+                ProductModel.compare_at_price_cents.is_not(None)
+                & (ProductModel.compare_at_price_cents > ProductModel.price_cents)
+            )
+            count_stmt = count_stmt.where(sale_filter)
+            stmt = stmt.where(sale_filter)
+
+        if filters.price_min_cents is not None:
+            count_stmt = count_stmt.where(
+                ProductModel.price_cents >= filters.price_min_cents
+            )
+            stmt = stmt.where(ProductModel.price_cents >= filters.price_min_cents)
+
+        if filters.price_max_cents is not None:
+            count_stmt = count_stmt.where(
+                ProductModel.price_cents <= filters.price_max_cents
+            )
+            stmt = stmt.where(ProductModel.price_cents <= filters.price_max_cents)
+
+        if filters.sizes:
+            variant_exists = self._build_variant_exists(
+                self._size_conditions(filters.sizes),
+            )
+            count_stmt = count_stmt.where(variant_exists)
+            stmt = stmt.where(variant_exists)
+
+        if filters.colors:
+            variant_exists = self._build_variant_exists(
+                self._color_conditions(filters.colors),
+            )
+            count_stmt = count_stmt.where(variant_exists)
+            stmt = stmt.where(variant_exists)
+
+        return count_stmt, stmt
+
+    @staticmethod
+    def _build_variant_exists(conditions: list):
+        if not conditions:
+            return exists(select(1).where(False))
+        return exists(
+            select(1).where(
+                ProductVariantModel.product_id == ProductModel.id,
+                or_(*conditions),
+            )
+        )
+
+    @staticmethod
+    def _size_conditions(sizes: tuple[str, ...]) -> list:
+        conditions = []
+        for size in sizes:
+            per_size = [
+                ProductVariantModel.attributes["size"].as_string() == size,
+                ProductVariantModel.name == size,
+            ]
+            if size.startswith("W") and size[1:].isdigit():
+                per_size.append(
+                    ProductVariantModel.attributes["waist"].as_string() == size[1:]
+                )
+            conditions.append(or_(*per_size))
+        return conditions
+
+    @staticmethod
+    def _color_conditions(colors: tuple[str, ...]) -> list:
+        conditions = []
+        for color in colors:
+            lowered = color.casefold()
+            conditions.append(
+                or_(
+                    func.lower(ProductVariantModel.attributes["color"].as_string())
+                    == lowered,
+                    func.lower(
+                        ProductVariantModel.attributes["camouflage"].as_string()
+                    )
+                    == lowered,
+                )
+            )
+        return conditions
+
+    @staticmethod
+    def _apply_sort(stmt, sort: str):
+        match sort:
+            case "price_asc":
+                return stmt.order_by(ProductModel.price_cents.asc(), ProductModel.name.asc())
+            case "price_desc":
+                return stmt.order_by(ProductModel.price_cents.desc(), ProductModel.name.asc())
+            case "name_asc":
+                return stmt.order_by(ProductModel.name.asc())
+            case "name_desc":
+                return stmt.order_by(ProductModel.name.desc())
+            case _:
+                return stmt.order_by(ProductModel.created_at.desc())
 
     @staticmethod
     def _to_domain(row: ProductModel, *, include_variants: bool = False) -> Product:

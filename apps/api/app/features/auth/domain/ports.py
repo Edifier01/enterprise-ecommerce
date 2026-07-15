@@ -1,9 +1,11 @@
 """Auth domain ports — repository and service interfaces."""
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
 
-from app.features.auth.domain.entities import User, WholesalerProfile
+from app.features.auth.domain.entities import AuthToken, User, WholesalerProfile
 from app.features.auth.domain.token_claims import TokenClaims
 
 
@@ -45,6 +47,52 @@ class IUserRepository(ABC):
     @abstractmethod
     async def set_wholesaler(self, user_id: UUID, *, is_wholesaler: bool) -> User | None:
         """Grant or revoke wholesaler status; None if user not found."""
+        ...
+
+    @abstractmethod
+    async def mark_email_verified(self, user_id: UUID, *, verified_at: datetime) -> User | None:
+        """Set email_verified_at for the user."""
+        ...
+
+    @abstractmethod
+    async def update_password(self, user_id: UUID, hashed_password: str) -> User | None:
+        """Replace the stored password hash."""
+        ...
+
+
+class IAuthTokenRepository(ABC):
+    @abstractmethod
+    async def create(self, token: AuthToken) -> AuthToken:
+        """Persist a new auth token (flush only — caller must commit)."""
+        ...
+
+    @abstractmethod
+    async def get_valid_by_hash(self, token_hash: str, token_type: str) -> AuthToken | None:
+        """Return an unused, unexpired token or None."""
+        ...
+
+    @abstractmethod
+    async def mark_used(self, token_id: UUID, *, used_at: datetime) -> None:
+        """Mark a token as consumed."""
+        ...
+
+    @abstractmethod
+    async def revoke_active_for_user(self, user_id: UUID, token_type: str) -> None:
+        """Invalidate outstanding tokens of a given type for a user."""
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class EmailMessage:
+    to: str
+    subject: str
+    body_text: str
+
+
+class IEmailService(ABC):
+    @abstractmethod
+    async def send(self, message: EmailMessage) -> None:
+        """Deliver an email message."""
         ...
 
 

@@ -4,6 +4,7 @@ import json
 import uuid
 from collections.abc import AsyncGenerator
 
+from tests.auth_helpers import mark_user_email_verified
 from tests.auth_payloads import retail_register_payload
 
 import pytest
@@ -80,10 +81,18 @@ async def _admin_token(client: AsyncClient, email: str, password: str) -> str:
     return response.json()["access_token"]
 
 
+_admin_orders_session_factory: async_sessionmaker | None = None
+
+
 async def _place_order(client: AsyncClient) -> str:
+    assert _admin_orders_session_factory is not None
     await client.post(
         "/api/v1/auth/register",
         json=retail_register_payload("admin-orders-user@example.com"),
+    )
+    await mark_user_email_verified(
+        _admin_orders_session_factory,
+        "admin-orders-user@example.com",
     )
     login_response = await client.post(
         "/api/v1/auth/login",
@@ -123,11 +132,13 @@ async def _place_order(client: AsyncClient) -> str:
 
 @pytest.fixture
 async def admin_orders_client() -> AsyncGenerator[AsyncClient, None]:
+    global _admin_orders_session_factory
     settings.stripe_secret_key = type(settings.stripe_secret_key)("sk_test_fake")  # type: ignore[misc]
     settings.stripe_webhook_secret = type(settings.stripe_webhook_secret)("whsec_test_fake")  # type: ignore[misc]
 
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    _admin_orders_session_factory = session_factory
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

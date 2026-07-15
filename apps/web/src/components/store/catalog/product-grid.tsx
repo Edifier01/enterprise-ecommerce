@@ -12,6 +12,7 @@ export type ProductGridItem = ProductCardProduct & {
   imageSrc?: string;
   isWholesaler?: boolean;
   wholesalePriceCents?: number;
+  defaultVariantId?: string;
 };
 
 export interface ProductGridProps {
@@ -57,6 +58,9 @@ export function ProductGrid({
               isWholesaler={product.isWholesaler ?? extraProps.isWholesaler}
               wholesalePriceCents={
                 product.wholesalePriceCents ?? extraProps.wholesalePriceCents
+              }
+              defaultVariantId={
+                product.defaultVariantId ?? extraProps.defaultVariantId
               }
             />
           </li>

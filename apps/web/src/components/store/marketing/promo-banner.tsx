@@ -15,18 +15,18 @@ export type PromoBannerItem = {
 
 const DEFAULT_PROMO_BANNERS: PromoBannerItem[] = [
   {
-    title: "Новая коллекция",
-    description: "Актуальные товары с быстрой доставкой по всей России",
+    title: "Разгрузочные системы",
+    description: "Plate carriers, подсумки и комплекты для полевых задач",
     href: "/catalog",
-    ctaLabel: "В каталог",
-    accentClass: "from-primary/90 to-primary",
+    ctaLabel: "Смотреть снаряжение",
+    accentClass: "from-primary/95 to-primary store-hero-pattern",
   },
   {
-    title: "Специальные предложения",
-    description: "Выгодные цены на популярные позиции — ограниченный период",
+    title: "Подготовка к сезону",
+    description: "Термобельё, мембрана и тактическая обувь — выгодные цены",
     href: "/catalog",
-    ctaLabel: "Смотреть акции",
-    accentClass: "from-store-cta/90 to-store-cta",
+    ctaLabel: "В каталог",
+    accentClass: "from-stone-700/95 to-stone-800 store-hero-pattern",
   },
 ];
 

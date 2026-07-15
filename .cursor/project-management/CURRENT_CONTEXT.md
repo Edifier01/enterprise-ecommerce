@@ -6,13 +6,13 @@
 
 ## Current Module
 
-`apps/` — Phase 24 application. Storefront UX + auth registration overhaul.
+`apps/web` — tactical storefront + catalog/search filters.
 
 ---
 
 ## Current Feature
 
-**СУХОПУТ branding + header UX + retail/wholesaler registration** ✅ **COMPLETE**
+**Search page filters + own-brand cleanup** ✅ **COMPLETE**
 
 ---
 
@@ -38,11 +38,12 @@ None.
 
 | Area | Status |
 |------|--------|
-| Header: TopBar search + Связаться | ✅ |
-| Header: cart icon, no email | ✅ |
-| Branding СУХОПУТ + favicon | ✅ |
-| Retail registration (ФИО + email) | ✅ |
-| Wholesaler self-registration | ✅ |
+| Phase 1 — palette, trust bar, visuals | ✅ |
+| Phase 2 — mega-menu, filters, PDP, toast | ✅ |
+| Brand filter removed (own brand only) | ✅ |
+| Search page filters | ✅ |
+| Real photography | ⏳ Backlog |
+| Prod SMTP delivery | ⏳ Next step |
 | Final YooKassa integration | ⏳ Next gate |
 
 ---
@@ -51,12 +52,13 @@ None.
 
 | Resource | Path |
 |----------|------|
-| Migration 011 | `apps/api/alembic/versions/011_user_profiles_wholesaler.py` |
-| Wholesaler register | `apps/web/src/app/register/wholesale/page.tsx` |
-| Site config | `apps/web/src/lib/store/site-config.ts` |
+| Filtered list (category + search) | `apps/web/src/components/store/catalog/filtered-product-list.tsx` |
+| Catalog query helpers | `apps/web/src/lib/store/catalog-query.ts` |
+| Search page | `apps/web/src/app/search/page.tsx` |
+| Filter API tests | `apps/api/tests/test_product_filters.py` |
 
 ---
 
 ## Last Updated
 
-2026-07-13 (СУХОПУТ UX + registration)
+2026-07-15 (search filters, brand filter removed)

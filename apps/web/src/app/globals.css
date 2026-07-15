@@ -58,36 +58,36 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.22 0.02 250);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.22 0.02 250);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.22 0.02 250);
-    /* Slate primary — neutral enterprise storefront (not olive/military) */
-    --primary: oklch(0.32 0.02 250);
-    --primary-foreground: oklch(0.985 0 0);
-    /* Storefront-specific tokens */
-    --store-cta: oklch(0.48 0.14 250);
-    --store-cta-foreground: oklch(0.99 0 0);
-    --store-success: oklch(0.52 0.14 145);
+    /* Tactical storefront — olive / stone / amber */
+    --background: oklch(0.985 0.006 85);
+    --foreground: oklch(0.22 0.02 130);
+    --card: oklch(1 0.004 85);
+    --card-foreground: oklch(0.22 0.02 130);
+    --popover: oklch(1 0.004 85);
+    --popover-foreground: oklch(0.22 0.02 130);
+    --primary: oklch(0.34 0.05 130);
+    --primary-foreground: oklch(0.985 0.006 85);
+    --store-cta: oklch(0.62 0.14 55);
+    --store-cta-foreground: oklch(0.18 0.02 55);
+    --store-success: oklch(0.48 0.1 145);
     --store-success-foreground: oklch(0.99 0 0);
-    --store-muted-badge: oklch(0.94 0.005 250);
-    --store-muted-badge-foreground: oklch(0.45 0.02 250);
-    --store-sale: oklch(0.58 0.19 25);
+    --store-muted-badge: oklch(0.93 0.012 85);
+    --store-muted-badge-foreground: oklch(0.42 0.03 130);
+    --store-sale: oklch(0.52 0.17 25);
     --store-sale-foreground: oklch(0.99 0 0);
+    --store-coyote: oklch(0.72 0.06 75);
     --store-max-width: 80rem;
     --store-mobile-nav-height: 4rem;
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.96 0.008 85);
+    --secondary-foreground: oklch(0.25 0.03 130);
+    --muted: oklch(0.955 0.01 85);
+    --muted-foreground: oklch(0.5 0.02 130);
+    --accent: oklch(0.94 0.015 75);
+    --accent-foreground: oklch(0.28 0.04 130);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    --border: oklch(0.9 0.012 85);
+    --input: oklch(0.9 0.012 85);
+    --ring: oklch(0.55 0.06 130);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -182,6 +182,20 @@
 
   .store-section-title {
     @apply text-2xl font-semibold tracking-tight text-foreground;
+  }
+
+  .store-section-link {
+    @apply text-sm font-medium text-primary transition-colors hover:text-primary/80;
+  }
+
+  .store-hero-pattern {
+    background-image:
+      linear-gradient(135deg, oklch(0 0 0 / 0.08) 25%, transparent 25%),
+      linear-gradient(225deg, oklch(0 0 0 / 0.08) 25%, transparent 25%),
+      linear-gradient(45deg, oklch(0 0 0 / 0.08) 25%, transparent 25%),
+      linear-gradient(315deg, oklch(0 0 0 / 0.08) 25%, transparent 25%);
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0;
   }
 
   .store-price {

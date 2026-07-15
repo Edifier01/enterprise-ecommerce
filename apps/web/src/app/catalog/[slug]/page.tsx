@@ -6,7 +6,7 @@ import type { BreadcrumbItem } from "@/components/store/catalog/breadcrumbs";
 import { CategoryGrid } from "@/components/store/catalog/category-grid";
 import { CategoryProductList } from "@/components/store/catalog/category-product-list";
 import { PageContainer } from "@/components/store/layout/page-container";
-import { getCategories, listProducts } from "@/lib/api";
+import { getCategories, getProductFacets, listProducts } from "@/lib/api";
 import type { Category } from "@/lib/api";
 import { getAccessToken, getCurrentUser } from "@/lib/auth/session";
 import {
@@ -14,11 +14,17 @@ import {
   getBreadcrumbsForCategory,
   getCategoryBySlug,
 } from "@/lib/store/categories";
+import {
+  apiFacetsToCatalogFacets,
+  catalogQueryToApiParams,
+  parseCatalogSearchParams,
+} from "@/lib/store/catalog-query";
 import { toProductGridItems } from "@/lib/store/product-grid";
 import { siteConfig } from "@/lib/store/site-config";
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export function generateStaticParams() {
@@ -76,8 +82,13 @@ export async function generateMetadata({
   };
 }
 
-export default async function CategoryPage({ params }: CategoryPageProps) {
+export default async function CategoryPage({
+  params,
+  searchParams,
+}: CategoryPageProps) {
   const { slug } = await params;
+  const resolvedSearchParams = await searchParams;
+  const catalogQuery = parseCatalogSearchParams(resolvedSearchParams);
   const token = await getAccessToken();
   const user = await getCurrentUser();
   const isWholesaler = user?.is_wholesaler ?? false;
@@ -97,11 +108,17 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   }
 
   let products: Awaited<ReturnType<typeof listProducts>> | null = null;
+  let facets: Awaited<ReturnType<typeof getProductFacets>> | null = null;
   let error: string | null = null;
 
   try {
-    // Filter by the real primary-category association (ADR-002).
-    products = await listProducts(1, 48, slug, token);
+    const apiFilters = catalogQueryToApiParams(catalogQuery, {
+      categorySlug: slug,
+      page: 1,
+      limit: 48,
+    });
+    products = await listProducts(1, 48, slug, token, apiFilters);
+    facets = await getProductFacets({ categorySlug: slug }, token);
   } catch {
     error =
       "Не удалось загрузить товары. Убедитесь, что API запущен и доступен.";
@@ -113,6 +130,13 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       ? allCategories.filter((c) => c.parent_id === apiCategory.id)
       : [];
   const categoryProducts = toProductGridItems(products?.items ?? [], isWholesaler);
+  const catalogFacets = facets
+    ? apiFacetsToCatalogFacets(facets)
+    : {
+        sizes: [],
+        colors: [],
+        priceRange: { min: 0, max: 0 },
+      };
 
   const childCategoryCards = childCategories.map((child) => ({
     slug: child.slug,
@@ -163,7 +187,13 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           Товары раздела
         </h2>
         <p className="text-xs text-muted-foreground">{siteConfig.catalogDisclaimer}</p>
-        <CategoryProductList products={categoryProducts} />
+        <CategoryProductList
+          categorySlug={slug}
+          products={categoryProducts}
+          total={products?.total ?? 0}
+          facets={catalogFacets}
+          query={catalogQuery}
+        />
       </section>
     </PageContainer>
   );

@@ -11,9 +11,9 @@ export const SECTION_TAB_IDS = ["recommended", "new", "special"] as const;
 export type SectionTabId = (typeof SECTION_TAB_IDS)[number];
 
 export const SECTION_TAB_LABELS: Record<SectionTabId, string> = {
-  recommended: "Рекомендуемые",
+  recommended: "Хиты сезона",
   new: "Новинки",
-  special: "Спецпредложения",
+  special: "Распродажа",
 };
 
 export type SectionTabCompareAtMap = Record<string, number | undefined>;

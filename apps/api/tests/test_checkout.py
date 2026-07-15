@@ -4,6 +4,7 @@ import json
 import uuid
 from collections.abc import AsyncGenerator
 
+from tests.auth_helpers import mark_user_email_verified
 from tests.auth_payloads import retail_register_payload
 
 import pytest
@@ -607,6 +608,7 @@ async def test_checkout_uses_access_token_cookie_for_authenticated_cart(
         "/api/v1/auth/register",
         json=retail_register_payload("checkout-user@example.com"),
     )
+    await mark_user_email_verified(session_factory, "checkout-user@example.com")
     login_response = await client.post(
         "/api/v1/auth/login",
         json={"email": "checkout-user@example.com", "password": "secret123"},

@@ -11,6 +11,7 @@ one default variant per product (per ADR-002 consistency rule).
 
 import asyncio
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -32,9 +33,10 @@ _WHOLESALER_PASSWORD = "wholesale12345"
 
 # --- categories ------------------------------------------------------------
 _CATEGORIES = [
-    {"slug": "elektronika", "name": "Электроника", "description": "Гаджеты и техника", "sort_order": 0},
-    {"slug": "odezhda", "name": "Одежда", "description": "Повседневная и сезонная одежда", "sort_order": 1},
-    {"slug": "aksessuary", "name": "Аксессуары", "description": "Сумки, ремни и мелочи", "sort_order": 2},
+    {"slug": "snaryazhenie", "name": "Снаряжение", "description": "Разгрузки, рюкзаки, подсумки", "sort_order": 0},
+    {"slug": "odezhda", "name": "Тактическая одежда", "description": "Куртки, термобельё, мембрана", "sort_order": 1},
+    {"slug": "obuv", "name": "Обувь", "description": "Ботинки, берцы, тактические кроссовки", "sort_order": 2},
+    {"slug": "aksessuary", "name": "Аксессуары", "description": "Фонари, IFAK, ножи, оптика", "sort_order": 3},
 ]
 
 # --- products: (data, category_slug, variants) -----------------------------
@@ -131,7 +133,7 @@ _SAMPLE_PRODUCTS = [
         "compare_at_price_cents": 10999,
         "currency": "USD",
         "in_stock": True,
-        "category": "elektronika",
+        "category": "aksessuary",
         "variants": [
             {"sku": "EARBUDS-BLK", "name": "Чёрный", "attributes": {"color": "black"}, "price_cents": 8999, "is_default": True, "sort_order": 0},
             {"sku": "EARBUDS-WHT", "name": "Белый", "attributes": {"color": "white"}, "price_cents": 8999, "is_default": False, "sort_order": 1},
@@ -166,12 +168,14 @@ async def _seed_wholesaler_user(session: AsyncSession) -> None:
         return
 
     hasher = BcryptPasswordHasher()
+    now = datetime.now(timezone.utc)
     session.add(
         UserModel(
             email=_WHOLESALER_EMAIL,
             hashed_password=hasher.hash(_WHOLESALER_PASSWORD),
             is_active=True,
             is_wholesaler=True,
+            email_verified_at=now,
         )
     )
     await session.commit()

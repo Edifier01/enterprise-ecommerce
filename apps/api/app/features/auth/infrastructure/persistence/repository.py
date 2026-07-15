@@ -1,5 +1,6 @@
 """User repository — SQLAlchemy implementation of IUserRepository."""
 
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -47,6 +48,7 @@ class UserRepository(IUserRepository):
             last_name=user.last_name or None,
             is_active=user.is_active,
             is_wholesaler=user.is_wholesaler,
+            email_verified_at=user.email_verified_at,
             created_at=user.created_at,
         )
         self._session.add(model)
@@ -63,6 +65,7 @@ class UserRepository(IUserRepository):
             last_name=None,
             is_active=user.is_active,
             is_wholesaler=True,
+            email_verified_at=user.email_verified_at,
             created_at=user.created_at,
         )
         self._session.add(model)
@@ -95,7 +98,26 @@ class UserRepository(IUserRepository):
             created_at=row.created_at,
             first_name=row.first_name or "",
             last_name=row.last_name or "",
+            email_verified_at=row.email_verified_at,
         )
+
+    async def mark_email_verified(self, user_id: UUID, *, verified_at: datetime) -> User | None:
+        row = await self._session.get(UserModel, user_id)
+        if row is None:
+            return None
+        row.email_verified_at = verified_at
+        await self._session.flush()
+        await self._session.refresh(row)
+        return self._to_entity(row)
+
+    async def update_password(self, user_id: UUID, hashed_password: str) -> User | None:
+        row = await self._session.get(UserModel, user_id)
+        if row is None:
+            return None
+        row.hashed_password = hashed_password
+        await self._session.flush()
+        await self._session.refresh(row)
+        return self._to_entity(row)
 
     async def list_customers(self, page: int, limit: int) -> tuple[list[User], int]:
         offset = (page - 1) * limit
