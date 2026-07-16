@@ -9,6 +9,7 @@ cd "$ROOT_DIR"
 
 ENV_FILE="${ENV_FILE:-.env.production}"
 COMPOSE=(docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE")
+PROJECT_NAME="${COMPOSE_PROJECT_NAME:-enterprise-ecommerce}"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "Missing $ENV_FILE. Copy .env.production.example and fill in values."
@@ -25,23 +26,42 @@ if [[ -z "${DOMAIN:-}" || -z "${JWT_SECRET_KEY:-}" || -z "${POSTGRES_PASSWORD:-}
   exit 1
 fi
 
-echo "==> Pulling latest code..."
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+
+log() {
+  echo "[$(date -u +%H:%M:%S)] $*"
+}
+
+log "Pulling latest code..."
 git pull --ff-only origin master
 
-echo "==> Building images..."
-"${COMPOSE[@]}" build
+log "Building images (BuildKit + layer cache)..."
+"${COMPOSE[@]}" build --progress=plain --parallel
 
-echo "==> Starting containers..."
+log "Tagging images for next deploy cache..."
+docker image inspect "${PROJECT_NAME}-api:latest" >/dev/null 2>&1 \
+  && docker tag "${PROJECT_NAME}-api:latest" "${PROJECT_NAME}-api:previous" || true
+docker tag "${PROJECT_NAME}-api" "${PROJECT_NAME}-api:latest" 2>/dev/null || true
+
+docker image inspect "${PROJECT_NAME}-web:latest" >/dev/null 2>&1 \
+  && docker tag "${PROJECT_NAME}-web:latest" "${PROJECT_NAME}-web:previous" || true
+docker tag "${PROJECT_NAME}-web" "${PROJECT_NAME}-web:latest" 2>/dev/null || true
+
+log "Starting containers..."
 "${COMPOSE[@]}" up -d
 
-echo "==> Waiting for API readiness..."
+log "Waiting for API readiness (migrations may take a few minutes)..."
 ready=0
-for _ in $(seq 1 60); do
+for attempt in $(seq 1 90); do
   if "${COMPOSE[@]}" exec -T api \
     python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')" \
     >/dev/null 2>&1; then
     ready=1
     break
+  fi
+  if (( attempt % 15 == 0 )); then
+    log "Still waiting for API... (${attempt}/90)"
   fi
   sleep 2
 done
@@ -53,9 +73,9 @@ if [[ "$ready" -ne 1 ]]; then
   exit 1
 fi
 
-echo "==> Container status:"
+log "Container status:"
 "${COMPOSE[@]}" ps
 
-echo "==> Deployment complete."
+log "Deployment complete."
 echo "Site: https://${DOMAIN}"
 echo "API health: https://${DOMAIN}/health"

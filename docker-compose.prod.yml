@@ -20,6 +20,9 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.api
+      cache_from:
+        - enterprise-ecommerce-api:latest
+        - enterprise-ecommerce-api:previous
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@postgres:5432/ecommerce
       ENVIRONMENT: production
@@ -45,6 +48,9 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.web
+      cache_from:
+        - enterprise-ecommerce-web:latest
+        - enterprise-ecommerce-web:previous
       args:
         NEXT_PUBLIC_API_URL: https://${DOMAIN}
         NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
