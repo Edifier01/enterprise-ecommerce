@@ -63,12 +63,6 @@ test.describe("Homepage", () => {
     expect(await categoryNav.getByRole("link").count()).toBeGreaterThanOrEqual(3);
   });
 
-  test("shows promo banners when homepage loads", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByLabel("Промо-баннеры")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Смотреть снаряжение" })).toBeVisible();
-  });
-
   test("shows product grid or graceful empty/error state", async ({ page }) => {
     await page.goto("/");
 

@@ -12,7 +12,7 @@
 
 ## Current Feature
 
-**Admin Panel Optimization Wave C** ✅ **COMPLETE**
+**E2E test stabilization** — all 24 Playwright smoke tests green (2026-07-16)
 
 ---
 
@@ -38,11 +38,9 @@ None.
 
 | Area | Status |
 |------|--------|
-| Admin Wave A–B | ✅ |
-| Admin search (`?q=`) | ✅ |
-| Variant CRUD UI | ✅ |
-| Category parent selector | ✅ |
-| Local media upload (`POST /admin/media/upload`) | ✅ |
+| Admin Wave A–C | ✅ |
+| E2E smoke suite | ✅ 24/24 passing |
+| Homepage search UX | ✅ |
 | Prod S3/CDN (production) | ⏳ Backlog |
 | Prod SMTP / YooKassa | ⏳ Next gate |
 
@@ -62,4 +60,4 @@ None.
 
 ## Last Updated
 
-2026-07-16 (admin Wave C)
+2026-07-16 (E2E test fixes — 24/24 green)

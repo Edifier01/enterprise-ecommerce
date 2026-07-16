@@ -1,10 +1,14 @@
 import { expect, test } from "@playwright/test";
 
+import { loginAsWholesaler, productDetailPanel } from "./test-helpers";
+
 /**
  * Wholesale pricing smoke (Sprint E).
  * Retail user must not see wholesale price; wholesaler sees dual pricing on PDP.
  */
 test.describe("Wholesale pricing smoke", () => {
+  test.describe.configure({ mode: "serial" });
+
   test("retail user does not see wholesale price on PDP", async ({ page }) => {
     await page.goto("/products/classic-white-t-shirt");
     await expect(page.getByText("Опт:")).not.toBeVisible();
@@ -12,14 +16,11 @@ test.describe("Wholesale pricing smoke", () => {
   });
 
   test("wholesaler sees dual prices on PDP", async ({ page }) => {
-    await page.goto("/login");
-    await page.getByLabel("Email").fill("wholesaler@example.com");
-    await page.getByLabel("Пароль").fill("wholesale12345");
-    await page.getByRole("button", { name: "Войти" }).click();
-    await page.waitForURL("**/account**");
+    await loginAsWholesaler(page);
 
     await page.goto("/products/classic-white-t-shirt");
-    await expect(page.getByText("Розница:")).toBeVisible();
-    await expect(page.getByText("Опт:")).toBeVisible();
+    const detail = productDetailPanel(page, "Classic White T-Shirt");
+    await expect(detail.getByText("Розница:")).toBeVisible();
+    await expect(detail.getByText("Опт:")).toBeVisible();
   });
 });

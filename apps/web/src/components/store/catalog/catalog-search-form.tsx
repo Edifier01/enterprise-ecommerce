@@ -53,7 +53,7 @@ export function CatalogSearchForm({
           type="search"
           name="q"
           defaultValue={defaultQuery}
-          placeholder="АРТИКУЛ ИЛИ НАЗВАНИЕ"
+          placeholder="НАЗВАНИЕ"
           autoComplete="off"
           className={headerInputClassName}
           aria-label="Поиск по каталогу"
@@ -88,7 +88,7 @@ export function CatalogSearchForm({
         type="search"
         name="q"
         defaultValue={defaultQuery}
-        placeholder={compact ? "Поиск..." : "Поиск по каталогу..."}
+        placeholder="Название..."
         autoComplete="off"
         className={compact ? compactInputClassName : inputClassName}
         aria-label="Поиск по каталогу"

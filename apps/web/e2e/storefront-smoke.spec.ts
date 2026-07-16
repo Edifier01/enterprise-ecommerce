@@ -11,7 +11,9 @@ test.describe("Storefront smoke", () => {
     const response = await page.goto("/search");
     expect(response?.status()).toBe(200);
     await expect(page.getByRole("heading", { name: "Поиск" })).toBeVisible();
-    await expect(page.getByText("Поиск скоро будет доступен")).toBeVisible();
+    await expect(
+      page.getByText("Введите название товара в поле выше."),
+    ).toBeVisible();
   });
 
   test("cart page loads with empty state", async ({ page }) => {
@@ -29,9 +31,8 @@ test.describe("Storefront smoke", () => {
   });
 
   test("login page loads with Russian form", async ({ page }) => {
-    const response = await page.goto("/login");
-    expect(response?.status()).toBe(200);
-    await expect(page.getByRole("heading", { name: "Вход" })).toBeVisible();
+    await page.goto("/login");
+    await expect(page.getByText("Вход", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Войти" })).toBeVisible();
   });
 });

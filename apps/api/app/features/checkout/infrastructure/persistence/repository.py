@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -176,9 +177,14 @@ class CheckoutRepository(ICheckoutRepository):
         return await self._load_cart(stmt)
 
     async def get_active_cart_by_user_id(self, user_id: uuid.UUID) -> Cart | None:
-        stmt = select(CartModel).where(
-            CartModel.user_id == user_id,
-            CartModel.status == CartStatus.ACTIVE.value,
+        stmt = (
+            select(CartModel)
+            .where(
+                CartModel.user_id == user_id,
+                CartModel.status == CartStatus.ACTIVE.value,
+            )
+            .order_by(CartModel.created_at.desc())
+            .limit(1)
         )
         return await self._load_cart(stmt)
 
@@ -207,28 +213,31 @@ class CheckoutRepository(ICheckoutRepository):
         currency: str,
         snapshot: ProductSnapshot,
     ) -> CartLine:
-        result = await self._session.execute(
-            select(CartLineModel).where(
-                CartLineModel.cart_id == cart_id,
-                CartLineModel.variant_id == variant_id,
-            )
-        )
-        model = result.scalar_one_or_none()
-        if model:
-            model.quantity = quantity
-            model.unit_price_cents = unit_price_cents
-            model.currency = currency
-            model.product_snapshot = snapshot.to_dict()
-        else:
-            model = CartLineModel(
+        snapshot_dict = snapshot.to_dict()
+        stmt = (
+            insert(CartLineModel)
+            .values(
+                id=uuid.uuid4(),
                 cart_id=cart_id,
                 variant_id=variant_id,
                 quantity=quantity,
                 unit_price_cents=unit_price_cents,
                 currency=currency,
-                product_snapshot=snapshot.to_dict(),
+                product_snapshot=snapshot_dict,
             )
-            self._session.add(model)
+            .on_conflict_do_update(
+                constraint="uq_cart_lines_cart_variant",
+                set_={
+                    "quantity": quantity,
+                    "unit_price_cents": unit_price_cents,
+                    "currency": currency,
+                    "product_snapshot": snapshot_dict,
+                },
+            )
+            .returning(CartLineModel)
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one()
         await self._session.flush()
         await self._session.refresh(model)
         return _line_from_model(model)

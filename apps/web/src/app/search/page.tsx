@@ -73,7 +73,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <header className="space-y-2 text-center sm:text-left">
         <h1 className="store-section-title">Поиск</h1>
         <p className="text-sm text-muted-foreground sm:text-base">
-          Найдите нужный товар по названию или артикулу
+          Найдите нужный товар по названию
         </p>
       </header>
 
@@ -106,7 +106,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         </section>
       ) : (
         <p className="text-center text-sm text-muted-foreground sm:text-left">
-          Введите название товара или артикул в поле выше.
+          Введите название товара в поле выше.
         </p>
       )}
     </PageContainer>

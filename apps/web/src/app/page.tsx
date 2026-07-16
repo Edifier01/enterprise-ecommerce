@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { SectionTabs } from "@/components/store/catalog/section-tabs";
 import type { SectionTabData } from "@/components/store/catalog/section-tabs";
 import { PageContainer } from "@/components/store/layout/page-container";
-import { PromoBanner } from "@/components/store/marketing/promo-banner";
 import { SeoContentBlock } from "@/components/store/marketing/seo-content-block";
 import { listProducts } from "@/lib/api";
 import { getAccessToken, getCurrentUser } from "@/lib/auth/session";
@@ -66,8 +65,6 @@ export default async function HomePage() {
 
   return (
     <PageContainer as="div" className="space-y-10 sm:space-y-12">
-      <PromoBanner />
-
       {error ? (
         <div
           role="alert"

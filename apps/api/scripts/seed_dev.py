@@ -155,36 +155,54 @@ _SAMPLE_PRODUCTS = [
 
 
 async def _seed_admin_user(session: AsyncSession) -> None:
-    existing = await session.scalar(select(func.count()).select_from(AdminUserModel))
-    if existing and existing > 0:
-        return
-
     hasher = BcryptPasswordHasher()
-    session.add(
-        AdminUserModel(
-            email=settings.admin_dev_email,
-            hashed_password=hasher.hash(settings.admin_dev_password),
-            role="superadmin",
-            is_active=True,
+    password_hash = hasher.hash(settings.admin_dev_password)
+    dev_emails = {settings.admin_dev_email, "admin@example.com"}
+
+    for email in dev_emails:
+        existing = await session.scalar(
+            select(AdminUserModel).where(AdminUserModel.email == email)
         )
-    )
+        if existing:
+            existing.hashed_password = password_hash
+            existing.is_active = True
+            existing.role = "superadmin"
+            print(f"Refreshed dev admin credentials: {email}")
+            continue
+
+        session.add(
+            AdminUserModel(
+                email=email,
+                hashed_password=password_hash,
+                role="superadmin",
+                is_active=True,
+            )
+        )
+        print(f"Seeded dev admin user: {email}")
+
     await session.commit()
-    print(f"Seeded dev admin user: {settings.admin_dev_email}")
 
 
 async def _seed_wholesaler_user(session: AsyncSession) -> None:
-    existing = await session.scalar(
-        select(func.count()).select_from(UserModel).where(UserModel.email == _WHOLESALER_EMAIL)
-    )
-    if existing and existing > 0:
-        return
-
     hasher = BcryptPasswordHasher()
     now = datetime.now(timezone.utc)
+    password_hash = hasher.hash(_WHOLESALER_PASSWORD)
+    existing = await session.scalar(
+        select(UserModel).where(UserModel.email == _WHOLESALER_EMAIL)
+    )
+    if existing:
+        existing.hashed_password = password_hash
+        existing.is_active = True
+        existing.is_wholesaler = True
+        existing.email_verified_at = existing.email_verified_at or now
+        await session.commit()
+        print(f"Refreshed dev wholesaler credentials: {_WHOLESALER_EMAIL}")
+        return
+
     session.add(
         UserModel(
             email=_WHOLESALER_EMAIL,
-            hashed_password=hasher.hash(_WHOLESALER_PASSWORD),
+            hashed_password=password_hash,
             is_active=True,
             is_wholesaler=True,
             email_verified_at=now,

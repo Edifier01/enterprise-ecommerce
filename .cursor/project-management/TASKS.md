@@ -521,8 +521,8 @@ admin-assigned. Existing orders are never repriced.
 - [ ] Catalog admin: wholesale price field on product create/edit (per variant)
 - [ ] New `/admin/customers` — list + toggle wholesaler status
 - [ ] Admin sidebar: «Клиенты» link
-- [ ] Playwright E2E: `admin-wholesale-smoke.spec.ts` (toggle wholesaler + verify dual price)
-- [ ] Playwright E2E: `wholesale-checkout-smoke.spec.ts` (wholesaler pays wholesale)
+- [x] Playwright E2E: `admin-wholesale-smoke.spec.ts` (toggle wholesaler + verify dual price)
+- [x] Playwright E2E: `wholesale-checkout-smoke.spec.ts` (wholesaler pays wholesale)
 
 #### E7 — Quality Gate
 
@@ -581,6 +581,29 @@ admin-assigned. Existing orders are never repriced.
 - [x] Related products on PDP
 - [x] Dynamic facet counts
 - [ ] Real product/category photography (production assets)
+
+---
+
+### Feature: Homepage Search UX Simplification
+
+**Status:** COMPLETED (2026-07-16)
+
+- [x] Search placeholder «Название» in header and `/search` page
+- [x] Remove 2 promo cards (`PromoBanner`) from homepage — «Подборки» directly under header
+- [x] E2E: `homepage.spec.ts`, `search-smoke.spec.ts` updated
+
+---
+
+### Feature: E2E Test Stabilization
+
+**Status:** COMPLETED (2026-07-16)
+
+- [x] Shared E2E helpers (`test-helpers.ts`) — admin/wholesaler login, cart add, PDP panel locators
+- [x] Fix admin catalog slug strict-mode assertion + form redirect catch bug
+- [x] Fix cart line upsert race (`ON CONFLICT` in checkout repository)
+- [x] Stabilize wholesale checkout (ensureCartEmpty, serial wholesale specs)
+- [x] Refresh seed credentials for E2E (`admin@example.com`, wholesaler)
+- [x] Quality gate: **24/24 Playwright E2E passing**
 
 ---
 

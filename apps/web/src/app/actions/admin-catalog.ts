@@ -105,18 +105,20 @@ export async function createProductAction(
   _prev: CatalogActionState | null,
   formData: FormData,
 ): Promise<CatalogActionState> {
+  let body: Record<string, unknown>;
   try {
-    const body = buildProductBody(formData, true);
-    const result = await adminMutate("/api/v1/admin/catalog/products", "POST", body);
-
-    if (!result.ok) return result.error;
-
-    revalidatePath("/admin/catalog");
-    revalidatePath("/catalog");
-    redirect("/admin/catalog");
+    body = buildProductBody(formData, true);
   } catch {
     return { error: "Некорректные данные формы." };
   }
+
+  const result = await adminMutate("/api/v1/admin/catalog/products", "POST", body);
+
+  if (!result.ok) return result.error;
+
+  revalidatePath("/admin/catalog");
+  revalidatePath("/catalog");
+  redirect("/admin/catalog");
 }
 
 export async function updateProductAction(
@@ -124,24 +126,26 @@ export async function updateProductAction(
   _prev: CatalogActionState | null,
   formData: FormData,
 ): Promise<CatalogActionState> {
+  let body: Record<string, unknown>;
+  const categoryId = formData.get("category_id");
+
   try {
-    const body = buildProductBody(formData, false);
-    const categoryId = formData.get("category_id");
-
-    const result = await adminMutate(`/api/v1/admin/catalog/products/${productId}`, "PATCH", {
-      ...body,
-      clear_category: !(typeof categoryId === "string" && categoryId),
-    });
-
-    if (!result.ok) return result.error;
-
-    revalidatePath("/admin/catalog");
-    revalidatePath(`/admin/catalog/${productId}/edit`);
-    revalidatePath("/catalog");
-    redirect("/admin/catalog");
+    body = buildProductBody(formData, false);
   } catch {
     return { error: "Некорректные данные формы." };
   }
+
+  const result = await adminMutate(`/api/v1/admin/catalog/products/${productId}`, "PATCH", {
+    ...body,
+    clear_category: !(typeof categoryId === "string" && categoryId),
+  });
+
+  if (!result.ok) return result.error;
+
+  revalidatePath("/admin/catalog");
+  revalidatePath(`/admin/catalog/${productId}/edit`);
+  revalidatePath("/catalog");
+  redirect("/admin/catalog");
 }
 
 export async function createCategoryAction(

@@ -53,6 +53,8 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Recently Completed
 
+- [x] **E2E test stabilization** — 24/24 Playwright green; cart upsert race fix (2026-07-16)
+- [x] **Homepage search UX** — placeholder «Название», promo cards removed (2026-07-16)
 - [x] **Admin Panel Optimization Wave A–C** (2026-07-16)
 - [x] **Production Catalog Optimization Wave 1–3** (2026-07-16)
 
@@ -74,10 +76,10 @@ None.
 
 ## Last Updated
 
-2026-07-16 (admin panel optimization Wave A–C)
+2026-07-16 (homepage search UX)
 
 ---
 
 ## Last Agent
 
-Implementation Agent (admin panel Wave C)
+Implementation Agent (homepage search UX)

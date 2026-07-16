@@ -6,54 +6,58 @@ Implementation Agent
 
 ## Completed Work
 
-**Admin Panel Wave C (2026-07-16):**
+**E2E test stabilization (2026-07-16):**
 
-### Catalog search
-- `GET /admin/catalog/products?q=` — searches name, slug, variant SKU (all statuses)
-- Admin catalog page search box with URL sync
+### Root causes fixed
+- **Cart line race**: concurrent `POST /cart/lines` caused `UniqueViolationError` on `(cart_id, variant_id)` — fixed with PostgreSQL `ON CONFLICT` upsert in checkout repository
+- **Wholesaler cart isolation**: logged-in wholesaler shares DB cart across parallel tests — added `ensureCartEmpty()` helper and serial mode for wholesale specs
+- **Admin catalog assertion**: slug appears in name + slug columns — use `getByRole('cell', { exact: true })`
+- **Admin redirect bug**: `redirect()` caught in form action `catch` — moved outside try/catch in `admin-catalog.ts`
 
-### Variant CRUD UI
-- `AdminVariantPanel` on product edit — list, edit, add variants
-- Server actions: `createVariantAction`, `updateVariantAction`
+### E2E helpers (`apps/web/e2e/test-helpers.ts`)
+- `loginAsAdmin`, `loginAsWholesaler`, `ensureCartEmpty`
+- `addPrimaryProductToCart(page, scope?)` — scoped PDP button, POST wait, UI assert on cart page
+- `productDetailPanel`, `pageSearchInput`, `productResultLink`
 
-### Category parent selector
-- Parent dropdown on category create (indented hierarchy)
-- Parent column in category table
-- Indented category selects on product create/edit
+### Seed
+- `seed_dev.py` refreshes `admin@example.com` and wholesaler credentials for E2E
 
-### Media upload (local dev storage)
-- `POST /api/v1/admin/media/upload` — JPEG/PNG/WebP/GIF up to 5 MB
-- Files served at `/media/{filename}`; `AdminImageField` upload widget
-- Config: `media_upload_dir`, `media_public_base_url`
-- Added `python-multipart` dependency
-
-### Tests
-- 15/15 `test_admin_catalog.py` passed
-- TypeScript check clean
+### Quality gate
+- **24/24 Playwright E2E passing** (`npm run test:e2e` with CI=true)
+- **18/18 checkout pytest** passing after upsert change
 
 ## Files Changed
 
 | Area | Key paths |
 |------|-----------|
-| Backend | `admin_catalog_repository.py`, `admin_router.py`, `admin_ports.py`, `media_router.py`, `config.py`, `main.py`, `requirements.txt` |
-| Frontend | `admin-catalog-search.tsx`, `admin-variant-panel.tsx`, `admin-image-field.tsx`, `admin-category-select.tsx`, `category-options.ts`, `admin-category-panel.tsx`, `admin-product-form.tsx`, `admin-product-edit-form.tsx`, `catalog/page.tsx`, `admin-catalog.ts` |
-| Contract | `openapi.yaml` |
-| Tests | `test_admin_catalog.py` |
+| Backend | `checkout/infrastructure/persistence/repository.py` (ON CONFLICT upsert, cart lookup limit) |
+| Backend | `scripts/seed_dev.py` |
+| Frontend | `app/actions/admin-catalog.ts` |
+| E2E | `e2e/test-helpers.ts`, all `e2e/*-smoke.spec.ts` |
+| Homepage UX | `page.tsx`, `catalog-search-form.tsx`, `search/page.tsx` |
 
 ## Known Issues
 
 - Upload uses local filesystem — swap to S3/CDN in production via same URL contract
 - Variant delete not implemented (API or UI)
+- `CartHeaderSummary` loads cart once on mount — badge does not update after add-to-cart without navigation
+- Multiple active user carts possible under concurrent create (mitigated in tests; consider DB partial unique index)
 
 ## Next Recommended Action
 
 1. Production media: S3 presigned upload + CDN base URL
 2. SMTP / YooKassa (release gates)
+3. Optional: refresh cart badge after add-to-cart (client-side event or re-fetch)
 
 ## How to Run
 
 ```bash
-cd apps/api && pip install -r requirements.txt && python -m pytest tests/test_admin_catalog.py -q
+# E2E (starts API :8001 + web :3002, resets checkout DB)
+cd apps/web && npm run test:e2e
+
+# Dev stack
+docker compose up -d postgres
+cd apps/api && python scripts/seed_dev.py
+cd apps/api && uvicorn app.main:app --reload --port 8000
 cd apps/web && npm run dev
-# Admin catalog: search, upload image, edit variants, category parent
 ```
