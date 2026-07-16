@@ -9,6 +9,7 @@ import {
   apiFacetsToCatalogFacets,
   catalogQueryToApiParams,
   parseCatalogSearchParams,
+  readQueryParam,
 } from "@/lib/store/catalog-query";
 import { toProductGridItems } from "@/lib/store/product-grid";
 
@@ -23,7 +24,7 @@ type SearchPageProps = {
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const resolvedSearchParams = await searchParams;
-  const query = resolvedSearchParams.q?.trim() ?? "";
+  const query = readQueryParam(resolvedSearchParams, "q");
   const catalogQuery = parseCatalogSearchParams(resolvedSearchParams);
   const token = await getAccessToken();
   const user = await getCurrentUser();

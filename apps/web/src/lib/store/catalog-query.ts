@@ -46,6 +46,13 @@ function readParam(
   return value;
 }
 
+export function readQueryParam(
+  params: Record<string, string | string[] | undefined>,
+  key: string,
+): string {
+  return readParam(params, key)?.trim() ?? "";
+}
+
 function readParamList(
   params: Record<string, string | string[] | undefined>,
   key: string,
