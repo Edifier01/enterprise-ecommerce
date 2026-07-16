@@ -53,6 +53,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Recently Completed
 
+- [x] **Admin UX polish** — category-first catalog, RUB pricing, read-only wholesaler status (2026-07-16)
 - [x] **E2E test stabilization** — 24/24 Playwright green; cart upsert race fix (2026-07-16)
 - [x] **Homepage search UX** — placeholder «Название», promo cards removed (2026-07-16)
 - [x] **Admin Panel Optimization Wave A–C** (2026-07-16)
@@ -76,7 +77,7 @@ None.
 
 ## Last Updated
 
-2026-07-16 (homepage search UX)
+2026-07-16 (admin UX polish)
 
 ---
 

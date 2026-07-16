@@ -3,11 +3,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { AdminCatalogCategoryPicker } from "@/components/admin/catalog/admin-catalog-category-picker";
 import { AdminCatalogSearch } from "@/components/admin/catalog/admin-catalog-search";
 import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
 import {
   ADMIN_CATALOG_PAGE_SIZE,
   formatPrice,
+  listAdminCategories,
   listAdminProducts,
   PRODUCT_STATUS_LABELS,
 } from "@/lib/admin/catalog";
@@ -27,7 +29,14 @@ const STATUS_FILTERS = [
 ] as const;
 
 type PageProps = {
-  searchParams: Promise<{ page?: string; status?: string; q?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    status?: string;
+    q?: string;
+    category_id?: string;
+    uncategorized?: string;
+    all?: string;
+  }>;
 };
 
 function parsePage(raw: string | undefined): number {
@@ -35,17 +44,64 @@ function parsePage(raw: string | undefined): number {
   return Number.isFinite(page) && page >= 1 ? page : 1;
 }
 
+function getCategoryLabel(
+  categories: Awaited<ReturnType<typeof listAdminCategories>>,
+  categoryId: string | undefined,
+  uncategorized: boolean,
+  showAll: boolean,
+): string {
+  if (uncategorized) return "Без категории";
+  if (showAll) return "Все товары";
+  if (!categoryId || !categories) return "Каталог";
+  return categories.find((category) => category.id === categoryId)?.name ?? "Каталог";
+}
+
 export default async function AdminCatalogPage({ searchParams }: PageProps) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
 
-  const { page: pageRaw, status, q } = await searchParams;
+  const { page: pageRaw, status, q, category_id, uncategorized, all } = await searchParams;
   const page = parsePage(pageRaw);
   const searchQuery = q?.trim() ?? "";
   const activeStatus =
     status === "active" || status === "draft" || status === "archived" ? status : undefined;
+  const isUncategorized = uncategorized === "1" || uncategorized === "true";
+  const showAll = all === "1" || all === "true";
+  const showProductList =
+    Boolean(searchQuery) || showAll || isUncategorized || Boolean(category_id);
 
-  const products = await listAdminProducts(page, activeStatus, searchQuery || undefined);
+  const categories = await listAdminCategories();
+
+  if (!showProductList) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Каталог</h1>
+            <p className="text-sm text-muted-foreground">Управление товарами по категориям.</p>
+          </div>
+          <Link
+            href="/admin/catalog/categories"
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
+          >
+            Категории
+          </Link>
+        </div>
+
+        {categories ? (
+          <AdminCatalogCategoryPicker categories={categories} />
+        ) : (
+          <p className="text-sm text-destructive">Не удалось загрузить категории.</p>
+        )}
+      </div>
+    );
+  }
+
+  const products = await listAdminProducts(page, activeStatus, searchQuery || undefined, {
+    categoryId: category_id,
+    uncategorized: isUncategorized,
+  });
+
   if (!products) {
     return (
       <p className="text-sm text-destructive">
@@ -55,23 +111,39 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
   }
 
   const totalPages = getAdminTotalPages(products.total, ADMIN_CATALOG_PAGE_SIZE);
+  const categoryLabel = getCategoryLabel(categories, category_id, isUncategorized, showAll);
 
   function buildHref(nextPage: number) {
     const params = new URLSearchParams();
     if (nextPage > 1) params.set("page", String(nextPage));
     if (activeStatus) params.set("status", activeStatus);
     if (searchQuery) params.set("q", searchQuery);
+    if (isUncategorized) params.set("uncategorized", "1");
+    else if (showAll) params.set("all", "1");
+    else if (category_id) params.set("category_id", category_id);
     const query = params.toString();
     return query ? `/admin/catalog?${query}` : "/admin/catalog";
   }
+
+  const newProductHref = category_id
+    ? `/admin/catalog/new?category_id=${category_id}`
+    : "/admin/catalog/new";
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Каталог</h1>
+          <Link
+            href="/admin/catalog"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← К категориям
+          </Link>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{categoryLabel}</h1>
           <p className="text-sm text-muted-foreground">
-            Управление товарами магазина ({products.total} всего).
+            {searchQuery
+              ? `Результаты поиска (${products.total})`
+              : `${products.total} товаров`}
           </p>
         </div>
         <div className="flex gap-2">
@@ -82,7 +154,7 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
             Категории
           </Link>
           <Link
-            href="/admin/catalog/new"
+            href={newProductHref}
             className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80"
           >
             Новый товар
@@ -90,13 +162,22 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <AdminCatalogSearch defaultQuery={searchQuery} status={activeStatus} />
+      <AdminCatalogSearch
+        defaultQuery={searchQuery}
+        status={activeStatus}
+        categoryId={category_id}
+        uncategorized={isUncategorized}
+        showAll={showAll}
+      />
 
       <div className="flex flex-wrap gap-2 text-sm">
         {STATUS_FILTERS.map((filter) => {
           const params = new URLSearchParams();
           if (filter.value) params.set("status", filter.value);
           if (searchQuery) params.set("q", searchQuery);
+          if (isUncategorized) params.set("uncategorized", "1");
+          else if (showAll) params.set("all", "1");
+          else if (category_id) params.set("category_id", category_id);
           const href = params.size > 0 ? `/admin/catalog?${params}` : "/admin/catalog";
           const isActive = (activeStatus ?? "") === filter.value;
           return (

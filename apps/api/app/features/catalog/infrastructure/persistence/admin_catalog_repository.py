@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.features.catalog.domain.admin_ports import (
     CategoryNotFoundError,
+    InvalidCategoryParentError,
     CreateCategoryData,
     CreateProductData,
     CreateVariantData,
@@ -39,6 +40,8 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         limit: int,
         status: str | None = None,
         q: str | None = None,
+        category_id: uuid.UUID | None = None,
+        uncategorized: bool = False,
     ) -> tuple[list[Product], int]:
         offset = (page - 1) * limit
         filters = []
@@ -46,6 +49,10 @@ class AdminCatalogRepository(IAdminCatalogRepository):
             filters.append(ProductModel.status == status)
         if q is not None and q.strip():
             filters.append(self._admin_search_filter(q.strip()))
+        if uncategorized:
+            filters.append(ProductModel.category_id.is_(None))
+        elif category_id is not None:
+            filters.append(ProductModel.category_id == category_id)
 
         count_stmt = select(func.count()).select_from(ProductModel)
         stmt = select(ProductModel).order_by(ProductModel.updated_at.desc())
@@ -263,7 +270,36 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         row = await self._session.get(CategoryModel, category_id)
         return self._category_to_domain(row) if row is not None else None
 
+    async def _validate_category_parent(
+        self,
+        parent_id: uuid.UUID | None,
+        *,
+        category_id: uuid.UUID | None = None,
+    ) -> None:
+        if parent_id is None:
+            return
+
+        if category_id is not None and parent_id == category_id:
+            raise InvalidCategoryParentError()
+
+        parent = await self._session.get(CategoryModel, parent_id)
+        if parent is None:
+            raise CategoryNotFoundError(str(parent_id))
+
+        if parent.parent_id is not None:
+            raise InvalidCategoryParentError()
+
+        if category_id is not None:
+            child_count = await self._session.scalar(
+                select(func.count())
+                .select_from(CategoryModel)
+                .where(CategoryModel.parent_id == category_id)
+            )
+            if int(child_count or 0) > 0:
+                raise InvalidCategoryParentError()
+
     async def create_category(self, data: CreateCategoryData) -> Category:
+        await self._validate_category_parent(data.parent_id)
         category = CategoryModel(
             id=uuid.uuid4(),
             slug=data.slug,
@@ -296,6 +332,10 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         if data.clear_parent:
             category.parent_id = None
         elif data.parent_id is not None:
+            await self._validate_category_parent(
+                data.parent_id,
+                category_id=category_id,
+            )
             category.parent_id = data.parent_id
         if data.is_active is not None:
             category.is_active = data.is_active

@@ -12,6 +12,9 @@ type AdminCategorySelectProps = {
   allowEmpty?: boolean;
   emptyLabel?: string;
   excludeId?: string;
+  /** When true, only root categories are selectable (for subcategory parent). */
+  rootsOnly?: boolean;
+  disabled?: boolean;
 };
 
 export function AdminCategorySelect({
@@ -22,13 +25,25 @@ export function AdminCategorySelect({
   allowEmpty = true,
   emptyLabel = "Без категории",
   excludeId,
+  rootsOnly = false,
+  disabled = false,
 }: AdminCategorySelectProps) {
-  const options = buildCategoryOptions(
-    excludeId ? categories.filter((category) => category.id !== excludeId) : categories,
-  );
+  let filtered = excludeId
+    ? categories.filter((category) => category.id !== excludeId)
+    : categories;
+  if (rootsOnly) {
+    filtered = filtered.filter((category) => category.parent_id === null);
+  }
+  const options = buildCategoryOptions(filtered);
 
   return (
-    <select id={id ?? name} name={name} defaultValue={defaultValue} className={selectClass}>
+    <select
+      id={id ?? name}
+      name={name}
+      defaultValue={defaultValue}
+      disabled={disabled}
+      className={selectClass}
+    >
       {allowEmpty && <option value="">{emptyLabel}</option>}
       {options.map((option) => (
         <option key={option.id} value={option.id}>

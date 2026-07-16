@@ -29,6 +29,10 @@ class CategoryNotFoundError(Exception):
     """Raised when category id does not exist."""
 
 
+class InvalidCategoryParentError(Exception):
+    """Raised when parent is invalid (non-root parent or root with children)."""
+
+
 @dataclass(frozen=True, slots=True)
 class CreateProductData:
     name: str
@@ -110,6 +114,8 @@ class IAdminCatalogRepository(ABC):
         limit: int,
         status: str | None = None,
         q: str | None = None,
+        category_id: UUID | None = None,
+        uncategorized: bool = False,
     ) -> tuple[list[Product], int]:
         ...
 

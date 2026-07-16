@@ -1,10 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { CATEGORIES_CACHE_TAG } from "@/lib/cache-tags";
+
 import { parseAdminApiError } from "@/lib/admin/parse-api-error";
+import { parseOptionalRubles, parseRequiredRubles } from "@/lib/admin/money";
 import { getAdminAccessToken } from "@/lib/admin/session";
+import { siteConfig } from "@/lib/store/site-config";
 
 import { getApiBase } from "@/lib/api-base";
 
@@ -13,7 +17,15 @@ const API_BASE = getApiBase();
 export type CatalogActionState = {
   error?: string;
   fieldErrors?: Record<string, string>;
+  success?: boolean;
 };
+
+function revalidateStorefrontCategories() {
+  revalidateTag(CATEGORIES_CACHE_TAG);
+  revalidatePath("/");
+  revalidatePath("/catalog");
+  revalidatePath("/admin/catalog");
+}
 
 async function adminMutate(
   path: string,
@@ -57,25 +69,30 @@ function readOptionalString(formData: FormData, key: string): string | null {
 function buildProductBody(formData: FormData, includeSku: boolean): Record<string, unknown> {
   const name = formData.get("name");
   const slug = formData.get("slug");
-  const price = formData.get("price_cents");
   const status = formData.get("status");
   const categoryId = formData.get("category_id");
-  const compareAtRaw = formData.get("compare_at_price_cents");
-  const wholesaleRaw = formData.get("wholesale_price_cents");
 
-  if (
-    typeof name !== "string" ||
-    typeof slug !== "string" ||
-    typeof price !== "string" ||
-    typeof status !== "string"
-  ) {
+  if (typeof name !== "string" || typeof slug !== "string" || typeof status !== "string") {
+    throw new Error("INVALID_FORM");
+  }
+
+  let priceCents: number;
+  let compareAtCents: number | undefined;
+  let wholesaleCents: number | undefined;
+
+  try {
+    priceCents = parseRequiredRubles(formData.get("price_rub"));
+    compareAtCents = parseOptionalRubles(formData.get("compare_at_price_rub"));
+    wholesaleCents = parseOptionalRubles(formData.get("wholesale_price_rub"));
+  } catch {
     throw new Error("INVALID_FORM");
   }
 
   const body: Record<string, unknown> = {
     name,
     slug,
-    price_cents: Number(price),
+    price_cents: priceCents,
+    currency: siteConfig.defaultCurrency,
     status,
     category_id: typeof categoryId === "string" && categoryId ? categoryId : null,
     description: readOptionalString(formData, "description"),
@@ -90,15 +107,23 @@ function buildProductBody(formData: FormData, includeSku: boolean): Record<strin
     body.sku = sku;
   }
 
-  if (typeof compareAtRaw === "string" && compareAtRaw.trim() !== "") {
-    body.compare_at_price_cents = Number(compareAtRaw);
+  if (compareAtCents !== undefined) {
+    body.compare_at_price_cents = compareAtCents;
   }
 
-  if (typeof wholesaleRaw === "string" && wholesaleRaw.trim() !== "") {
-    body.wholesale_price_cents = Number(wholesaleRaw);
+  if (wholesaleCents !== undefined) {
+    body.wholesale_price_cents = wholesaleCents;
   }
 
   return body;
+}
+
+function catalogListRedirectPath(formData: FormData): string {
+  const categoryId = formData.get("category_id");
+  if (typeof categoryId === "string" && categoryId) {
+    return `/admin/catalog?category_id=${categoryId}`;
+  }
+  return "/admin/catalog?all=1";
 }
 
 export async function createProductAction(
@@ -118,7 +143,7 @@ export async function createProductAction(
 
   revalidatePath("/admin/catalog");
   revalidatePath("/catalog");
-  redirect("/admin/catalog");
+  redirect(catalogListRedirectPath(formData));
 }
 
 export async function updateProductAction(
@@ -145,7 +170,7 @@ export async function updateProductAction(
   revalidatePath("/admin/catalog");
   revalidatePath(`/admin/catalog/${productId}/edit`);
   revalidatePath("/catalog");
-  redirect("/admin/catalog");
+  redirect(catalogListRedirectPath(formData));
 }
 
 export async function createCategoryAction(
@@ -171,12 +196,12 @@ export async function createCategoryAction(
 
   if (!result.ok) return result.error;
 
+  revalidateStorefrontCategories();
   revalidatePath("/admin/catalog/categories");
-  revalidatePath("/catalog");
-  return {};
+  return { success: true };
 }
 
-export async function updateCategoryAction(
+export async function updateCategoryActiveAction(
   categoryId: string,
   isActive: boolean,
 ): Promise<CatalogActionState> {
@@ -188,9 +213,57 @@ export async function updateCategoryAction(
 
   if (!result.ok) return result.error;
 
+  revalidateStorefrontCategories();
   revalidatePath("/admin/catalog/categories");
-  revalidatePath("/catalog");
-  return {};
+  return { success: true };
+}
+
+export async function updateCategoryDetailsAction(
+  categoryId: string,
+  _prev: CatalogActionState | null,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  const name = formData.get("name");
+  const slug = formData.get("slug");
+  const sortOrder = formData.get("sort_order");
+  const parentId = formData.get("parent_id");
+
+  if (typeof name !== "string" || typeof slug !== "string") {
+    return { error: "Некорректные данные формы." };
+  }
+
+  const body: Record<string, unknown> = {
+    name,
+    slug,
+    description: readOptionalString(formData, "description"),
+    sort_order: typeof sortOrder === "string" ? Number(sortOrder) || 0 : 0,
+  };
+
+  if (typeof parentId === "string" && parentId) {
+    body.parent_id = parentId;
+  } else {
+    body.clear_parent = true;
+  }
+
+  const result = await adminMutate(
+    `/api/v1/admin/catalog/categories/${categoryId}`,
+    "PATCH",
+    body,
+  );
+
+  if (!result.ok) return result.error;
+
+  revalidateStorefrontCategories();
+  revalidatePath("/admin/catalog/categories");
+  return { success: true };
+}
+
+/** @deprecated Use updateCategoryActiveAction */
+export async function updateCategoryAction(
+  categoryId: string,
+  isActive: boolean,
+): Promise<CatalogActionState> {
+  return updateCategoryActiveAction(categoryId, isActive);
 }
 
 export async function updateVariantWholesaleAction(
@@ -230,25 +303,33 @@ export async function saveVariantWholesaleFormAction(
 function buildVariantBody(formData: FormData): Record<string, unknown> {
   const sku = formData.get("sku");
   const name = formData.get("name");
-  const price = formData.get("price_cents");
-  const wholesaleRaw = formData.get("wholesale_price_cents");
   const sortOrderRaw = formData.get("sort_order");
   const isDefault = formData.get("is_default") === "true";
 
-  if (typeof sku !== "string" || typeof name !== "string" || typeof price !== "string") {
+  if (typeof sku !== "string" || typeof name !== "string") {
+    throw new Error("INVALID_FORM");
+  }
+
+  let priceCents: number;
+  let wholesaleCents: number | undefined;
+
+  try {
+    priceCents = parseRequiredRubles(formData.get("price_rub"));
+    wholesaleCents = parseOptionalRubles(formData.get("wholesale_price_rub"));
+  } catch {
     throw new Error("INVALID_FORM");
   }
 
   const body: Record<string, unknown> = {
     sku,
     name,
-    price_cents: Number(price),
+    price_cents: priceCents,
     is_default: isDefault,
     sort_order: typeof sortOrderRaw === "string" && sortOrderRaw ? Number(sortOrderRaw) : 0,
   };
 
-  if (typeof wholesaleRaw === "string" && wholesaleRaw.trim() !== "") {
-    body.wholesale_price_cents = Number(wholesaleRaw);
+  if (wholesaleCents !== undefined) {
+    body.wholesale_price_cents = wholesaleCents;
   }
 
   return body;

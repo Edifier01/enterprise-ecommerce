@@ -46,3 +46,14 @@ export function getCategoryParentName(
   }
   return categories.find((category) => category.id === parentId)?.name ?? parentId;
 }
+
+export function getRootCategories(categories: AdminCategory[]): AdminCategory[] {
+  return categories.filter((category) => category.parent_id === null);
+}
+
+export function categoryHasChildren(
+  categories: AdminCategory[],
+  categoryId: string,
+): boolean {
+  return categories.some((category) => category.parent_id === categoryId);
+}

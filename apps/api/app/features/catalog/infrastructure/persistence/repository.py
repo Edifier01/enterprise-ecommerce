@@ -1,5 +1,7 @@
 """Product repository — SQLAlchemy implementation of IProductRepository."""
 
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy import case, exists, func, or_, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,9 +20,12 @@ from app.features.catalog.infrastructure.persistence.models import (
     ProductModel,
     ProductVariantModel,
 )
+from app.features.checkout.infrastructure.persistence.models import OrderLineModel, OrderModel
 
 _ACTIVE_STATUS = "active"
 _FACET_SCAN_LIMIT = 5000
+_POPULAR_ORDER_STATUSES = ("confirmed", "shipped")
+_POPULAR_LOOKBACK_DAYS = 90
 
 
 class ProductRepository(IProductRepository):
@@ -48,7 +53,11 @@ class ProductRepository(IProductRepository):
         count_stmt, stmt = self._apply_filters(count_stmt, stmt, filters)
 
         total = int((await self._session.scalar(count_stmt)) or 0)
-        stmt = self._apply_sort(stmt, filters.sort).offset(offset).limit(limit)
+        if filters.sort == "popular":
+            stmt = self._apply_popular_sort(stmt)
+        else:
+            stmt = self._apply_sort(stmt, filters.sort)
+        stmt = stmt.offset(offset).limit(limit)
         rows = (await self._session.scalars(stmt)).all()
         products = [self._to_domain(row, include_variants=True) for row in rows]
         return products, total
@@ -136,6 +145,8 @@ class ProductRepository(IProductRepository):
 
         if filters.sort == "default":
             stmt = stmt.order_by(relevance, ProductModel.name.asc())
+        elif filters.sort == "popular":
+            stmt = self._apply_popular_sort(stmt)
         else:
             stmt = self._apply_sort(stmt, filters.sort)
 
@@ -266,8 +277,38 @@ class ProductRepository(IProductRepository):
             )
         return conditions
 
+    def _product_sales_subquery(self):
+        since = datetime.now(UTC) - timedelta(days=_POPULAR_LOOKBACK_DAYS)
+        return (
+            select(
+                ProductVariantModel.product_id.label("product_id"),
+                func.coalesce(func.sum(OrderLineModel.quantity), 0).label("sales_score"),
+            )
+            .select_from(OrderLineModel)
+            .join(OrderModel, OrderLineModel.order_id == OrderModel.id)
+            .join(ProductVariantModel, OrderLineModel.variant_id == ProductVariantModel.id)
+            .where(
+                OrderModel.status.in_(_POPULAR_ORDER_STATUSES),
+                OrderModel.created_at >= since,
+            )
+            .group_by(ProductVariantModel.product_id)
+            .subquery()
+        )
+
+    def _apply_popular_sort(self, stmt):
+        sales_sq = self._product_sales_subquery()
+        return (
+            stmt.outerjoin(sales_sq, ProductModel.id == sales_sq.c.product_id)
+            .order_by(
+                func.coalesce(sales_sq.c.sales_score, 0).desc(),
+                ProductModel.created_at.desc(),
+            )
+        )
+
     @staticmethod
     def _apply_sort(stmt, sort: str):
+        if sort == "popular":
+            return stmt.order_by(ProductModel.created_at.desc())
         match sort:
             case "price_asc":
                 return stmt.order_by(ProductModel.price_cents.asc(), ProductModel.name.asc())

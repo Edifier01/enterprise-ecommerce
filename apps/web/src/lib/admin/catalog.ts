@@ -1,4 +1,5 @@
 import { getAdminAccessToken } from "@/lib/admin/session";
+import { siteConfig } from "@/lib/store/site-config";
 
 import { getApiBase } from "@/lib/api-base";
 
@@ -73,6 +74,7 @@ export async function listAdminProducts(
   page = 1,
   status?: string,
   q?: string,
+  options?: { categoryId?: string; uncategorized?: boolean },
 ): Promise<AdminProductList | null> {
   const params = new URLSearchParams({
     page: String(page),
@@ -80,6 +82,8 @@ export async function listAdminProducts(
   });
   if (status) params.set("status", status);
   if (q?.trim()) params.set("q", q.trim());
+  if (options?.uncategorized) params.set("uncategorized", "true");
+  else if (options?.categoryId) params.set("category_id", options.categoryId);
   return adminFetch<AdminProductList>(`/api/v1/admin/catalog/products?${params}`);
 }
 
@@ -92,11 +96,13 @@ export async function listAdminCategories(): Promise<AdminCategory[] | null> {
   return data?.items ?? null;
 }
 
-export function formatPrice(cents: number, currency = "USD") {
-  return new Intl.NumberFormat("ru-RU", {
+export function formatPrice(cents: number, currency = siteConfig.defaultCurrency) {
+  const normalized = currency.toUpperCase();
+  return new Intl.NumberFormat(siteConfig.locale, {
     style: "currency",
-    currency,
-    minimumFractionDigits: 2,
+    currency: normalized,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: normalized === "RUB" ? 0 : 2,
   }).format(cents / 100);
 }
 

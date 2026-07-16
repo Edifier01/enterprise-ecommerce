@@ -594,6 +594,41 @@ admin-assigned. Existing orders are never repriced.
 
 ---
 
+### Feature: Homepage Recommendations (Popular Sort)
+
+**Status:** COMPLETED (2026-07-16)
+
+- [x] Replace «Хиты сезона» with «Рекомендации» in SectionTabs
+- [x] Backend `sort=popular` — sales score from order_lines (90-day window)
+- [x] Homepage + catalog «Смотреть все» wired to popular sort
+- [x] Pytest `test_recommendations.py`; E2E homepage tab label updated
+
+---
+
+### Feature: Admin Categories (Hierarchy + Instant Sync)
+
+**Status:** COMPLETED (2026-07-16)
+
+- [x] 2-level parent validation (API 422 for nested subcategory parent)
+- [x] `CATEGORIES_CACHE_TAG` + `revalidateTag` on category mutations
+- [x] Admin tree table + inline edit (name, slug, parent, description)
+- [x] «+ Категория» button on catalog category picker
+- [x] Pytest + E2E smoke for root + subcategory creation
+
+---
+
+### Feature: Admin UX Polish (Category, RUB, Wholesaler)
+
+**Status:** COMPLETED (2026-07-16)
+
+- [x] Remove manual wholesaler toggle from `/admin/customers` (variant A — registration only)
+- [x] Category-first admin catalog UX with `category_id` / `uncategorized` / `all` filters
+- [x] Backend `GET /admin/catalog/products?category_id=` + `?uncategorized=true`
+- [x] RUB default currency in admin API + forms in rubles + ₽ formatting
+- [x] Tests: 16/16 `test_admin_catalog.py`; E2E `admin-catalog-smoke.spec.ts` updated
+
+---
+
 ### Feature: E2E Test Stabilization
 
 **Status:** COMPLETED (2026-07-16)

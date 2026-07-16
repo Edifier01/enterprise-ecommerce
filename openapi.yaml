@@ -114,10 +114,10 @@ paths:
             minimum: 0
         - name: sort
           in: query
-          description: Sort order
+          description: Sort order (popular = best sellers by quantity in last 90 days)
           schema:
             type: string
-            enum: [default, price_asc, price_desc, name_asc, name_desc]
+            enum: [default, popular, price_asc, price_desc, name_asc, name_desc]
             default: default
       responses:
         "200":
@@ -251,7 +251,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [default, price_asc, price_desc, name_asc, name_desc]
+            enum: [default, popular, price_asc, price_desc, name_asc, name_desc]
             default: default
       responses:
         "200":
@@ -929,6 +929,18 @@ paths:
             type: string
             maxLength: 200
           description: Search by product name, slug, or variant SKU (all statuses)
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter products by primary category
+        - name: uncategorized
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: When true, list only products without a category
       responses:
         "200":
           description: Paginated admin product list

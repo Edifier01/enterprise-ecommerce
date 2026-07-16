@@ -11,24 +11,32 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function AdminNewProductPage() {
+type PageProps = {
+  searchParams: Promise<{ category_id?: string }>;
+};
+
+export default async function AdminNewProductPage({ searchParams }: PageProps) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
   if (!admin.permissions.includes("catalog:write")) {
     return <p className="text-sm text-destructive">Недостаточно прав для создания товаров.</p>;
   }
 
+  const { category_id } = await searchParams;
   const categories = (await listAdminCategories()) ?? [];
+  const backHref = category_id
+    ? `/admin/catalog?category_id=${category_id}`
+    : "/admin/catalog";
 
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/admin/catalog" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href={backHref} className="text-sm text-muted-foreground hover:text-foreground">
           ← К каталогу
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">Новый товар</h1>
       </div>
-      <AdminProductForm categories={categories} />
+      <AdminProductForm categories={categories} defaultCategoryId={category_id} />
     </div>
   );
 }

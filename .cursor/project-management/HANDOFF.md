@@ -6,6 +6,29 @@ Implementation Agent
 
 ## Completed Work
 
+**Homepage recommendations (2026-07-16):**
+
+- «Хиты сезона» → **«Рекомендации»**
+- `sort=popular`: score = sum(order_lines.qty) за 90 дней (confirmed/shipped)
+- Cold start fallback: in_stock + created_at DESC
+- Catalog sort toolbar + `/catalog?sort=popular&in_stock=1`
+- Tests: `test_recommendations.py` (2 tests)
+
+**Admin categories (2026-07-16):**
+
+- 2-level hierarchy validation (root → subcategory only)
+- `revalidateTag('categories')` — instant storefront visibility after create/edit
+- Admin UI: tree table, inline edit, «+ Категория» on catalog picker
+- E2E: `admin-categories-smoke.spec.ts`; pytest 17/17 admin catalog
+
+**Admin UX polish (2026-07-16):**
+
+### Changes
+- **Wholesaler (variant A):** removed manual «Назначить опт» toggle from `/admin/customers`; status read-only («Опт» / «Розница»); assignment only via `/register/wholesale`
+- **Category-first catalog:** `/admin/catalog` shows category picker; products listed at `?category_id=` / `?uncategorized=1` / `?all=1`
+- **RUB pricing:** admin forms use rubles (₽); API default currency `RUB`; dashboard/catalog format in ₽
+- **Backend:** `GET /admin/catalog/products?category_id=` + `?uncategorized=true`; pytest +16/16 admin catalog
+
 **E2E test stabilization (2026-07-16):**
 
 ### Root causes fixed
@@ -30,11 +53,12 @@ Implementation Agent
 
 | Area | Key paths |
 |------|-----------|
-| Backend | `checkout/infrastructure/persistence/repository.py` (ON CONFLICT upsert, cart lookup limit) |
-| Backend | `scripts/seed_dev.py` |
-| Frontend | `app/actions/admin-catalog.ts` |
-| E2E | `e2e/test-helpers.ts`, all `e2e/*-smoke.spec.ts` |
-| Homepage UX | `page.tsx`, `catalog-search-form.tsx`, `search/page.tsx` |
+| Backend | `catalog/presentation/admin_router.py`, `admin_catalog_repository.py`, `admin_schemas.py` |
+| Frontend | `admin/(panel)/catalog/page.tsx`, `admin-catalog-category-picker.tsx`, `admin-customers-table.tsx` |
+| Frontend | `admin-product-form.tsx`, `admin-product-edit-form.tsx`, `admin-variant-panel.tsx`, `lib/admin/money.ts` |
+| Frontend | `actions/admin-catalog.ts`, `admin-dashboard.tsx`, `lib/admin/catalog.ts` |
+| Tests | `test_admin_catalog.py` (+category filter), `e2e/admin-catalog-smoke.spec.ts` |
+| OpenAPI | `openapi.yaml` — admin list products filters |
 
 ## Known Issues
 
@@ -47,7 +71,7 @@ Implementation Agent
 
 1. Production media: S3 presigned upload + CDN base URL
 2. SMTP / YooKassa (release gates)
-3. Optional: refresh cart badge after add-to-cart (client-side event or re-fetch)
+3. Optional: global admin search shortcut from category landing page
 
 ## How to Run
 

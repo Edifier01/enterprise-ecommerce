@@ -16,11 +16,12 @@ test.describe("Admin catalog smoke", () => {
     await page.getByLabel("Название").fill(`E2E Draft ${slug}`);
     await page.getByLabel("Slug").fill(slug);
     await page.getByLabel("SKU").fill(`SKU-${slug}`);
-    await page.locator("#price_cents").fill("1999");
+    await page.locator("#price_rub").fill("20");
     await page.getByLabel("Статус").selectOption("draft");
     await page.getByRole("button", { name: "Создать" }).click();
 
-    await expect(page).toHaveURL(/\/admin\/catalog\/?$/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/admin\/catalog(\?all=1)?$/, { timeout: 15_000 });
+    await page.goto("/admin/catalog?all=1");
     await expect(page.getByRole("cell", { name: slug, exact: true })).toBeVisible();
 
     const publicList = await request.get(`${E2E_API_BASE}/api/v1/products?limit=100`);

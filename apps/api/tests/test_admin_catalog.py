@@ -357,6 +357,43 @@ async def test_admin_create_category_with_parent(admin_catalog_client: AsyncClie
 
 
 @pytest.mark.asyncio
+async def test_admin_rejects_subcategory_as_parent(admin_catalog_client: AsyncClient) -> None:
+    token = await _token(admin_catalog_client)
+    root = await admin_catalog_client.post(
+        "/api/v1/admin/catalog/categories",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"slug": "root-for-nesting", "name": "Root", "sort_order": 1},
+    )
+    assert root.status_code == 201
+    root_id = root.json()["id"]
+
+    child = await admin_catalog_client.post(
+        "/api/v1/admin/catalog/categories",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "slug": "child-for-nesting",
+            "name": "Child",
+            "parent_id": root_id,
+            "sort_order": 2,
+        },
+    )
+    assert child.status_code == 201
+    child_id = child.json()["id"]
+
+    nested = await admin_catalog_client.post(
+        "/api/v1/admin/catalog/categories",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "slug": "nested-cat",
+            "name": "Nested",
+            "parent_id": child_id,
+            "sort_order": 3,
+        },
+    )
+    assert nested.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_admin_upload_media(admin_catalog_client: AsyncClient) -> None:
     token = await _token(admin_catalog_client)
     png_header = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
@@ -369,3 +406,51 @@ async def test_admin_upload_media(admin_catalog_client: AsyncClient) -> None:
     data = response.json()
     assert "url" in data
     assert data["url"].endswith(".png")
+
+
+@pytest.mark.asyncio
+async def test_admin_list_products_filter_by_category(admin_catalog_client: AsyncClient) -> None:
+    token = await _token(admin_catalog_client)
+
+    category = await admin_catalog_client.post(
+        "/api/v1/admin/catalog/categories",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "slug": "filter-test-cat",
+            "name": "Filter Test Category",
+            "sort_order": 1,
+        },
+    )
+    assert category.status_code == 201
+    category_id = category.json()["id"]
+
+    in_category = await admin_catalog_client.post(
+        "/api/v1/admin/catalog/products",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "name": "Category Product",
+            "slug": "category-product",
+            "sku": "CAT-PROD-1",
+            "price_cents": 5000,
+            "category_id": category_id,
+        },
+    )
+    assert in_category.status_code == 201
+
+    filtered = await admin_catalog_client.get(
+        f"/api/v1/admin/catalog/products?category_id={category_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert filtered.status_code == 200
+    slugs = {item["slug"] for item in filtered.json()["items"]}
+    assert "category-product" in slugs
+    assert "visible-product" not in slugs
+
+    uncategorized = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products?uncategorized=true",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert uncategorized.status_code == 200
+    uncategorized_slugs = {item["slug"] for item in uncategorized.json()["items"]}
+    assert "category-product" not in uncategorized_slugs
+    assert "visible-product" in uncategorized_slugs

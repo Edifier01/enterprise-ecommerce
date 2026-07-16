@@ -10,6 +10,7 @@ from app.features.admin.domain.entities import AdminUser
 from app.features.admin.presentation.dependencies import require_permission
 from app.features.catalog.domain.admin_ports import (
     CategoryNotFoundError,
+    InvalidCategoryParentError,
     CreateCategoryData,
     CreateProductData,
     CreateVariantData,
@@ -71,10 +72,19 @@ async def admin_list_products(
     limit: int = Query(default=20, ge=1, le=100),
     status: str | None = Query(default=None),
     q: str | None = Query(default=None, max_length=200),
+    category_id: UUID | None = Query(default=None),
+    uncategorized: bool = Query(default=False),
     _admin: AdminUser = Depends(require_permission("admin:read")),
     repo: IAdminCatalogRepository = Depends(get_admin_catalog_repository),
 ) -> AdminProductListResponse:
-    products, total = await repo.list_products(page=page, limit=limit, status=status, q=q)
+    products, total = await repo.list_products(
+        page=page,
+        limit=limit,
+        status=status,
+        q=q,
+        category_id=category_id,
+        uncategorized=uncategorized,
+    )
     return AdminProductListResponse(
         items=[_product_schema(p) for p in products],
         total=total,
@@ -307,6 +317,13 @@ async def admin_create_category(
         )
     except DuplicateSlugError:
         raise HTTPException(status_code=409, detail="Slug already exists")
+    except CategoryNotFoundError:
+        raise HTTPException(status_code=404, detail="Parent category not found")
+    except InvalidCategoryParentError:
+        raise HTTPException(
+            status_code=422,
+            detail="Parent must be a root category; roots with subcategories cannot become subcategories",
+        )
     await session.commit()
     return CategorySchema.model_validate(category)
 
@@ -340,5 +357,10 @@ async def admin_update_category(
         raise HTTPException(status_code=404, detail="Category not found")
     except DuplicateSlugError:
         raise HTTPException(status_code=409, detail="Slug already exists")
+    except InvalidCategoryParentError:
+        raise HTTPException(
+            status_code=422,
+            detail="Parent must be a root category; roots with subcategories cannot become subcategories",
+        )
     await session.commit()
     return CategorySchema.model_validate(category)

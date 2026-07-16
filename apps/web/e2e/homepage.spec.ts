@@ -10,11 +10,10 @@ test.describe("Homepage", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: /О магазине/ })).toBeVisible();
 
-    const picksHeading = page.getByRole("heading", { name: "Подборки" });
-    if (await picksHeading.isVisible()) {
-      await expect(
-        page.getByRole("tablist", { name: "Разделы каталога" }),
-      ).toBeVisible();
+    const tablist = page.getByRole("tablist", { name: "Разделы каталога" });
+    if (await tablist.isVisible()) {
+      await expect(tablist).toBeVisible();
+      await expect(page.getByRole("tab", { name: "Рекомендации" })).toBeVisible();
     }
   });
 

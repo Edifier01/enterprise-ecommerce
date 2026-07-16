@@ -25,10 +25,10 @@ export default async function HomePage() {
   let sectionTabs: SectionTabData[] = [];
 
   try {
-    const [hits, newItems, saleItems] = await Promise.all([
+    const [recommended, newItems, saleItems] = await Promise.all([
       listProducts(1, HOMEPAGE_SECTION_LIMIT, undefined, token, {
         in_stock: true,
-        sort: "default",
+        sort: "popular",
       }),
       listProducts(1, HOMEPAGE_SECTION_LIMIT, undefined, token, {
         sort: "default",
@@ -42,8 +42,8 @@ export default async function HomePage() {
     sectionTabs = [
       {
         id: "recommended",
-        products: toProductGridItems(hits.items, isWholesaler),
-        viewAllHref: "/catalog?in_stock=1",
+        products: toProductGridItems(recommended.items, isWholesaler),
+        viewAllHref: "/catalog?sort=popular&in_stock=1",
       },
       {
         id: "new",
@@ -75,10 +75,7 @@ export default async function HomePage() {
       ) : null}
 
       {hasSections ? (
-        <section aria-labelledby="catalog-tabs-heading" className="space-y-4">
-          <h2 id="catalog-tabs-heading" className="store-section-title">
-            Подборки
-          </h2>
+        <section aria-label="Разделы каталога">
           <SectionTabs tabs={sectionTabs} />
         </section>
       ) : null}

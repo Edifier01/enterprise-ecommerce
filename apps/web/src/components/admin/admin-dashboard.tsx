@@ -1,17 +1,10 @@
 import Link from "next/link";
 
 import type { DashboardSummary } from "@/lib/admin/types";
+import { formatPrice } from "@/lib/admin/catalog";
 import { getAdminOrderStatusLabel } from "@/lib/admin/orders-shared";
+import { siteConfig } from "@/lib/store/site-config";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-function formatMoney(cents: number, currency = "USD") {
-  return new Intl.NumberFormat("ru-RU", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(cents / 100);
-}
-
 const FILTERABLE_ORDER_STATUSES = new Set(["confirmed", "shipped", "canceled"]);
 
 function orderStatusHref(status: string): string | null {
@@ -68,7 +61,7 @@ export function AdminDashboard({ summary }: AdminDashboardProps) {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">
-              {formatMoney(summary.revenue_last_7_days_cents)}
+              {formatPrice(summary.revenue_last_7_days_cents, siteConfig.defaultCurrency)}
             </p>
           </CardContent>
         </Card>

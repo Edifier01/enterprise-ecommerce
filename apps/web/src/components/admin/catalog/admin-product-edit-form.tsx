@@ -14,6 +14,7 @@ import { AdminVariantPanel } from "@/components/admin/catalog/admin-variant-pane
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminCategory, AdminProduct } from "@/lib/admin/catalog";
+import { centsToRubles } from "@/lib/admin/money";
 import { siteConfig } from "@/lib/store/site-config";
 
 const inputClass =
@@ -98,29 +99,35 @@ export function AdminProductEditForm({ product, categories }: AdminProductEditFo
                 <FieldError fieldErrors={state.fieldErrors} name="slug" />
               </div>
               <div className="flex flex-col gap-2">
-                <label htmlFor="price_cents" className="text-sm font-medium">
-                  Цена (копейки)
+                <label htmlFor="price_rub" className="text-sm font-medium">
+                  Цена, ₽
                 </label>
                 <input
-                  id="price_cents"
-                  name="price_cents"
+                  id="price_rub"
+                  name="price_rub"
                   type="number"
                   min={0}
-                  defaultValue={product.price_cents}
+                  step={1}
+                  defaultValue={centsToRubles(product.price_cents)}
                   required
                   className={inputClass}
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <label htmlFor="compare_at_price_cents" className="text-sm font-medium">
-                  Старая цена (копейки)
+                <label htmlFor="compare_at_price_rub" className="text-sm font-medium">
+                  Старая цена, ₽
                 </label>
                 <input
-                  id="compare_at_price_cents"
-                  name="compare_at_price_cents"
+                  id="compare_at_price_rub"
+                  name="compare_at_price_rub"
                   type="number"
                   min={0}
-                  defaultValue={product.compare_at_price_cents ?? ""}
+                  step={1}
+                  defaultValue={
+                    product.compare_at_price_cents != null
+                      ? centsToRubles(product.compare_at_price_cents)
+                      : ""
+                  }
                   className={inputClass}
                 />
               </div>

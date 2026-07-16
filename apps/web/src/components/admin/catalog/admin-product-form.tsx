@@ -40,9 +40,10 @@ function FieldError({
 
 type AdminProductFormProps = {
   categories: AdminCategory[];
+  defaultCategoryId?: string;
 };
 
-export function AdminProductForm({ categories }: AdminProductFormProps) {
+export function AdminProductForm({ categories, defaultCategoryId }: AdminProductFormProps) {
   const [state, formAction, pending] = useActionState(createProductAction, initialState);
 
   return (
@@ -75,40 +76,43 @@ export function AdminProductForm({ categories }: AdminProductFormProps) {
               <FieldError fieldErrors={state.fieldErrors} name="sku" />
             </div>
             <div className="flex flex-col gap-2">
-              <label htmlFor="price_cents" className="text-sm font-medium">
-                Цена (копейки)
+              <label htmlFor="price_rub" className="text-sm font-medium">
+                Цена, ₽
               </label>
               <input
-                id="price_cents"
-                name="price_cents"
+                id="price_rub"
+                name="price_rub"
                 type="number"
                 min={0}
+                step={1}
                 required
                 className={inputClass}
               />
               <FieldError fieldErrors={state.fieldErrors} name="price_cents" />
             </div>
             <div className="flex flex-col gap-2">
-              <label htmlFor="compare_at_price_cents" className="text-sm font-medium">
-                Старая цена (копейки)
+              <label htmlFor="compare_at_price_rub" className="text-sm font-medium">
+                Старая цена, ₽
               </label>
               <input
-                id="compare_at_price_cents"
-                name="compare_at_price_cents"
+                id="compare_at_price_rub"
+                name="compare_at_price_rub"
                 type="number"
                 min={0}
+                step={1}
                 className={inputClass}
               />
             </div>
             <div className="flex flex-col gap-2">
-              <label htmlFor="wholesale_price_cents" className="text-sm font-medium">
-                Опт (копейки)
+              <label htmlFor="wholesale_price_rub" className="text-sm font-medium">
+                Опт, ₽
               </label>
               <input
-                id="wholesale_price_cents"
-                name="wholesale_price_cents"
+                id="wholesale_price_rub"
+                name="wholesale_price_rub"
                 type="number"
                 min={0}
+                step={1}
                 className={inputClass}
               />
             </div>
@@ -126,7 +130,11 @@ export function AdminProductForm({ categories }: AdminProductFormProps) {
               <label htmlFor="category_id" className="text-sm font-medium">
                 Категория
               </label>
-              <AdminCategorySelect id="category_id" categories={categories} />
+              <AdminCategorySelect
+                id="category_id"
+                categories={categories}
+                defaultValue={defaultCategoryId ?? ""}
+              />
             </div>
             <div className="sm:col-span-2">
               <AdminImageField />

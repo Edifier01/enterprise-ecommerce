@@ -12,7 +12,7 @@
 
 ## Current Feature
 
-**E2E test stabilization** — all 24 Playwright smoke tests green (2026-07-16)
+**Homepage recommendations** — popular sort by sales (2026-07-16)
 
 ---
 
@@ -60,4 +60,4 @@ None.
 
 ## Last Updated
 
-2026-07-16 (E2E test fixes — 24/24 green)
+2026-07-16 (admin UX — category catalog, RUB, wholesaler read-only)

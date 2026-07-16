@@ -86,6 +86,7 @@ export function parseCatalogSearchParams(
     priceMin: priceMinRaw ? Number(priceMinRaw) * 100 : null,
     priceMax: priceMaxRaw ? Number(priceMaxRaw) * 100 : null,
     sort:
+      sort === "popular" ||
       sort === "price-asc" ||
       sort === "price-desc" ||
       sort === "name-asc" ||

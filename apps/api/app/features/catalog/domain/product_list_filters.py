@@ -5,6 +5,7 @@ from typing import Literal
 
 ProductSortOption = Literal[
     "default",
+    "popular",
     "price_asc",
     "price_desc",
     "name_asc",

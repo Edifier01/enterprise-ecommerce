@@ -1,4 +1,5 @@
 import { getApiBase } from "@/lib/api-base";
+import { CATEGORIES_CACHE_TAG } from "@/lib/cache-tags";
 import type { ProductListQueryParams, ProductFacetsResponse } from "@/lib/store/catalog-query";
 
 const API_BASE = getApiBase();
@@ -193,7 +194,7 @@ export async function getProduct(slug: string, accessToken?: string): Promise<Pr
 
 export async function getCategories(): Promise<CategoryListResponse> {
   const res = await fetch(`${API_BASE}/api/v1/categories`, {
-    next: { revalidate: 300 },
+    next: { tags: [CATEGORIES_CACHE_TAG] },
   });
   if (!res.ok) throw new Error("Failed to fetch categories");
   return res.json();

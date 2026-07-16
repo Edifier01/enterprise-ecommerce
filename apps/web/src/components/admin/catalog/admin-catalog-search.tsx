@@ -3,12 +3,24 @@
 type AdminCatalogSearchProps = {
   defaultQuery?: string;
   status?: string;
+  categoryId?: string;
+  uncategorized?: boolean;
+  showAll?: boolean;
 };
 
-export function AdminCatalogSearch({ defaultQuery = "", status }: AdminCatalogSearchProps) {
+export function AdminCatalogSearch({
+  defaultQuery = "",
+  status,
+  categoryId,
+  uncategorized,
+  showAll,
+}: AdminCatalogSearchProps) {
   return (
     <form method="get" action="/admin/catalog" className="flex flex-wrap items-center gap-2">
       {status ? <input type="hidden" name="status" value={status} /> : null}
+      {uncategorized ? <input type="hidden" name="uncategorized" value="1" /> : null}
+      {showAll ? <input type="hidden" name="all" value="1" /> : null}
+      {categoryId ? <input type="hidden" name="category_id" value={categoryId} /> : null}
       <input
         type="search"
         name="q"

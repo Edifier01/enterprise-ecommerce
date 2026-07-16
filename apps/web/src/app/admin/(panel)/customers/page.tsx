@@ -43,7 +43,8 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
       <header>
         <h1 className="text-2xl font-semibold">Клиенты</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Управление статусом оптовика. Изменение не влияет на уже оформленные заказы.
+          Список зарегистрированных клиентов. Статус «Опт» назначается только при регистрации
+          через форму для оптовиков.
           {data ? ` (${data.total} всего).` : ""}
         </p>
       </header>

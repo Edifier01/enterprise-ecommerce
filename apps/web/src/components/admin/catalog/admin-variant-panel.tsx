@@ -9,6 +9,7 @@ import {
 } from "@/app/actions/admin-catalog";
 import { Button } from "@/components/ui/button";
 import type { AdminProduct } from "@/lib/admin/catalog";
+import { centsToRubles } from "@/lib/admin/money";
 
 const inputClass =
   "h-8 w-full rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -42,23 +43,29 @@ function VariantEditRow({
           <input name="name" defaultValue={variant.name} required className={inputClass} />
         </label>
         <label className="flex flex-col gap-1 text-xs">
-          Цена (коп.)
+          Цена, ₽
           <input
-            name="price_cents"
+            name="price_rub"
             type="number"
             min={0}
-            defaultValue={variant.price_cents}
+            step={1}
+            defaultValue={centsToRubles(variant.price_cents)}
             required
             className={inputClass}
           />
         </label>
         <label className="flex flex-col gap-1 text-xs">
-          Опт (коп.)
+          Опт, ₽
           <input
-            name="wholesale_price_cents"
+            name="wholesale_price_rub"
             type="number"
             min={0}
-            defaultValue={variant.wholesale_price_cents ?? ""}
+            step={1}
+            defaultValue={
+              variant.wholesale_price_cents != null
+                ? centsToRubles(variant.wholesale_price_cents)
+                : ""
+            }
             className={inputClass}
           />
         </label>
@@ -134,12 +141,12 @@ export function AdminVariantPanel({ product }: AdminVariantPanelProps) {
             <input name="name" required className={inputClass} />
           </label>
           <label className="flex flex-col gap-1 text-xs">
-            Цена (коп.)
-            <input name="price_cents" type="number" min={0} required className={inputClass} />
+            Цена, ₽
+            <input name="price_rub" type="number" min={0} step={1} required className={inputClass} />
           </label>
           <label className="flex flex-col gap-1 text-xs">
-            Опт (коп.)
-            <input name="wholesale_price_cents" type="number" min={0} className={inputClass} />
+            Опт, ₽
+            <input name="wholesale_price_rub" type="number" min={0} step={1} className={inputClass} />
           </label>
           <label className="flex flex-col gap-1 text-xs">
             Порядок

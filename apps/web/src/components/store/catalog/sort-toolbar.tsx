@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 export const SORT_OPTIONS = [
   { value: "default", label: "По умолчанию" },
+  { value: "popular", label: "Рекомендации" },
   { value: "price-asc", label: "Цена: по возрастанию" },
   { value: "price-desc", label: "Цена: по убыванию" },
   { value: "name-asc", label: "Название: А–Я" },

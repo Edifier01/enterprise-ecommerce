@@ -24,6 +24,7 @@ router = APIRouter(prefix="/products", tags=["catalog"])
 
 _SORT_OPTIONS: set[str] = {
     "default",
+    "popular",
     "price_asc",
     "price_desc",
     "name_asc",
@@ -125,7 +126,10 @@ async def list_products(
     color: list[str] = Query(default=[], description="Filter by variant color/camouflage"),
     price_min: int | None = Query(default=None, ge=0, description="Minimum price in cents"),
     price_max: int | None = Query(default=None, ge=0, description="Maximum price in cents"),
-    sort: str = Query(default="default", description="Sort order"),
+    sort: str = Query(
+        default="default",
+        description="Sort order (popular = best sellers by quantity in last 90 days)",
+    ),
     repo: IProductRepository = Depends(get_product_repository),
     user: User | None = Depends(get_optional_current_user),
 ) -> ProductListResponse:

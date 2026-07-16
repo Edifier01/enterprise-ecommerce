@@ -41,7 +41,7 @@ class AdminCreateProductRequest(BaseModel):
     slug: str = Field(min_length=1, max_length=255)
     sku: str = Field(min_length=3, max_length=64)
     price_cents: int = Field(ge=0)
-    currency: str = Field(default="USD", min_length=3, max_length=3)
+    currency: str = Field(default="RUB", min_length=3, max_length=3)
     status: str = Field(default="draft")
     compare_at_price_cents: int | None = Field(default=None, ge=0)
     category_id: UUID | None = None

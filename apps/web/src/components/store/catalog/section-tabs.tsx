@@ -12,7 +12,7 @@ export const SECTION_TAB_IDS = ["recommended", "new", "special"] as const;
 export type SectionTabId = (typeof SECTION_TAB_IDS)[number];
 
 export const SECTION_TAB_LABELS: Record<SectionTabId, string> = {
-  recommended: "Хиты сезона",
+  recommended: "Рекомендации",
   new: "Новинки",
   special: "Распродажа",
 };
