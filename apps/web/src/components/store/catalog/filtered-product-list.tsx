@@ -3,6 +3,11 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
 
+import {
+  CatalogPagination,
+  CATALOG_PAGE_SIZE,
+  getTotalPages,
+} from "@/components/store/catalog/catalog-pagination";
 import { CatalogFiltersPanel } from "@/components/store/catalog/catalog-filters-panel";
 import { ProductGrid, type ProductGridItem } from "@/components/store/catalog/product-grid";
 import {
@@ -26,6 +31,7 @@ export interface FilteredProductListProps {
   query: CatalogListQuery;
   searchQuery?: string;
   emptyMessage?: string;
+  pageSize?: number;
 }
 
 export function FilteredProductList({
@@ -35,6 +41,7 @@ export function FilteredProductList({
   query,
   searchQuery,
   emptyMessage = "В этом разделе пока нет товаров.",
+  pageSize = CATALOG_PAGE_SIZE,
 }: FilteredProductListProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -51,6 +58,7 @@ export function FilteredProductList({
   };
 
   const activeFilterCount = countActiveFilters(filters);
+  const totalPages = getTotalPages(total, pageSize);
 
   const navigateWithQuery = useCallback(
     (nextQuery: CatalogListQuery) => {
@@ -67,6 +75,7 @@ export function FilteredProductList({
     navigateWithQuery({
       ...nextFilters,
       sort: query.sort,
+      page: 1,
     });
   }
 
@@ -74,7 +83,16 @@ export function FilteredProductList({
     navigateWithQuery({
       ...filters,
       sort: nextSort,
+      page: 1,
     });
+  }
+
+  function buildPageHref(page: number) {
+    const params = buildCatalogSearchParams(
+      { ...filters, sort: query.sort, page },
+      { searchQuery },
+    );
+    return params.size > 0 ? `${pathname}?${params}` : pathname;
   }
 
   return (
@@ -110,6 +128,12 @@ export function FilteredProductList({
         ) : null}
 
         <ProductGrid products={products} emptyMessage={emptyMessage} />
+
+        <CatalogPagination
+          page={query.page}
+          totalPages={totalPages}
+          buildHref={buildPageHref}
+        />
 
         {mobileFiltersOpen ? (
           <CatalogFiltersPanel

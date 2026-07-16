@@ -30,6 +30,8 @@ def product_to_schema(product: Product, *, show_wholesale: bool) -> ProductSchem
         currency=product.currency,
         in_stock=product.in_stock,
         category_id=product.category_id,
+        description=product.description,
+        image_url=product.image_url,
         variants=[
             variant_to_schema(variant, show_wholesale=show_wholesale)
             for variant in product.variants

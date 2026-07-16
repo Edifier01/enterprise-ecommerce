@@ -24,6 +24,8 @@ class AdminProductSchema(BaseModel):
     in_stock: bool
     status: str
     category_id: UUID | None = None
+    description: str | None = None
+    image_url: str | None = None
     variants: list[ProductVariantSchema] = []
 
 
@@ -44,6 +46,8 @@ class AdminCreateProductRequest(BaseModel):
     compare_at_price_cents: int | None = Field(default=None, ge=0)
     category_id: UUID | None = None
     wholesale_price_cents: int | None = Field(default=None, ge=0)
+    description: str | None = Field(default=None, max_length=10000)
+    image_url: str | None = Field(default=None, max_length=2048)
 
     @field_validator("slug")
     @classmethod
@@ -78,6 +82,8 @@ class AdminUpdateProductRequest(BaseModel):
     compare_at_price_cents: int | None = Field(default=None, ge=0)
     category_id: UUID | None = None
     clear_category: bool = False
+    description: str | None = Field(default=None, max_length=10000)
+    image_url: str | None = Field(default=None, max_length=2048)
 
     @field_validator("slug")
     @classmethod

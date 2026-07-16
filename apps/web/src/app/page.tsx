@@ -1,15 +1,12 @@
 import type { Metadata } from "next";
 
-import { CategoryGrid } from "@/components/store/catalog/category-grid";
-import { ProductGrid } from "@/components/store/catalog/product-grid";
 import { SectionTabs } from "@/components/store/catalog/section-tabs";
+import type { SectionTabData } from "@/components/store/catalog/section-tabs";
 import { PageContainer } from "@/components/store/layout/page-container";
-import { SectionHeader } from "@/components/store/layout/section-header";
 import { PromoBanner } from "@/components/store/marketing/promo-banner";
 import { SeoContentBlock } from "@/components/store/marketing/seo-content-block";
-import { getCategories, listProducts } from "@/lib/api";
+import { listProducts } from "@/lib/api";
 import { getAccessToken, getCurrentUser } from "@/lib/auth/session";
-import { getRootCategories } from "@/lib/store/categories";
 import { toProductGridItems } from "@/lib/store/product-grid";
 import { siteConfig } from "@/lib/store/site-config";
 
@@ -18,48 +15,54 @@ export const metadata: Metadata = {
   description: siteConfig.description,
 };
 
+const HOMEPAGE_SECTION_LIMIT = 8;
+
 export default async function HomePage() {
   const token = await getAccessToken();
   const user = await getCurrentUser();
   const isWholesaler = user?.is_wholesaler ?? false;
 
-  let products: Awaited<ReturnType<typeof listProducts>> | null = null;
   let error: string | null = null;
+  let sectionTabs: SectionTabData[] = [];
 
   try {
-    products = await listProducts(1, 24, undefined, token);
+    const [hits, newItems, saleItems] = await Promise.all([
+      listProducts(1, HOMEPAGE_SECTION_LIMIT, undefined, token, {
+        in_stock: true,
+        sort: "default",
+      }),
+      listProducts(1, HOMEPAGE_SECTION_LIMIT, undefined, token, {
+        sort: "default",
+      }),
+      listProducts(1, HOMEPAGE_SECTION_LIMIT, undefined, token, {
+        on_sale: true,
+        sort: "default",
+      }),
+    ]);
+
+    sectionTabs = [
+      {
+        id: "recommended",
+        products: toProductGridItems(hits.items, isWholesaler),
+        viewAllHref: "/catalog?in_stock=1",
+      },
+      {
+        id: "new",
+        products: toProductGridItems(newItems.items, isWholesaler),
+        viewAllHref: "/catalog",
+      },
+      {
+        id: "special",
+        products: toProductGridItems(saleItems.items, isWholesaler),
+        viewAllHref: "/catalog?on_sale=1",
+      },
+    ];
   } catch {
     error =
       "Не удалось загрузить товары. Убедитесь, что API запущен и доступен.";
   }
 
-  let apiCategories: Awaited<ReturnType<typeof getCategories>> | null = null;
-  try {
-    apiCategories = await getCategories();
-  } catch {
-    // Fall back to static categories when API is unavailable
-  }
-
-  const categoryCards =
-    apiCategories !== null
-      ? apiCategories.items
-          .filter((c) => c.parent_id === null)
-          .map((c) => ({
-            slug: c.slug,
-            name: c.name,
-            description: c.description ?? undefined,
-            productCount: 0,
-          }))
-      : getRootCategories().map((c) => ({
-          slug: c.slug,
-          name: c.name,
-          description: c.description,
-          productCount: 0,
-        }));
-
-  const items = products?.items ?? [];
-  const gridItems = toProductGridItems(items, isWholesaler);
-  const newArrivals = [...gridItems].reverse().slice(0, 8);
+  const hasSections = sectionTabs.some((tab) => tab.products.length > 0);
 
   return (
     <PageContainer as="div" className="space-y-10 sm:space-y-12">
@@ -74,49 +77,12 @@ export default async function HomePage() {
         </div>
       ) : null}
 
-      <section aria-labelledby="home-categories-heading" className="space-y-4">
-        <SectionHeader
-          title="Категории снаряжения"
-          titleId="home-categories-heading"
-          subtitle="Разгрузки, одежда, обувь и аксессуары для полевых условий"
-          viewAllHref="/catalog"
-          viewAllLabel="Весь каталог"
-        />
-        <CategoryGrid categories={categoryCards} />
-      </section>
-
-      <section aria-labelledby="new-arrivals-heading" className="space-y-4">
-        <SectionHeader
-          title="Новинки"
-          titleId="new-arrivals-heading"
-          subtitle={
-            products
-              ? `${products.total} ${
-                  products.total === 1
-                    ? "товар"
-                    : products.total < 5
-                      ? "товара"
-                      : "товаров"
-                } в каталоге`
-              : undefined
-          }
-          viewAllHref="/catalog"
-        />
-
-        <ProductGrid
-          products={newArrivals}
-          emptyMessage="Новинки появятся после добавления товаров в каталог."
-        />
-      </section>
-
-      {items.length > 0 ? (
+      {hasSections ? (
         <section aria-labelledby="catalog-tabs-heading" className="space-y-4">
-          <SectionHeader
-            title="Подборки"
-            titleId="catalog-tabs-heading"
-            viewAllHref="/catalog"
-          />
-          <SectionTabs products={gridItems} limit={8} />
+          <h2 id="catalog-tabs-heading" className="store-section-title">
+            Подборки
+          </h2>
+          <SectionTabs tabs={sectionTabs} />
         </section>
       ) : null}
 

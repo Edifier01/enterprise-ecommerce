@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     admin_low_stock_threshold: int = 5
     admin_dev_email: str = "admin@localhost"
     admin_dev_password: str = "admin12345"
+    media_upload_dir: str = "uploads"
+    media_max_upload_bytes: int = 5 * 1024 * 1024
+    media_public_base_url: str = "http://localhost:8000/media"
 
     @field_validator("database_url", mode="before")
     @classmethod

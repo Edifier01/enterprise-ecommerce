@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -38,11 +38,14 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         page: int,
         limit: int,
         status: str | None = None,
+        q: str | None = None,
     ) -> tuple[list[Product], int]:
         offset = (page - 1) * limit
         filters = []
         if status is not None:
             filters.append(ProductModel.status == status)
+        if q is not None and q.strip():
+            filters.append(self._admin_search_filter(q.strip()))
 
         count_stmt = select(func.count()).select_from(ProductModel)
         stmt = select(ProductModel).order_by(ProductModel.updated_at.desc())
@@ -55,6 +58,19 @@ class AdminCatalogRepository(IAdminCatalogRepository):
             await self._session.scalars(stmt.offset(offset).limit(limit))
         ).all()
         return [self._product_to_domain(row) for row in rows], total
+
+    @staticmethod
+    def _admin_search_filter(query: str):
+        term = f"%{query.casefold()}%"
+        name_match = func.lower(ProductModel.name).like(term)
+        slug_match = func.lower(ProductModel.slug).like(term)
+        sku_match = exists(
+            select(1).where(
+                ProductVariantModel.product_id == ProductModel.id,
+                func.lower(ProductVariantModel.sku).like(term),
+            )
+        )
+        return or_(name_match, slug_match, sku_match)
 
     async def get_product_by_id(self, product_id: uuid.UUID) -> Product | None:
         stmt = (
@@ -79,6 +95,8 @@ class AdminCatalogRepository(IAdminCatalogRepository):
             in_stock=True,
             status=data.status,
             category_id=data.category_id,
+            description=data.description,
+            image_url=data.image_url,
         )
         self._session.add(product)
         variant = ProductVariantModel(
@@ -132,6 +150,10 @@ class AdminCatalogRepository(IAdminCatalogRepository):
             product.category_id = None
         elif data.category_id is not None:
             product.category_id = data.category_id
+        if data.description is not None:
+            product.description = data.description
+        if data.image_url is not None:
+            product.image_url = data.image_url
 
         try:
             await self._session.flush()
@@ -219,9 +241,23 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         return self._variant_to_domain(variant)
 
     async def list_categories(self) -> list[Category]:
+        counts_stmt = (
+            select(ProductModel.category_id, func.count())
+            .where(
+                ProductModel.status == "active",
+                ProductModel.category_id.is_not(None),
+            )
+            .group_by(ProductModel.category_id)
+        )
+        count_rows = await self._session.execute(counts_stmt)
+        product_counts = {row[0]: int(row[1]) for row in count_rows}
+
         stmt = select(CategoryModel).order_by(CategoryModel.sort_order, CategoryModel.name)
         rows = (await self._session.scalars(stmt)).all()
-        return [self._category_to_domain(row) for row in rows]
+        return [
+            self._category_to_domain(row, product_count=product_counts.get(row.id, 0))
+            for row in rows
+        ]
 
     async def get_category_by_id(self, category_id: uuid.UUID) -> Category | None:
         row = await self._session.get(CategoryModel, category_id)
@@ -298,6 +334,8 @@ class AdminCatalogRepository(IAdminCatalogRepository):
             status=row.status,
             compare_at_price_cents=row.compare_at_price_cents,
             category_id=row.category_id,
+            description=row.description,
+            image_url=row.image_url,
             variants=variants,
         )
 
@@ -317,7 +355,7 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         )
 
     @staticmethod
-    def _category_to_domain(row: CategoryModel) -> Category:
+    def _category_to_domain(row: CategoryModel, *, product_count: int = 0) -> Category:
         return Category(
             id=row.id,
             slug=row.slug,
@@ -326,4 +364,5 @@ class AdminCatalogRepository(IAdminCatalogRepository):
             parent_id=row.parent_id,
             is_active=row.is_active,
             sort_order=row.sort_order,
+            product_count=product_count,
         )

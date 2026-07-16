@@ -127,6 +127,23 @@ export const siteConfig = {
   /** Static categories — offline fallback when API is unreachable */
   catalogDisclaimer:
     "Разделы каталога синхронизируются с API. При недоступности сервера показывается резервный список категорий.",
+
+  homepagePromos: [
+    {
+      title: "Разгрузочные системы",
+      description: "Plate carriers, подсумки и комплекты для полевых задач",
+      href: "/catalog/snaryazhenie",
+      ctaLabel: "Смотреть снаряжение",
+      accentClass: "from-primary/95 to-primary store-hero-pattern",
+    },
+    {
+      title: "Распродажа сезона",
+      description: "Термобельё, мембрана и тактическая обувь — выгодные цены",
+      href: "/catalog?on_sale=1",
+      ctaLabel: "К акциям",
+      accentClass: "from-stone-700/95 to-stone-800 store-hero-pattern",
+    },
+  ],
 } as const;
 
 export type SiteConfig = typeof siteConfig;

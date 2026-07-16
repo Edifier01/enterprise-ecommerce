@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getAdminAccessToken } from "@/lib/admin/session";
+import { ADMIN_ORDERS_PAGE_SIZE } from "@/lib/admin/catalog";
 import type {
   AdminOrderDetail,
   AdminOrderList,
@@ -35,7 +36,7 @@ export async function listAdminOrders(
   page = 1,
   status?: string,
 ): Promise<AdminOrderList | null> {
-  const params = new URLSearchParams({ page: String(page), limit: "50" });
+  const params = new URLSearchParams({ page: String(page), limit: String(ADMIN_ORDERS_PAGE_SIZE) });
   if (status) params.set("status", status);
   return adminFetch<AdminOrderList>(`/api/v1/admin/orders?${params}`);
 }

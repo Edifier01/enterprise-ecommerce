@@ -145,6 +145,40 @@ paths:
             type: string
             minLength: 1
             maxLength: 100
+        - name: in_stock
+          in: query
+          schema:
+            type: boolean
+        - name: on_sale
+          in: query
+          schema:
+            type: boolean
+        - name: size
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+        - name: color
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+        - name: price_min
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+        - name: price_max
+          in: query
+          schema:
+            type: integer
+            minimum: 0
       responses:
         "200":
           description: Available filter facets for the catalog scope
@@ -790,6 +824,55 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/admin/media/upload:
+    post:
+      summary: Upload product image (local storage)
+      operationId: adminUploadMedia
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Public URL of uploaded image
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url]
+                properties:
+                  url:
+                    type: string
+                    format: uri
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid file type or size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /api/v1/admin/dashboard/summary:
     get:
       summary: Admin dashboard summary metrics
@@ -840,6 +923,12 @@ paths:
           schema:
             type: string
             enum: [draft, active, archived]
+        - name: q
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+          description: Search by product name, slug, or variant SKU (all statuses)
       responses:
         "200":
           description: Paginated admin product list
@@ -1160,12 +1249,18 @@ components:
           nullable: true
         currency:
           type: string
-          example: USD
+          example: RUB
         in_stock:
           type: boolean
         category_id:
           type: string
           format: uuid
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        image_url:
+          type: string
           nullable: true
         variants:
           type: array
@@ -1194,6 +1289,9 @@ components:
           type: boolean
         sort_order:
           type: integer
+        product_count:
+          type: integer
+          default: 0
 
     CategoryListResponse:
       type: object
@@ -1236,6 +1334,14 @@ components:
           type: integer
         price_max_cents:
           type: integer
+        size_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        color_counts:
+          type: object
+          additionalProperties:
+            type: integer
 
     RegisterRequest:
       type: object
@@ -1764,6 +1870,12 @@ components:
         category_id:
           type: string
           format: uuid
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        image_url:
+          type: string
           nullable: true
         variants:
           type: array

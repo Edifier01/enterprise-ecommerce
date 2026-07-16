@@ -23,6 +23,7 @@ export function toProductGridItems(
       currency: product.currency,
       in_stock: product.in_stock,
       compareAtCents: product.compare_at_price_cents ?? undefined,
+      imageSrc: product.image_url ?? undefined,
       isWholesaler: wholesalePriceCents != null,
       wholesalePriceCents,
       defaultVariantId: variant?.id,

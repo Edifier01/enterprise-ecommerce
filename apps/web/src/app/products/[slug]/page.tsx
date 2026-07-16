@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { ProductDetail } from "@/components/store/catalog/product-detail";
+import { ProductJsonLd } from "@/components/store/catalog/product-json-ld";
+import { RelatedProducts } from "@/components/store/catalog/related-products";
 import { PageContainer } from "@/components/store/layout/page-container";
 import { getAccessToken, getCurrentUser } from "@/lib/auth/session";
-import { getProduct } from "@/lib/api";
+import { getCategories, getProduct, listProducts } from "@/lib/api";
+import { toProductGridItems } from "@/lib/store/product-grid";
 import { siteConfig } from "@/lib/store/site-config";
 
 interface ProductDetailPageProps {
@@ -20,7 +23,9 @@ export async function generateMetadata({
     const product = await getProduct(slug);
     return {
       title: product.name,
-      description: `${product.name} — купить в ${siteConfig.name}`,
+      description:
+        product.description?.trim() ||
+        `${product.name} — купить в ${siteConfig.name}`,
     };
   } catch {
     return { title: "Товар не найден" };
@@ -31,6 +36,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   const { slug } = await params;
   const token = await getAccessToken();
   const user = await getCurrentUser();
+  const isWholesaler = user?.is_wholesaler ?? false;
 
   let product: Awaited<ReturnType<typeof getProduct>>;
   try {
@@ -42,9 +48,48 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     throw error;
   }
 
+  let categoryBreadcrumb: { name: string; href: string } | undefined;
+  let relatedProducts: ReturnType<typeof toProductGridItems> = [];
+
+  if (product.category_id) {
+    try {
+      const categories = await getCategories();
+      const category = categories.items.find((item) => item.id === product.category_id);
+      if (category) {
+        categoryBreadcrumb = {
+          name: category.name,
+          href: `/catalog/${category.slug}`,
+        };
+
+        const related = await listProducts(1, 5, category.slug, token, {
+          in_stock: true,
+          sort: "default",
+        });
+        relatedProducts = toProductGridItems(
+          related.items.filter((item) => item.slug !== product.slug).slice(0, 4),
+          isWholesaler,
+        );
+      }
+    } catch {
+      // Optional enrichment when API is unavailable
+    }
+  }
+
+  const productUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/products/${product.slug}`;
+
   return (
-    <PageContainer as="div">
-      <ProductDetail product={product} isWholesaler={user?.is_wholesaler ?? false} />
+    <PageContainer as="div" className="space-y-10">
+      <ProductJsonLd product={product} productUrl={productUrl} />
+      <ProductDetail
+        product={product}
+        isWholesaler={isWholesaler}
+        categoryBreadcrumb={categoryBreadcrumb}
+      />
+      <RelatedProducts
+        products={relatedProducts}
+        categoryHref={categoryBreadcrumb?.href}
+        categoryName={categoryBreadcrumb?.name}
+      />
     </PageContainer>
   );
 }

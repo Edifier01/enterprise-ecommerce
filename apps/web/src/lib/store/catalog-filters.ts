@@ -20,6 +20,8 @@ export type CatalogFilterFacets = {
   sizes: string[];
   colors: string[];
   priceRange: { min: number; max: number };
+  sizeCounts: Record<string, number>;
+  colorCounts: Record<string, number>;
 };
 
 export function countActiveFilters(filters: CatalogFilterState): number {

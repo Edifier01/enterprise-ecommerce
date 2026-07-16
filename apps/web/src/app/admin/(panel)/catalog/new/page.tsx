@@ -28,7 +28,7 @@ export default async function AdminNewProductPage() {
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">Новый товар</h1>
       </div>
-      <AdminProductForm categories={categories} mode="create" />
+      <AdminProductForm categories={categories} />
     </div>
   );
 }

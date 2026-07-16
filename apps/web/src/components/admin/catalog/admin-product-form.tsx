@@ -7,27 +7,48 @@ import {
   createProductAction,
   type CatalogActionState,
 } from "@/app/actions/admin-catalog";
+import { AdminCategorySelect } from "@/components/admin/catalog/admin-category-select";
+import { AdminImageField } from "@/components/admin/catalog/admin-image-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminCategory } from "@/lib/admin/catalog";
+import { siteConfig } from "@/lib/store/site-config";
 
 const initialState: CatalogActionState = {};
 
 const inputClass =
   "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
+const textareaClass =
+  "min-h-24 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+
+function FieldError({
+  fieldErrors,
+  name,
+}: {
+  fieldErrors?: Record<string, string>;
+  name: string;
+}) {
+  const message = fieldErrors?.[name];
+  if (!message) return null;
+  return (
+    <p className="text-xs text-destructive" role="alert">
+      {message}
+    </p>
+  );
+}
+
 type AdminProductFormProps = {
   categories: AdminCategory[];
-  mode: "create";
 };
 
-export function AdminProductForm({ categories, mode }: AdminProductFormProps) {
+export function AdminProductForm({ categories }: AdminProductFormProps) {
   const [state, formAction, pending] = useActionState(createProductAction, initialState);
 
   return (
     <Card className="max-w-2xl">
       <CardHeader>
-        <CardTitle>{mode === "create" ? "Новый товар" : "Редактирование товара"}</CardTitle>
+        <CardTitle>Новый товар</CardTitle>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="flex flex-col gap-4">
@@ -37,22 +58,25 @@ export function AdminProductForm({ categories, mode }: AdminProductFormProps) {
                 Название
               </label>
               <input id="name" name="name" required className={inputClass} />
+              <FieldError fieldErrors={state.fieldErrors} name="name" />
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="slug" className="text-sm font-medium">
                 Slug
               </label>
               <input id="slug" name="slug" required className={inputClass} />
+              <FieldError fieldErrors={state.fieldErrors} name="slug" />
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="sku" className="text-sm font-medium">
                 SKU
               </label>
               <input id="sku" name="sku" required className={inputClass} />
+              <FieldError fieldErrors={state.fieldErrors} name="sku" />
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="price_cents" className="text-sm font-medium">
-                Цена (копейки/центы)
+                Цена (копейки)
               </label>
               <input
                 id="price_cents"
@@ -62,10 +86,23 @@ export function AdminProductForm({ categories, mode }: AdminProductFormProps) {
                 required
                 className={inputClass}
               />
+              <FieldError fieldErrors={state.fieldErrors} name="price_cents" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="compare_at_price_cents" className="text-sm font-medium">
+                Старая цена (копейки)
+              </label>
+              <input
+                id="compare_at_price_cents"
+                name="compare_at_price_cents"
+                type="number"
+                min={0}
+                className={inputClass}
+              />
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="wholesale_price_cents" className="text-sm font-medium">
-                Опт (центы, опционально)
+                Опт (копейки)
               </label>
               <input
                 id="wholesale_price_cents"
@@ -89,14 +126,17 @@ export function AdminProductForm({ categories, mode }: AdminProductFormProps) {
               <label htmlFor="category_id" className="text-sm font-medium">
                 Категория
               </label>
-              <select id="category_id" name="category_id" defaultValue="" className={inputClass}>
-                <option value="">Без категории</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+              <AdminCategorySelect id="category_id" categories={categories} />
+            </div>
+            <div className="sm:col-span-2">
+              <AdminImageField />
+            </div>
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <label htmlFor="description" className="text-sm font-medium">
+                Описание
+              </label>
+              <textarea id="description" name="description" className={textareaClass} />
+              <FieldError fieldErrors={state.fieldErrors} name="description" />
             </div>
           </div>
 

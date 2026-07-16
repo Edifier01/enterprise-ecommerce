@@ -48,11 +48,13 @@ function MultiCheckboxGroup({
   title,
   options,
   selected,
+  counts,
   onToggle,
 }: {
   title: string;
   options: string[];
   selected: string[];
+  counts?: Record<string, number>;
   onToggle: (option: string) => void;
 }) {
   if (options.length === 0) {
@@ -63,17 +65,25 @@ function MultiCheckboxGroup({
     <fieldset className="space-y-2">
       <legend className="text-sm font-semibold text-foreground">{title}</legend>
       <div className="space-y-2">
-        {options.map((option) => (
-          <label key={option} className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={selected.includes(option)}
-              onChange={() => onToggle(option)}
-              className="size-4 rounded border-input accent-primary"
-            />
-            <span>{option}</span>
-          </label>
-        ))}
+        {options.map((option) => {
+          const count = counts?.[option];
+          return (
+            <label key={option} className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={selected.includes(option)}
+                onChange={() => onToggle(option)}
+                className="size-4 rounded border-input accent-primary"
+              />
+              <span className="flex flex-1 items-center justify-between gap-2">
+                <span>{option}</span>
+                {typeof count === "number" ? (
+                  <span className="text-xs tabular-nums text-muted-foreground">{count}</span>
+                ) : null}
+              </span>
+            </label>
+          );
+        })}
       </div>
     </fieldset>
   );
@@ -122,6 +132,7 @@ function FilterContent({
         title="Размер"
         options={facets.sizes}
         selected={value.sizes}
+        counts={facets.sizeCounts}
         onToggle={(option) => toggleListValue("sizes", option)}
       />
 
@@ -129,6 +140,7 @@ function FilterContent({
         title="Цвет / камуфляж"
         options={facets.colors}
         selected={value.colors}
+        counts={facets.colorCounts}
         onToggle={(option) => toggleListValue("colors", option)}
       />
 

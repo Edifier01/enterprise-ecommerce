@@ -6,45 +6,54 @@ Implementation Agent
 
 ## Completed Work
 
-**Own-brand cleanup + search page filters (2026-07-15):**
+**Admin Panel Wave C (2026-07-16):**
 
-- Removed brand filter from API, facets, OpenAPI, and frontend (single own brand «Сухопут»)
-- Trust bar: «Проверенные бренды» → «Собственный бренд»
-- Product specs table: no «Бренд» row
-- Extended `GET /api/v1/products/search` with same filter params as catalog list
-- Extended `GET /api/v1/products/facets` with optional `q` for search scope
-- `/search` page: URL-synced filters via shared `FilteredProductList`
-- Backend tests: 14 passed (`test_product_filters.py`, `test_search.py`)
-- `tsc --noEmit` clean
+### Catalog search
+- `GET /admin/catalog/products?q=` — searches name, slug, variant SKU (all statuses)
+- Admin catalog page search box with URL sync
+
+### Variant CRUD UI
+- `AdminVariantPanel` on product edit — list, edit, add variants
+- Server actions: `createVariantAction`, `updateVariantAction`
+
+### Category parent selector
+- Parent dropdown on category create (indented hierarchy)
+- Parent column in category table
+- Indented category selects on product create/edit
+
+### Media upload (local dev storage)
+- `POST /api/v1/admin/media/upload` — JPEG/PNG/WebP/GIF up to 5 MB
+- Files served at `/media/{filename}`; `AdminImageField` upload widget
+- Config: `media_upload_dir`, `media_public_base_url`
+- Added `python-multipart` dependency
+
+### Tests
+- 15/15 `test_admin_catalog.py` passed
+- TypeScript check clean
 
 ## Files Changed
 
 | Area | Key paths |
 |------|-----------|
-| Backend domain | `product_list_filters.py`, `variant_filter.py`, `ports.py` |
-| Backend infra | `repository.py`, `search_products.py`, `get_product_facets.py` |
-| Backend API | `router.py`, `schemas.py` |
-| Backend tests | `tests/test_product_filters.py` |
-| Frontend | `catalog-query.ts`, `catalog-filters.ts`, `api.ts`, `filtered-product-list.tsx`, `catalog-filters-panel.tsx`, `search/page.tsx`, `catalog/[slug]/page.tsx` |
-| Copy / UX | `site-config.ts`, `product-specs-table.tsx`, `homepage.spec.ts` |
+| Backend | `admin_catalog_repository.py`, `admin_router.py`, `admin_ports.py`, `media_router.py`, `config.py`, `main.py`, `requirements.txt` |
+| Frontend | `admin-catalog-search.tsx`, `admin-variant-panel.tsx`, `admin-image-field.tsx`, `admin-category-select.tsx`, `category-options.ts`, `admin-category-panel.tsx`, `admin-product-form.tsx`, `admin-product-edit-form.tsx`, `catalog/page.tsx`, `admin-catalog.ts` |
 | Contract | `openapi.yaml` |
+| Tests | `test_admin_catalog.py` |
 
 ## Known Issues
 
-- Facets reflect full category/search scope, not dynamic counts per active filter
-- Search URL keeps `q` + filter params; changing filters preserves query
+- Upload uses local filesystem — swap to S3/CDN in production via same URL contract
+- Variant delete not implemented (API or UI)
 
 ## Next Recommended Action
 
-1. Real product/category photography
-2. SMTP / YooKassa (TASKS.md gates)
-3. Optional: dynamic facet counts when filters applied
+1. Production media: S3 presigned upload + CDN base URL
+2. SMTP / YooKassa (release gates)
 
 ## How to Run
 
 ```bash
-cd apps/api && python -m pytest tests/test_product_filters.py tests/test_search.py -q
+cd apps/api && pip install -r requirements.txt && python -m pytest tests/test_admin_catalog.py -q
 cd apps/web && npm run dev
-# Category: /catalog/odezhda?in_stock=1&size=M&sort=price-asc
-# Search:   /search?q=куртка&in_stock=1&color=olive
+# Admin catalog: search, upload image, edit variants, category parent
 ```

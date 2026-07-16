@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
 import { AdminInventoryTable } from "@/components/admin/inventory/admin-inventory-table";
+import { ADMIN_INVENTORY_PAGE_SIZE } from "@/lib/admin/catalog";
 import { listAdminInventory } from "@/lib/admin/inventory";
 import { getCurrentAdmin } from "@/lib/admin/session";
 
@@ -12,16 +14,22 @@ export const metadata: Metadata = {
 };
 
 type PageProps = {
-  searchParams: Promise<{ low_stock?: string }>;
+  searchParams: Promise<{ page?: string; low_stock?: string }>;
 };
+
+function parsePage(raw: string | undefined): number {
+  const page = raw ? Number.parseInt(raw, 10) : 1;
+  return Number.isFinite(page) && page >= 1 ? page : 1;
+}
 
 export default async function AdminInventoryPage({ searchParams }: PageProps) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
 
-  const { low_stock } = await searchParams;
+  const { page: pageRaw, low_stock } = await searchParams;
+  const page = parsePage(pageRaw);
   const lowStockOnly = low_stock === "true";
-  const inventory = await listAdminInventory(1, lowStockOnly);
+  const inventory = await listAdminInventory(page, lowStockOnly);
 
   if (!inventory) {
     return (
@@ -29,6 +37,16 @@ export default async function AdminInventoryPage({ searchParams }: PageProps) {
         Не удалось загрузить остатки. Проверьте права доступа.
       </p>
     );
+  }
+
+  const totalPages = getAdminTotalPages(inventory.total, ADMIN_INVENTORY_PAGE_SIZE);
+
+  function buildHref(nextPage: number) {
+    const params = new URLSearchParams();
+    if (nextPage > 1) params.set("page", String(nextPage));
+    if (lowStockOnly) params.set("low_stock", "true");
+    const query = params.toString();
+    return query ? `/admin/inventory?${query}` : "/admin/inventory";
   }
 
   return (
@@ -69,6 +87,8 @@ export default async function AdminInventoryPage({ searchParams }: PageProps) {
         items={inventory.items}
         lowStockThreshold={inventory.low_stock_threshold}
       />
+
+      <AdminPagination page={page} totalPages={totalPages} buildHref={buildHref} />
     </div>
   );
 }

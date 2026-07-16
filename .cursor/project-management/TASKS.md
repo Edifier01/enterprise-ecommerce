@@ -562,6 +562,50 @@ admin-assigned. Existing orders are never repriced.
 
 ---
 
+### Feature: Production Catalog Optimization (Wave 1–2)
+
+**Status:** COMPLETED (2026-07-16)
+
+- [x] ADR-009 — product content + homepage collections
+- [x] Migration 013 — `products.description`, `products.image_url`
+- [x] API-driven homepage SectionTabs (hits / new / sale)
+- [x] Contextual «Смотреть все» per active tab
+- [x] Catalog pagination on category PLP + search
+- [x] Category `product_count` in API + cards
+- [x] PDP: description, image, SKU, category breadcrumbs, JSON-LD
+- [x] Seed: RUB currency + subcategories
+- [x] Remove unused `category-nav-bar.tsx`
+
+**Backlog (Wave 3):**
+- [x] PromoBanner on homepage
+- [x] Related products on PDP
+- [x] Dynamic facet counts
+- [ ] Real product/category photography (production assets)
+
+---
+
+### Feature: Admin Panel Optimization (Wave A–B)
+
+**Status:** COMPLETED (2026-07-16)
+
+- [x] Product content fields in admin forms (`description`, `image_url`, `compare_at_price_cents`)
+- [x] Catalog list thumbnails + status filter + pagination
+- [x] Category `description` on create + `product_count` column
+- [x] `AdminPagination` on orders, inventory, customers
+- [x] Field-level 422 validation in server actions
+- [x] Admin `loading.tsx` skeleton
+- [x] Active sidebar nav + dashboard deep links
+- [x] Admin catalog search (`?q=` name/slug/SKU)
+- [x] Variant CRUD UI on product edit page
+- [x] Category parent selector + hierarchy in dropdowns
+- [x] Local media upload endpoint + admin image widget
+- [x] Tests: 15 in `test_admin_catalog.py`
+
+**Backlog (production media):**
+- [ ] S3 presigned upload + CDN (replace local `/media` storage)
+
+---
+
 ### Feature: Email Verification & Password Reset
 
 **Status:** COMPLETED (2026-07-15)

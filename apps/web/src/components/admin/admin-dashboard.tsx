@@ -1,4 +1,7 @@
+import Link from "next/link";
+
 import type { DashboardSummary } from "@/lib/admin/types";
+import { getAdminOrderStatusLabel } from "@/lib/admin/orders-shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function formatMoney(cents: number, currency = "USD") {
@@ -7,6 +10,15 @@ function formatMoney(cents: number, currency = "USD") {
     currency,
     minimumFractionDigits: 2,
   }).format(cents / 100);
+}
+
+const FILTERABLE_ORDER_STATUSES = new Set(["confirmed", "shipped", "canceled"]);
+
+function orderStatusHref(status: string): string | null {
+  if (!FILTERABLE_ORDER_STATUSES.has(status)) {
+    return null;
+  }
+  return `/admin/orders?status=${status}`;
 }
 
 type AdminDashboardProps = {
@@ -61,15 +73,18 @@ export function AdminDashboard({ summary }: AdminDashboardProps) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Низкий остаток
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{summary.low_stock_count}</p>
-          </CardContent>
+        <Card className="transition-colors hover:bg-muted/30">
+          <Link href="/admin/inventory?low_stock=true" className="block">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Низкий остаток
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-semibold">{summary.low_stock_count}</p>
+              <p className="mt-1 text-xs text-primary">Перейти на склад →</p>
+            </CardContent>
+          </Link>
         </Card>
       </div>
 
@@ -82,15 +97,26 @@ export function AdminDashboard({ summary }: AdminDashboardProps) {
             <p className="text-sm text-muted-foreground">Заказов пока нет.</p>
           ) : (
             <ul className="space-y-2">
-              {statusEntries.map(([status, count]) => (
-                <li
-                  key={status}
-                  className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
-                >
-                  <span className="font-medium">{status}</span>
-                  <span className="text-muted-foreground">{count}</span>
-                </li>
-              ))}
+              {statusEntries.map(([status, count]) => {
+                const href = orderStatusHref(status);
+                const label = getAdminOrderStatusLabel(status);
+
+                return (
+                  <li
+                    key={status}
+                    className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
+                  >
+                    {href ? (
+                      <Link href={href} className="font-medium text-primary hover:underline">
+                        {label}
+                      </Link>
+                    ) : (
+                      <span className="font-medium">{label}</span>
+                    )}
+                    <span className="text-muted-foreground">{count}</span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </CardContent>

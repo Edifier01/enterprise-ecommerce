@@ -196,6 +196,25 @@ async def test_get_product_facets(filter_client: AsyncClient) -> None:
     assert "Multicam" in data["colors"] or "Olive" in data["colors"]
     assert "brands" not in data
     assert data["price_min_cents"] <= data["price_max_cents"]
+    assert isinstance(data["size_counts"], dict)
+    assert data["size_counts"].get("M", 0) >= 1
+
+
+@pytest.mark.asyncio
+async def test_get_product_facets_respect_in_stock_filter(filter_client: AsyncClient) -> None:
+    all_response = await filter_client.get(
+        "/api/v1/products/facets",
+        params={"category": "odezhda"},
+    )
+    in_stock_response = await filter_client.get(
+        "/api/v1/products/facets",
+        params={"category": "odezhda", "in_stock": "true"},
+    )
+    assert all_response.status_code == 200
+    assert in_stock_response.status_code == 200
+    all_total = sum(all_response.json()["size_counts"].values())
+    in_stock_total = sum(in_stock_response.json()["size_counts"].values())
+    assert in_stock_total <= all_total
 
 
 @pytest.mark.asyncio

@@ -17,6 +17,7 @@ import {
 import {
   apiFacetsToCatalogFacets,
   catalogQueryToApiParams,
+  catalogQueryToFacetParams,
   parseCatalogSearchParams,
 } from "@/lib/store/catalog-query";
 import { toProductGridItems } from "@/lib/store/product-grid";
@@ -114,11 +115,16 @@ export default async function CategoryPage({
   try {
     const apiFilters = catalogQueryToApiParams(catalogQuery, {
       categorySlug: slug,
-      page: 1,
       limit: 48,
     });
-    products = await listProducts(1, 48, slug, token, apiFilters);
-    facets = await getProductFacets({ categorySlug: slug }, token);
+    products = await listProducts(catalogQuery.page, 48, slug, token, apiFilters);
+    facets = await getProductFacets(
+      {
+        categorySlug: slug,
+        filters: catalogQueryToFacetParams(catalogQuery, { categorySlug: slug }),
+      },
+      token,
+    );
   } catch {
     error =
       "Не удалось загрузить товары. Убедитесь, что API запущен и доступен.";
@@ -136,13 +142,15 @@ export default async function CategoryPage({
         sizes: [],
         colors: [],
         priceRange: { min: 0, max: 0 },
+        sizeCounts: {},
+        colorCounts: {},
       };
 
   const childCategoryCards = childCategories.map((child) => ({
     slug: child.slug,
     name: child.name,
     description: child.description ?? undefined,
-    productCount: 0,
+    productCount: child.product_count,
   }));
 
   const breadcrumbs =

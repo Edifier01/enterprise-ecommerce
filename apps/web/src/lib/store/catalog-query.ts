@@ -3,6 +3,7 @@ import type { CatalogFilterState } from "@/lib/store/catalog-filters";
 
 export type CatalogListQuery = CatalogFilterState & {
   sort: SortOptionValue;
+  page: number;
 };
 
 export type ProductListQueryParams = {
@@ -23,6 +24,8 @@ export type ProductFacetsResponse = {
   colors: string[];
   price_min_cents: number;
   price_max_cents: number;
+  size_counts?: Record<string, number>;
+  color_counts?: Record<string, number>;
 };
 
 export const DEFAULT_CATALOG_LIST_QUERY: CatalogListQuery = {
@@ -33,6 +36,7 @@ export const DEFAULT_CATALOG_LIST_QUERY: CatalogListQuery = {
   priceMin: null,
   priceMax: null,
   sort: "default",
+  page: 1,
 };
 
 function readParam(
@@ -68,6 +72,9 @@ export function parseCatalogSearchParams(
   params: Record<string, string | string[] | undefined>,
 ): CatalogListQuery {
   const sort = readParam(params, "sort");
+  const pageRaw = readParam(params, "page");
+  const parsedPage = pageRaw ? Number.parseInt(pageRaw, 10) : 1;
+  const page = Number.isFinite(parsedPage) && parsedPage >= 1 ? parsedPage : 1;
   const priceMinRaw = readParam(params, "price_min");
   const priceMaxRaw = readParam(params, "price_max");
 
@@ -86,6 +93,7 @@ export function parseCatalogSearchParams(
       sort === "default"
         ? sort
         : "default",
+    page,
   };
 }
 
@@ -98,7 +106,7 @@ export function catalogQueryToApiParams(
   options?: { categorySlug?: string; page?: number; limit?: number },
 ): ProductListQueryParams {
   const params: ProductListQueryParams = {
-    page: options?.page ?? 1,
+    page: options?.page ?? query.page,
     limit: options?.limit ?? 48,
     sort: toApiSortValue(query.sort),
   };
@@ -159,7 +167,25 @@ export function buildCatalogSearchParams(
   if (query.sort !== "default") {
     params.set("sort", query.sort);
   }
+  if (query.page > 1) {
+    params.set("page", String(query.page));
+  }
 
+  return params;
+}
+
+export function catalogQueryToFacetParams(
+  query: CatalogListQuery,
+  options?: { categorySlug?: string },
+): ProductListQueryParams {
+  const params = catalogQueryToApiParams(query, {
+    categorySlug: options?.categorySlug,
+    page: 1,
+    limit: 1,
+  });
+  delete params.page;
+  delete params.limit;
+  delete params.sort;
   return params;
 }
 
@@ -171,5 +197,7 @@ export function apiFacetsToCatalogFacets(facets: ProductFacetsResponse) {
       min: facets.price_min_cents,
       max: facets.price_max_cents,
     },
+    sizeCounts: facets.size_counts ?? {},
+    colorCounts: facets.color_counts ?? {},
   };
 }

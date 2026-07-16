@@ -1,15 +1,6 @@
-import Link from "next/link";
-
 import { adminLogoutAction } from "@/app/actions/admin-auth";
+import { AdminSidebarNav } from "@/components/admin/admin-sidebar-nav";
 import type { AdminUser } from "@/lib/admin/types";
-
-const NAV_ITEMS = [
-  { href: "/admin", label: "Сводка", enabled: true },
-  { href: "/admin/catalog", label: "Каталог", enabled: true },
-  { href: "/admin/inventory", label: "Склад", enabled: true },
-  { href: "/admin/orders", label: "Заказы", enabled: true },
-  { href: "/admin/customers", label: "Клиенты", enabled: true },
-] as const;
 
 type AdminSidebarProps = {
   admin: AdminUser;
@@ -26,28 +17,7 @@ export function AdminSidebar({ admin }: AdminSidebarProps) {
         <p className="text-xs text-muted-foreground">{admin.role}</p>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 p-3">
-        {NAV_ITEMS.map((item) =>
-          item.enabled ? (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
-            >
-              {item.label}
-            </Link>
-          ) : (
-            <span
-              key={item.href}
-              className="rounded-md px-3 py-2 text-sm text-muted-foreground"
-              title="Скоро"
-            >
-              {item.label}
-              <span className="ml-2 text-xs">(скоро)</span>
-            </span>
-          ),
-        )}
-      </nav>
+      <AdminSidebarNav />
 
       <form action={adminLogoutAction} className="border-t border-border p-3">
         <button

@@ -59,6 +59,8 @@ def _product_schema(product: Product) -> AdminProductSchema:
         in_stock=product.in_stock,
         status=product.status,
         category_id=product.category_id,
+        description=product.description,
+        image_url=product.image_url,
         variants=[ProductVariantSchema.model_validate(v) for v in product.variants],
     )
 
@@ -68,10 +70,11 @@ async def admin_list_products(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
     status: str | None = Query(default=None),
+    q: str | None = Query(default=None, max_length=200),
     _admin: AdminUser = Depends(require_permission("admin:read")),
     repo: IAdminCatalogRepository = Depends(get_admin_catalog_repository),
 ) -> AdminProductListResponse:
-    products, total = await repo.list_products(page=page, limit=limit, status=status)
+    products, total = await repo.list_products(page=page, limit=limit, status=status, q=q)
     return AdminProductListResponse(
         items=[_product_schema(p) for p in products],
         total=total,
@@ -120,6 +123,8 @@ async def admin_create_product(
                 compare_at_price_cents=request.compare_at_price_cents,
                 category_id=request.category_id,
                 wholesale_price_cents=request.wholesale_price_cents,
+                description=request.description,
+                image_url=request.image_url,
             )
         )
     except DuplicateSlugError:
@@ -186,6 +191,8 @@ async def admin_update_product(
                 compare_at_price_cents=request.compare_at_price_cents,
                 category_id=request.category_id,
                 clear_category=request.clear_category,
+                description=request.description,
+                image_url=request.image_url,
             ),
         )
     except ProductNotFoundError:

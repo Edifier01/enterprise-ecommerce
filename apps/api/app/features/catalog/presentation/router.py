@@ -80,15 +80,37 @@ async def get_product_facets(
         max_length=100,
         description="Scope facets to search query",
     ),
+    in_stock: bool | None = Query(default=None, description="When true, only in-stock products"),
+    on_sale: bool | None = Query(default=None, description="When true, only discounted products"),
+    size: list[str] = Query(default=[], description="Filter by variant size (repeatable)"),
+    color: list[str] = Query(default=[], description="Filter by variant color/camouflage"),
+    price_min: int | None = Query(default=None, ge=0, description="Minimum price in cents"),
+    price_max: int | None = Query(default=None, ge=0, description="Maximum price in cents"),
     repo: IProductRepository = Depends(get_product_repository),
 ) -> ProductFacetsResponse:
+    filters = _build_filters(
+        category=category,
+        in_stock=in_stock,
+        on_sale=on_sale,
+        size=size,
+        color=color,
+        price_min=price_min,
+        price_max=price_max,
+        sort="default",
+    )
     use_case = GetProductFacetsUseCase(repo)
-    facets = await use_case.execute(category_slug=category, search_query=q)
+    facets = await use_case.execute(
+        category_slug=category,
+        search_query=q,
+        filters=filters,
+    )
     return ProductFacetsResponse(
         sizes=list(facets.sizes),
         colors=list(facets.colors),
         price_min_cents=facets.price_min_cents,
         price_max_cents=facets.price_max_cents,
+        size_counts=dict(facets.size_counts),
+        color_counts=dict(facets.color_counts),
     )
 
 

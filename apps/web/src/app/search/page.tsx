@@ -8,6 +8,7 @@ import { getAccessToken, getCurrentUser } from "@/lib/auth/session";
 import {
   apiFacetsToCatalogFacets,
   catalogQueryToApiParams,
+  catalogQueryToFacetParams,
   parseCatalogSearchParams,
   readQueryParam,
 } from "@/lib/store/catalog-query";
@@ -36,9 +37,21 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   if (query) {
     try {
-      const apiFilters = catalogQueryToApiParams(catalogQuery, { page: 1, limit: 48 });
-      results = await searchProducts(query, 1, 48, token, apiFilters);
-      facets = await getProductFacets({ searchQuery: query }, token);
+      const apiFilters = catalogQueryToApiParams(catalogQuery, { limit: 48 });
+      results = await searchProducts(
+        query,
+        catalogQuery.page,
+        48,
+        token,
+        apiFilters,
+      );
+      facets = await getProductFacets(
+        {
+          searchQuery: query,
+          filters: catalogQueryToFacetParams(catalogQuery),
+        },
+        token,
+      );
     } catch {
       error = "Не удалось выполнить поиск. Убедитесь, что API запущен и доступен.";
     }
@@ -51,6 +64,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         sizes: [],
         colors: [],
         priceRange: { min: 0, max: 0 },
+        sizeCounts: {},
+        colorCounts: {},
       };
 
   return (

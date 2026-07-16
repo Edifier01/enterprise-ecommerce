@@ -6,13 +6,13 @@
 
 ## Current Module
 
-`apps/web` — tactical storefront + catalog/search filters.
+`apps/web` + `apps/api` — admin panel Wave C complete.
 
 ---
 
 ## Current Feature
 
-**Search page filters + own-brand cleanup** ✅ **COMPLETE**
+**Admin Panel Optimization Wave C** ✅ **COMPLETE**
 
 ---
 
@@ -38,13 +38,13 @@ None.
 
 | Area | Status |
 |------|--------|
-| Phase 1 — palette, trust bar, visuals | ✅ |
-| Phase 2 — mega-menu, filters, PDP, toast | ✅ |
-| Brand filter removed (own brand only) | ✅ |
-| Search page filters | ✅ |
-| Real photography | ⏳ Backlog |
-| Prod SMTP delivery | ⏳ Next step |
-| Final YooKassa integration | ⏳ Next gate |
+| Admin Wave A–B | ✅ |
+| Admin search (`?q=`) | ✅ |
+| Variant CRUD UI | ✅ |
+| Category parent selector | ✅ |
+| Local media upload (`POST /admin/media/upload`) | ✅ |
+| Prod S3/CDN (production) | ⏳ Backlog |
+| Prod SMTP / YooKassa | ⏳ Next gate |
 
 ---
 
@@ -52,13 +52,14 @@ None.
 
 | Resource | Path |
 |----------|------|
-| Filtered list (category + search) | `apps/web/src/components/store/catalog/filtered-product-list.tsx` |
-| Catalog query helpers | `apps/web/src/lib/store/catalog-query.ts` |
-| Search page | `apps/web/src/app/search/page.tsx` |
-| Filter API tests | `apps/api/tests/test_product_filters.py` |
+| Admin search | `GET /api/v1/admin/catalog/products?q=` |
+| Media upload | `POST /api/v1/admin/media/upload` → `/media/{file}` |
+| Variant panel | `apps/web/src/components/admin/catalog/admin-variant-panel.tsx` |
+| Category hierarchy UI | `apps/web/src/lib/admin/category-options.ts` |
+| Admin tests | `tests/test_admin_catalog.py` (15 tests) |
 
 ---
 
 ## Last Updated
 
-2026-07-15 (search filters, brand filter removed)
+2026-07-16 (admin Wave C)

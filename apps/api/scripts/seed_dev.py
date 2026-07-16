@@ -31,13 +31,25 @@ _DEFAULT_IN_STOCK_QUANTITY = 50
 _WHOLESALER_EMAIL = "wholesaler@example.com"
 _WHOLESALER_PASSWORD = "wholesale12345"
 
-# --- categories ------------------------------------------------------------
-_CATEGORIES = [
+# --- categories (root + children) -----------------------------------------
+_ROOT_CATEGORIES = [
     {"slug": "snaryazhenie", "name": "Снаряжение", "description": "Разгрузки, рюкзаки, подсумки", "sort_order": 0},
     {"slug": "odezhda", "name": "Тактическая одежда", "description": "Куртки, термобельё, мембрана", "sort_order": 1},
     {"slug": "obuv", "name": "Обувь", "description": "Ботинки, берцы, тактические кроссовки", "sort_order": 2},
     {"slug": "aksessuary", "name": "Аксессуары", "description": "Фонари, IFAK, ножи, оптика", "sort_order": 3},
 ]
+
+_CHILD_CATEGORIES = [
+    {"slug": "razgruzki", "name": "Разгрузки", "parent_slug": "snaryazhenie", "sort_order": 0},
+    {"slug": "ryukzaki", "name": "Рюкзаки", "parent_slug": "snaryazhenie", "sort_order": 1},
+    {"slug": "podsumki", "name": "Подсумки", "parent_slug": "snaryazhenie", "sort_order": 2},
+    {"slug": "kurtki", "name": "Куртки", "parent_slug": "odezhda", "sort_order": 0},
+    {"slug": "termo", "name": "Термобельё", "parent_slug": "odezhda", "sort_order": 1},
+    {"slug": "botinki", "name": "Ботинки", "parent_slug": "obuv", "sort_order": 0},
+    {"slug": "fonari", "name": "Фонари", "parent_slug": "aksessuary", "sort_order": 0},
+]
+
+_CURRENCY = "RUB"
 
 # --- products: (data, category_slug, variants) -----------------------------
 _SAMPLE_PRODUCTS = [
@@ -46,7 +58,7 @@ _SAMPLE_PRODUCTS = [
         "slug": "classic-white-t-shirt",
         "price_cents": 2999,
         "compare_at_price_cents": 3999,
-        "currency": "USD",
+        "currency": _CURRENCY,
         "in_stock": True,
         "category": "odezhda",
         "variants": [
@@ -59,7 +71,7 @@ _SAMPLE_PRODUCTS = [
         "name": "Slim Fit Jeans",
         "slug": "slim-fit-jeans",
         "price_cents": 7999,
-        "currency": "USD",
+        "currency": _CURRENCY,
         "in_stock": True,
         "category": "odezhda",
         "variants": [
@@ -72,7 +84,7 @@ _SAMPLE_PRODUCTS = [
         "slug": "running-sneakers",
         "price_cents": 12999,
         "compare_at_price_cents": 15999,
-        "currency": "USD",
+        "currency": _CURRENCY,
         "in_stock": True,
         "category": "odezhda",
         "variants": [
@@ -84,7 +96,7 @@ _SAMPLE_PRODUCTS = [
         "name": "Wool Blazer",
         "slug": "wool-blazer",
         "price_cents": 24999,
-        "currency": "USD",
+        "currency": _CURRENCY,
         "in_stock": False,
         "category": "odezhda",
         "variants": [
@@ -95,7 +107,7 @@ _SAMPLE_PRODUCTS = [
         "name": "Canvas Tote Bag",
         "slug": "canvas-tote-bag",
         "price_cents": 3999,
-        "currency": "USD",
+        "currency": _CURRENCY,
         "in_stock": True,
         "category": "aksessuary",
         "variants": [
@@ -106,7 +118,7 @@ _SAMPLE_PRODUCTS = [
         "name": "Leather Belt",
         "slug": "leather-belt",
         "price_cents": 4999,
-        "currency": "USD",
+        "currency": _CURRENCY,
         "in_stock": True,
         "category": "aksessuary",
         "variants": [
@@ -119,7 +131,7 @@ _SAMPLE_PRODUCTS = [
         "slug": "merino-wool-sweater",
         "price_cents": 15999,
         "compare_at_price_cents": 19999,
-        "currency": "USD",
+        "currency": _CURRENCY,
         "in_stock": True,
         "category": "odezhda",
         "variants": [
@@ -131,7 +143,7 @@ _SAMPLE_PRODUCTS = [
         "slug": "wireless-earbuds",
         "price_cents": 8999,
         "compare_at_price_cents": 10999,
-        "currency": "USD",
+        "currency": _CURRENCY,
         "in_stock": True,
         "category": "aksessuary",
         "variants": [
@@ -197,15 +209,35 @@ async def seed() -> None:
             return
 
         category_ids: dict[str, uuid.UUID] = {}
-        for data in _CATEGORIES:
+        for data in _ROOT_CATEGORIES:
             cat_id = uuid.uuid4()
             category_ids[data["slug"]] = cat_id
             session.add(CategoryModel(id=cat_id, is_active=True, **data))
+
+        for data in _CHILD_CATEGORIES:
+            parent_id = category_ids[data["parent_slug"]]
+            payload = {k: v for k, v in data.items() if k != "parent_slug"}
+            cat_id = uuid.uuid4()
+            category_ids[data["slug"]] = cat_id
+            session.add(
+                CategoryModel(
+                    id=cat_id,
+                    parent_id=parent_id,
+                    is_active=True,
+                    description=None,
+                    **payload,
+                )
+            )
 
         for data in _SAMPLE_PRODUCTS:
             payload = dict(data)
             category_slug = payload.pop("category")
             variants = payload.pop("variants")
+            payload.setdefault("image_url", "/images/product-placeholder.svg")
+            payload.setdefault(
+                "description",
+                f"{payload['name']} — экипировка собственного бренда для полевых условий и активного отдыха.",
+            )
             product_id = uuid.uuid4()
             session.add(
                 ProductModel(
@@ -241,7 +273,7 @@ async def seed() -> None:
 
     await engine.dispose()
     print(
-        f"Seeded {len(_CATEGORIES)} categories and {len(_SAMPLE_PRODUCTS)} products "
+        f"Seeded {len(_ROOT_CATEGORIES) + len(_CHILD_CATEGORIES)} categories and {len(_SAMPLE_PRODUCTS)} products "
         "with variants successfully."
     )
 

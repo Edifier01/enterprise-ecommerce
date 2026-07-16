@@ -1,6 +1,6 @@
 """Get product filter facets for a catalog scope."""
 
-from app.features.catalog.domain.product_list_filters import ProductListFacets
+from app.features.catalog.domain.product_list_filters import ProductListFacets, ProductListFilters
 from app.features.catalog.domain.ports import IProductRepository
 
 
@@ -12,8 +12,10 @@ class GetProductFacetsUseCase:
         self,
         category_slug: str | None = None,
         search_query: str | None = None,
+        filters: ProductListFilters | None = None,
     ) -> ProductListFacets:
         return await self._repository.get_product_facets(
             category_slug=category_slug,
             search_query=search_query,
+            filters=filters,
         )

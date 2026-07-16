@@ -24,6 +24,8 @@ export type Product = {
   currency: string;
   in_stock: boolean;
   category_id: string | null;
+  description: string | null;
+  image_url: string | null;
   variants: ProductVariant[];
 };
 
@@ -42,6 +44,7 @@ export type Category = {
   parent_id: string | null;
   is_active: boolean;
   sort_order: number;
+  product_count: number;
 };
 
 export type CategoryListResponse = {
@@ -116,11 +119,22 @@ export async function listProducts(
 }
 
 export async function getProductFacets(
-  options?: { categorySlug?: string; searchQuery?: string },
+  options?: {
+    categorySlug?: string;
+    searchQuery?: string;
+    filters?: ProductListQueryParams;
+  },
   accessToken?: string,
 ): Promise<ProductFacetsResponse> {
-  const params = new URLSearchParams();
-  if (options?.categorySlug) {
+  const params = options?.filters
+    ? buildProductListSearchParams(1, 1, options.categorySlug, options.filters)
+    : new URLSearchParams();
+
+  params.delete("page");
+  params.delete("limit");
+  params.delete("sort");
+
+  if (!options?.filters && options?.categorySlug) {
     params.set("category", options.categorySlug);
   }
   if (options?.searchQuery) {

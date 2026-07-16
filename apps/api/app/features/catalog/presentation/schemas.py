@@ -30,6 +30,8 @@ class ProductSchema(BaseModel):
     currency: str
     in_stock: bool
     category_id: UUID | None = None
+    description: str | None = None
+    image_url: str | None = None
     variants: list[ProductVariantSchema] = []
 
 
@@ -45,6 +47,8 @@ class ProductFacetsResponse(BaseModel):
     colors: list[str]
     price_min_cents: int
     price_max_cents: int
+    size_counts: dict[str, int] = {}
+    color_counts: dict[str, int] = {}
 
 
 class CategorySchema(BaseModel):
@@ -57,6 +61,7 @@ class CategorySchema(BaseModel):
     parent_id: UUID | None
     is_active: bool
     sort_order: int
+    product_count: int = 0
 
 
 class CategoryListResponse(BaseModel):

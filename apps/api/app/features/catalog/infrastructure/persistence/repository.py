@@ -5,9 +5,14 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.catalog.domain.entities import Product, ProductVariant
+from dataclasses import replace
+
 from app.features.catalog.domain.product_list_filters import ProductListFacets, ProductListFilters
 from app.features.catalog.domain.ports import IProductRepository
-from app.features.catalog.domain.variant_filter import build_facets_from_products
+from app.features.catalog.domain.variant_filter import (
+    build_facets_from_products,
+    build_facets_with_scoped_products,
+)
 from app.features.catalog.infrastructure.persistence.models import (
     CategoryModel,
     ProductModel,
@@ -52,8 +57,37 @@ class ProductRepository(IProductRepository):
         self,
         category_slug: str | None = None,
         search_query: str | None = None,
+        filters: ProductListFilters | None = None,
     ) -> ProductListFacets:
-        filters = ProductListFilters(category_slug=category_slug)
+        base_filters = filters or ProductListFilters()
+        if category_slug is not None and base_filters.category_slug is None:
+            base_filters = replace(base_filters, category_slug=category_slug)
+
+        if not base_filters.sizes and not base_filters.colors:
+            products = await self._load_facet_products(search_query, base_filters)
+            return build_facets_from_products(products)
+
+        size_products = await self._load_facet_products(
+            search_query,
+            replace(base_filters, sizes=()),
+        )
+        color_products = await self._load_facet_products(
+            search_query,
+            replace(base_filters, colors=()),
+        )
+        price_products = await self._load_facet_products(search_query, base_filters)
+
+        return build_facets_with_scoped_products(
+            size_products=size_products,
+            color_products=color_products,
+            price_products=price_products,
+        )
+
+    async def _load_facet_products(
+        self,
+        search_query: str | None,
+        filters: ProductListFilters,
+    ) -> list[Product]:
         count_stmt = select(func.count()).select_from(ProductModel).where(
             ProductModel.status == _ACTIVE_STATUS
         )
@@ -71,8 +105,7 @@ class ProductRepository(IProductRepository):
         count_stmt, stmt = self._apply_filters(count_stmt, stmt, filters)
         stmt = stmt.limit(_FACET_SCAN_LIMIT)
         rows = (await self._session.scalars(stmt)).all()
-        products = [self._to_domain(row, include_variants=True) for row in rows]
-        return build_facets_from_products(products)
+        return [self._to_domain(row, include_variants=True) for row in rows]
 
     async def search_products(
         self,
@@ -276,5 +309,7 @@ class ProductRepository(IProductRepository):
             status=row.status,
             compare_at_price_cents=row.compare_at_price_cents,
             category_id=row.category_id,
+            description=row.description,
+            image_url=row.image_url,
             variants=variants,
         )

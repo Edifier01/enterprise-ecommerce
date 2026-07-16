@@ -46,9 +46,15 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
+- [ ] Run migration 013 on dev DB (`alembic upgrade head`)
 - [ ] Real product/category photography — BACKLOG
 - [ ] SMTP email delivery (production)
 - [ ] Final YooKassa payment integration
+
+## Recently Completed
+
+- [x] **Admin Panel Optimization Wave A–C** (2026-07-16)
+- [x] **Production Catalog Optimization Wave 1–3** (2026-07-16)
 
 ---
 
@@ -60,18 +66,18 @@ None.
 
 ## Next Actions
 
-1. Re-run `seed_dev.py` on dev DB for tactical category names in API.
-2. Phase 2 design: filters, mega-menu, PDP improvements.
-3. YooKassa provider integration (replace/refactor Stripe paths).
+1. Upload real product photos via admin `image_url`
+2. SMTP production delivery
+3. YooKassa provider integration (replace/refactor Stripe paths)
 
 ---
 
 ## Last Updated
 
-2026-07-15 (tactical design roadmap Phase 1)
+2026-07-16 (admin panel optimization Wave A–C)
 
 ---
 
 ## Last Agent
 
-Implementation Agent (tactical storefront design)
+Implementation Agent (admin panel Wave C)

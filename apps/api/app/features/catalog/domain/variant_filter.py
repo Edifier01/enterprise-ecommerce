@@ -1,5 +1,7 @@
 """Variant attribute helpers for catalog filtering and facets."""
 
+from collections import Counter
+
 from app.features.catalog.domain.entities import Product, ProductVariant
 from app.features.catalog.domain.product_list_filters import ProductListFacets
 
@@ -49,24 +51,67 @@ def _extract_sizes(variant: ProductVariant) -> set[str]:
     return sizes
 
 
-def build_facets_from_products(products: list[Product]) -> ProductListFacets:
-    sizes: set[str] = set()
-    colors: set[str] = set()
+def _price_bounds(products: list[Product]) -> tuple[int, int]:
     min_price = 0
     max_price = 0
-
     for product in products:
-        for variant in product.variants:
-            sizes.update(_extract_sizes(variant))
-        colors.update(_extract_colors(product))
         if product.price_cents > max_price:
             max_price = product.price_cents
         if min_price == 0 or product.price_cents < min_price:
             min_price = product.price_cents
+    return min_price, max_price
 
+
+def _count_sizes(products: list[Product]) -> tuple[tuple[str, ...], tuple[tuple[str, int], ...]]:
+    counter: Counter[str] = Counter()
+    for product in products:
+        product_sizes: set[str] = set()
+        for variant in product.variants:
+            product_sizes.update(_extract_sizes(variant))
+        for size in product_sizes:
+            counter[size] += 1
+    ordered = tuple(sorted(counter))
+    return ordered, tuple(sorted(counter.items()))
+
+
+def _count_colors(products: list[Product]) -> tuple[tuple[str, ...], tuple[tuple[str, int], ...]]:
+    counter: Counter[str] = Counter()
+    for product in products:
+        product_colors = _extract_colors(product)
+        for color in product_colors:
+            counter[color] += 1
+    ordered = tuple(sorted(counter))
+    return ordered, tuple(sorted(counter.items()))
+
+
+def build_facets_from_products(products: list[Product]) -> ProductListFacets:
+    sizes, size_counts = _count_sizes(products)
+    colors, color_counts = _count_colors(products)
+    min_price, max_price = _price_bounds(products)
     return ProductListFacets(
-        sizes=tuple(sorted(sizes)),
-        colors=tuple(sorted(colors)),
+        sizes=sizes,
+        colors=colors,
         price_min_cents=min_price,
         price_max_cents=max_price,
+        size_counts=size_counts,
+        color_counts=color_counts,
+    )
+
+
+def build_facets_with_scoped_products(
+    *,
+    size_products: list[Product],
+    color_products: list[Product],
+    price_products: list[Product],
+) -> ProductListFacets:
+    sizes, size_counts = _count_sizes(size_products)
+    colors, color_counts = _count_colors(color_products)
+    min_price, max_price = _price_bounds(price_products)
+    return ProductListFacets(
+        sizes=sizes,
+        colors=colors,
+        price_min_cents=min_price,
+        price_max_cents=max_price,
+        size_counts=size_counts,
+        color_counts=color_counts,
     )

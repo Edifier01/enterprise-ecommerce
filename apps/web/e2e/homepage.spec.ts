@@ -8,10 +8,14 @@ test.describe("Homepage", () => {
 
   test("shows storefront sections in Russian", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Новинки" })).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Категории снаряжения" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /О магазине/ })).toBeVisible();
+
+    const picksHeading = page.getByRole("heading", { name: "Подборки" });
+    if (await picksHeading.isVisible()) {
+      await expect(
+        page.getByRole("tablist", { name: "Разделы каталога" }),
+      ).toBeVisible();
+    }
   });
 
   test("trust bar is visible", async ({ page }) => {
@@ -59,17 +63,23 @@ test.describe("Homepage", () => {
     expect(await categoryNav.getByRole("link").count()).toBeGreaterThanOrEqual(3);
   });
 
+  test("shows promo banners when homepage loads", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByLabel("Промо-баннеры")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Смотреть снаряжение" })).toBeVisible();
+  });
+
   test("shows product grid or graceful empty/error state", async ({ page }) => {
     await page.goto("/");
 
     const errorMsg = page.getByText("Не удалось загрузить товары");
-    const emptyMsg = page.getByText("Новинки появятся");
+    const seoBlock = page.getByRole("heading", { name: /О магазине/ });
     const productGrid = page.locator("ul").first();
 
     const isError = await errorMsg.isVisible();
-    const isEmpty = await emptyMsg.isVisible();
+    const hasSeoBlock = await seoBlock.isVisible();
     const hasProducts = await productGrid.isVisible();
 
-    expect(isError || isEmpty || hasProducts).toBe(true);
+    expect(isError || hasSeoBlock || hasProducts).toBe(true);
   });
 });

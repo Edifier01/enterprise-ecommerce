@@ -47,7 +47,7 @@ export default async function CatalogPage() {
             slug: c.slug,
             name: c.name,
             description: c.description ?? undefined,
-            productCount: 0,
+            productCount: c.product_count,
           }))
       : getRootCategories().map((c) => ({
           slug: c.slug,

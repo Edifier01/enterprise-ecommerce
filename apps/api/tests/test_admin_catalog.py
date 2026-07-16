@@ -223,6 +223,30 @@ async def test_admin_rejects_wholesale_above_retail(admin_catalog_client: AsyncC
 
 
 @pytest.mark.asyncio
+async def test_admin_create_product_with_content_fields(admin_catalog_client: AsyncClient) -> None:
+    token = await _token(admin_catalog_client)
+    response = await admin_catalog_client.post(
+        "/api/v1/admin/catalog/products",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "name": "Content Rich Product",
+            "slug": "content-rich-product",
+            "sku": "CONTENT-001",
+            "price_cents": 9900,
+            "compare_at_price_cents": 12900,
+            "description": "Detailed product description for storefront.",
+            "image_url": "https://cdn.example.com/products/content-rich.jpg",
+            "status": "active",
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["description"] == "Detailed product description for storefront."
+    assert data["image_url"] == "https://cdn.example.com/products/content-rich.jpg"
+    assert data["compare_at_price_cents"] == 12900
+
+
+@pytest.mark.asyncio
 async def test_admin_create_and_list_categories(admin_catalog_client: AsyncClient) -> None:
     token = await _token(admin_catalog_client)
     created = await admin_catalog_client.post(
@@ -242,8 +266,12 @@ async def test_admin_create_and_list_categories(admin_catalog_client: AsyncClien
         headers={"Authorization": f"Bearer {token}"},
     )
     assert listed.status_code == 200
-    ids = {item["id"] for item in listed.json()["items"]}
+    items = listed.json()["items"]
+    ids = {item["id"] for item in items}
     assert category_id in ids
+    listed_category = next(item for item in items if item["id"] == category_id)
+    assert "product_count" in listed_category
+    assert listed_category["product_count"] == 0
 
     updated = await admin_catalog_client.patch(
         f"/api/v1/admin/catalog/categories/{category_id}",
@@ -252,3 +280,92 @@ async def test_admin_create_and_list_categories(admin_catalog_client: AsyncClien
     )
     assert updated.status_code == 200
     assert updated.json()["is_active"] is False
+
+
+@pytest.mark.asyncio
+async def test_admin_search_products_by_name(admin_catalog_client: AsyncClient) -> None:
+    token = await _token(admin_catalog_client)
+    response = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products?q=draft",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["slug"] == "draft-product"
+
+
+@pytest.mark.asyncio
+async def test_admin_search_includes_all_statuses(admin_catalog_client: AsyncClient) -> None:
+    token = await _token(admin_catalog_client)
+    response = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products?q=product&status=draft",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+
+
+@pytest.mark.asyncio
+async def test_admin_create_variant(admin_catalog_client: AsyncClient) -> None:
+    token = await _token(admin_catalog_client)
+    listed = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products?status=active",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    product_id = listed.json()["items"][0]["id"]
+
+    response = await admin_catalog_client.post(
+        f"/api/v1/admin/catalog/products/{product_id}/variants",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "sku": "VARIANT-EXTRA-1",
+            "name": "Large size",
+            "price_cents": 1200,
+            "sort_order": 1,
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["sku"] == "VARIANT-EXTRA-1"
+    assert data["name"] == "Large size"
+
+
+@pytest.mark.asyncio
+async def test_admin_create_category_with_parent(admin_catalog_client: AsyncClient) -> None:
+    token = await _token(admin_catalog_client)
+    parent = await admin_catalog_client.post(
+        "/api/v1/admin/catalog/categories",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"slug": "parent-cat", "name": "Parent Category", "sort_order": 1},
+    )
+    assert parent.status_code == 201
+    parent_id = parent.json()["id"]
+
+    child = await admin_catalog_client.post(
+        "/api/v1/admin/catalog/categories",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "slug": "child-cat",
+            "name": "Child Category",
+            "parent_id": parent_id,
+            "sort_order": 2,
+        },
+    )
+    assert child.status_code == 201
+    assert child.json()["parent_id"] == parent_id
+
+
+@pytest.mark.asyncio
+async def test_admin_upload_media(admin_catalog_client: AsyncClient) -> None:
+    token = await _token(admin_catalog_client)
+    png_header = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+    response = await admin_catalog_client.post(
+        "/api/v1/admin/media/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("test.png", png_header, "image/png")},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "url" in data
+    assert data["url"].endswith(".png")

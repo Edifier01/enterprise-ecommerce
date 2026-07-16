@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getAdminAccessToken } from "@/lib/admin/session";
+import { ADMIN_INVENTORY_PAGE_SIZE } from "@/lib/admin/catalog";
 import type { AdminInventoryItem, AdminInventoryList } from "@/lib/admin/inventory-shared";
 
 import { getApiBase } from "@/lib/api-base";
@@ -31,7 +32,10 @@ export async function listAdminInventory(
   page = 1,
   lowStock = false,
 ): Promise<AdminInventoryList | null> {
-  const params = new URLSearchParams({ page: String(page), limit: "50" });
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(ADMIN_INVENTORY_PAGE_SIZE),
+  });
   if (lowStock) params.set("low_stock", "true");
   return adminFetch<AdminInventoryList>(`/api/v1/admin/inventory?${params}`);
 }

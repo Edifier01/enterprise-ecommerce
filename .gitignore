@@ -32,5 +32,9 @@ build/
 # Logs
 *.log
 
+# Uploaded media (dev/local API storage)
+uploads/
+apps/api/uploads/
+
 # Cursor local MCP secrets (optional local override)
 .cursor/mcp.local.json

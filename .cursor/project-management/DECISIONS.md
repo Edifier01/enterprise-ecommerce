@@ -521,6 +521,23 @@ retail only. Checkout already prices at variant level (ADR-002).
 
 ---
 
+## ADR-009
+
+| Field | Value |
+|-------|-------|
+| **Decision ID** | ADR-009 |
+| **Date** | 2026-07-16 |
+| **Status** | Accepted |
+| **Full ADR** | `docs/adr/ADR-009-product-content-and-homepage-collections.md` |
+
+**Context:** Homepage SectionTabs used client-side mock filtering; products lacked description/image fields; categories had no product counts.
+
+**Decision:** Add `products.description` + `products.image_url`; homepage collections reuse list API filters; categories expose `product_count`.
+
+**Related Rules:** `ecommerce/01-catalog`, ADR-002
+
+---
+
 ## Decision Log Template
 
 Use when recording new decisions:

@@ -13,22 +13,9 @@ export type PromoBannerItem = {
   accentClass?: string;
 };
 
-const DEFAULT_PROMO_BANNERS: PromoBannerItem[] = [
-  {
-    title: "Разгрузочные системы",
-    description: "Plate carriers, подсумки и комплекты для полевых задач",
-    href: "/catalog",
-    ctaLabel: "Смотреть снаряжение",
-    accentClass: "from-primary/95 to-primary store-hero-pattern",
-  },
-  {
-    title: "Подготовка к сезону",
-    description: "Термобельё, мембрана и тактическая обувь — выгодные цены",
-    href: "/catalog",
-    ctaLabel: "В каталог",
-    accentClass: "from-stone-700/95 to-stone-800 store-hero-pattern",
-  },
-];
+const DEFAULT_PROMO_BANNERS: PromoBannerItem[] = siteConfig.homepagePromos.map(
+  (item) => ({ ...item }),
+);
 
 export interface PromoBannerProps {
   items?: PromoBannerItem[];

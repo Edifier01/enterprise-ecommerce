@@ -48,6 +48,8 @@ class ProductModel(Base):
         nullable=True,
         index=True,
     )
+    description: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    image_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

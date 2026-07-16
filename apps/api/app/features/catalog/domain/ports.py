@@ -26,6 +26,7 @@ class IProductRepository(ABC):
         self,
         category_slug: str | None = None,
         search_query: str | None = None,
+        filters: ProductListFilters | None = None,
     ) -> ProductListFacets:
         """Return available filter facets for the given catalog scope."""
         ...

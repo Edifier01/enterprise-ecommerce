@@ -31,6 +31,8 @@ class Product:
     status: str = "active"
     compare_at_price_cents: int | None = None
     category_id: UUID | None = None
+    description: str | None = None
+    image_url: str | None = None
     variants: tuple[ProductVariant, ...] = ()
 
     def __post_init__(self) -> None:
@@ -51,3 +53,4 @@ class Category:
     parent_id: UUID | None
     is_active: bool
     sort_order: int
+    product_count: int = 0

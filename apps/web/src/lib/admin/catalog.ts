@@ -14,6 +14,8 @@ export type AdminProduct = {
   in_stock: boolean;
   status: string;
   category_id: string | null;
+  description: string | null;
+  image_url: string | null;
   variants: Array<{
     id: string;
     sku: string;
@@ -42,6 +44,7 @@ export type AdminCategory = {
   parent_id: string | null;
   is_active: boolean;
   sort_order: number;
+  product_count: number;
 };
 
 async function adminFetch<T>(path: string, init?: RequestInit): Promise<T | null> {
@@ -61,12 +64,22 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T | null
   return res.json() as Promise<T>;
 }
 
+export const ADMIN_CATALOG_PAGE_SIZE = 20;
+export const ADMIN_ORDERS_PAGE_SIZE = 50;
+export const ADMIN_INVENTORY_PAGE_SIZE = 50;
+export const ADMIN_CUSTOMERS_PAGE_SIZE = 20;
+
 export async function listAdminProducts(
   page = 1,
   status?: string,
+  q?: string,
 ): Promise<AdminProductList | null> {
-  const params = new URLSearchParams({ page: String(page), limit: "20" });
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(ADMIN_CATALOG_PAGE_SIZE),
+  });
   if (status) params.set("status", status);
+  if (q?.trim()) params.set("q", q.trim());
   return adminFetch<AdminProductList>(`/api/v1/admin/catalog/products?${params}`);
 }
 

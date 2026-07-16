@@ -30,3 +30,5 @@ class ProductListFacets:
     colors: tuple[str, ...]
     price_min_cents: int
     price_max_cents: int
+    size_counts: tuple[tuple[str, int], ...] = ()
+    color_counts: tuple[tuple[str, int], ...] = ()

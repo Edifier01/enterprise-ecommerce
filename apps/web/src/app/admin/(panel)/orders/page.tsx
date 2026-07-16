@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
 import { AdminOrdersTable } from "@/components/admin/orders/admin-orders-table";
+import { ADMIN_ORDERS_PAGE_SIZE } from "@/lib/admin/catalog";
 import {
   getAdminOrderStatusLabel,
   listAdminOrders,
@@ -22,19 +24,25 @@ const STATUS_FILTERS = [
 ] as const;
 
 type PageProps = {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ page?: string; status?: string }>;
 };
+
+function parsePage(raw: string | undefined): number {
+  const page = raw ? Number.parseInt(raw, 10) : 1;
+  return Number.isFinite(page) && page >= 1 ? page : 1;
+}
 
 export default async function AdminOrdersPage({ searchParams }: PageProps) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
 
-  const { status } = await searchParams;
+  const { page: pageRaw, status } = await searchParams;
+  const page = parsePage(pageRaw);
   const activeStatus =
     status === "confirmed" || status === "shipped" || status === "canceled"
       ? status
       : undefined;
-  const orders = await listAdminOrders(1, activeStatus);
+  const orders = await listAdminOrders(page, activeStatus);
 
   if (!orders) {
     return (
@@ -42,6 +50,16 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
         Не удалось загрузить заказы. Проверьте права доступа.
       </p>
     );
+  }
+
+  const totalPages = getAdminTotalPages(orders.total, ADMIN_ORDERS_PAGE_SIZE);
+
+  function buildHref(nextPage: number) {
+    const params = new URLSearchParams();
+    if (nextPage > 1) params.set("page", String(nextPage));
+    if (activeStatus) params.set("status", activeStatus);
+    const query = params.toString();
+    return query ? `/admin/orders?${query}` : "/admin/orders";
   }
 
   return (
@@ -55,10 +73,9 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
           {STATUS_FILTERS.map((filter) => {
-            const href =
-              filter.value === ""
-                ? "/admin/orders"
-                : `/admin/orders?status=${filter.value}`;
+            const params = new URLSearchParams();
+            if (filter.value) params.set("status", filter.value);
+            const href = params.size > 0 ? `/admin/orders?${params}` : "/admin/orders";
             const isActive = (activeStatus ?? "") === filter.value;
             return (
               <Link
@@ -81,6 +98,8 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
         orders={orders.items}
         getStatusLabel={getAdminOrderStatusLabel}
       />
+
+      <AdminPagination page={page} totalPages={totalPages} buildHref={buildHref} />
     </div>
   );
 }

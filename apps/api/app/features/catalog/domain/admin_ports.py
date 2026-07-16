@@ -40,6 +40,8 @@ class CreateProductData:
     compare_at_price_cents: int | None = None
     category_id: UUID | None = None
     wholesale_price_cents: int | None = None
+    description: str | None = None
+    image_url: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +54,8 @@ class UpdateProductData:
     compare_at_price_cents: int | None = None
     category_id: UUID | None = None
     clear_category: bool = False
+    description: str | None = None
+    image_url: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,6 +109,7 @@ class IAdminCatalogRepository(ABC):
         page: int,
         limit: int,
         status: str | None = None,
+        q: str | None = None,
     ) -> tuple[list[Product], int]:
         ...
 
