@@ -96,7 +96,7 @@ export async function listAdminCategories(): Promise<AdminCategory[] | null> {
   return data?.items ?? null;
 }
 
-export function formatPrice(cents: number, currency = siteConfig.defaultCurrency) {
+export function formatPrice(cents: number, currency: string = siteConfig.defaultCurrency) {
   const normalized = currency.toUpperCase();
   return new Intl.NumberFormat(siteConfig.locale, {
     style: "currency",
