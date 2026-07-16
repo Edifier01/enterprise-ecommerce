@@ -101,8 +101,14 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-_media_dir = Path(settings.media_upload_dir)
-_media_dir.mkdir(parents=True, exist_ok=True)
+_media_dir = Path(settings.media_upload_dir).resolve()
+try:
+    _media_dir.mkdir(parents=True, exist_ok=True)
+except PermissionError as exc:
+    raise RuntimeError(
+        f"Cannot create media upload directory {_media_dir}. "
+        "Ensure the path is writable by the API process."
+    ) from exc
 app.mount("/media", StaticFiles(directory=str(_media_dir)), name="media")
 
 

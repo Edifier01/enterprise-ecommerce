@@ -12,7 +12,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 COPY apps/api/ .
 
 COPY docker/api-entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+    && mkdir -p /app/uploads \
+    && chown -R app:app /app/uploads
 
 USER app
 
