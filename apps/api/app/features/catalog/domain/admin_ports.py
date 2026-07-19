@@ -33,6 +33,10 @@ class InvalidCategoryParentError(Exception):
     """Raised when parent is invalid (non-root parent or root with children)."""
 
 
+class SyncProtectedFieldError(Exception):
+    """Raised when admin attempts to edit MoySklad-owned fields."""
+
+
 @dataclass(frozen=True, slots=True)
 class CreateProductData:
     name: str
@@ -60,6 +64,8 @@ class UpdateProductData:
     clear_category: bool = False
     description: str | None = None
     image_url: str | None = None
+    meta_title: str | None = None
+    meta_description: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,6 +122,7 @@ class IAdminCatalogRepository(ABC):
         q: str | None = None,
         category_id: UUID | None = None,
         uncategorized: bool = False,
+        needs_styling: bool = False,
     ) -> tuple[list[Product], int]:
         ...
 

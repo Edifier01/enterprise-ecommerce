@@ -6,48 +6,46 @@ Implementation Agent
 
 ## Completed Work
 
-**Mobile storefront Wave 3 (2026-07-19):**
+**MoySklad Phase 6 — Operations & Returns (2026-07-19):**
 
-- **Service worker:** `public/sw.js` — precache shell, cache-first static, network-first navigation, offline fallback `/offline`
-- **PWA register:** `PwaRegister` in root layout (production by default; `NEXT_PUBLIC_PWA_ENABLED` override)
-- **Images:** `lib/store/product-image.ts` — CDN base URL, blur placeholders on product cards/PDP/admin catalog
-- **Admin mobile cards:** orders, customers, inventory, catalog (`admin-mobile-card.tsx` primitives)
-- **next.config:** `images.remotePatterns` for CDN/API; SW cache headers
-- **Tests:** mobile admin customers card layout (+1 E2E)
-- **tsc:** 0 errors
-
-**Wave 1–2:** see prior HANDOFF / git history
+- **Returns sync** — `SyncMoySkladOrderReturnUseCase`: MS `customerorder` DELETE/cancelled state → local order `canceled` via `UpdateAdminOrderStatusUseCase` (`changed_by=moysklad`)
+- **Webhook** — `customerorder` in supported types; router passes `inventory_service` for stock restore on cancel
+- **Full resync** — `POST /admin/integrations/moysklad/sync/resync` (catalog + stock + pending order exports)
+- **OpenAPI** — all MoySklad integration paths + schemas in `openapi.yaml`
+- **E2E** — `seed_moysklad_e2e.py` + `admin-moysklad-smoke.spec.ts` (read-only price/SKU on MS-synced product)
+- **Ops** — `register_moysklad_webhooks.py` now includes `customerorder`
+- **Admin UI** — «Полная синхронизация» button on integration page
 
 ## Files Changed
 
 | Area | Key paths |
 |------|-----------|
-| PWA | `public/sw.js`, `components/pwa/pwa-register.tsx`, `app/offline/page.tsx`, `layout.tsx` |
-| Images | `lib/store/product-image.ts`, `product-card.tsx`, `product-detail.tsx`, `product-grid.ts` |
-| Admin mobile | `admin-mobile-card.tsx`, orders/customers/inventory tables, `catalog/page.tsx` |
-| Config | `next.config.ts`, `.env.example` |
-| Tests | `e2e/mobile-admin.spec.ts` |
+| Returns | `application/sync_order_return.py`, `webhook_handler.py`, `webhook_router.py` |
+| Resync | `application/full_resync.py`, `admin_router.py` |
+| OpenAPI | `openapi.yaml` |
+| E2E | `scripts/seed_moysklad_e2e.py`, `e2e/admin-moysklad-smoke.spec.ts`, `start-e2e-api.mjs` |
+| Frontend | `admin-moysklad.ts`, `moysklad-integration-panel.tsx` |
+| Tests | `test_moysklad_order_return.py`, `test_moysklad_webhook.py` |
 
 ## Known Issues
 
-- SW disabled in dev unless `NEXT_PUBLIC_PWA_ENABLED=true` (avoids stale cache during development)
-- CDN env vars must be set at **build time** for `remotePatterns`
-- E2E not run locally — needs postgres on :5433
+- Docker/Postgres often not running locally — migration 014 + live import/export not validated on dev DB
+- E2E MoySklad smoke requires `seed_moysklad_e2e` in webServer bootstrap (added)
+- Full resync calls live MS API when credentials configured; otherwise 503
 
 ## Next Recommended Action
 
-1. Set `NEXT_PUBLIC_CDN_URL` in production when S3/CDN is ready
-2. Run full E2E on CI
-3. Lighthouse mobile audit post-deploy
-4. SMTP / YooKassa (release gates)
+1. Run Docker + migration 014 + catalog import with live MS credentials
+2. Register webhooks including `customerorder`: `python -m scripts.register_moysklad_webhooks --url <public-url>`
+3. Test live order export + return cancel flow in MS
+4. Proceed to YooKassa payment integration (release gate)
 
-## How to Run
+## Returns Flow
 
-```bash
-# Enable SW in dev
-NEXT_PUBLIC_PWA_ENABLED=true npm run dev
-
-# E2E
-docker compose up -d postgres
-cd apps/web && npm run test:e2e
+```
+MS customerorder UPDATE/DELETE webhook
+  → run_order_return_sync
+  → fetch MS state (GET customerorder)
+  → if cancelled/deleted → UpdateAdminOrderStatusUseCase(CANCELED)
+  → inventory restore via InventoryService
 ```

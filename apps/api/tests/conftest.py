@@ -3,6 +3,7 @@
 import os
 
 os.environ.setdefault("INVENTORY_RESERVATION_SWEEP_ENABLED", "false")
+os.environ.setdefault("MOYSKLAD_SYNC_CRON_ENABLED", "false")
 
 from collections.abc import AsyncGenerator
 

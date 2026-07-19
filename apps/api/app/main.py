@@ -30,9 +30,16 @@ from app.features.catalog.presentation.router import router as catalog_router
 from app.features.checkout.presentation.dev_router import router as checkout_dev_router
 from app.features.checkout.presentation.orders_router import router as orders_router
 from app.features.checkout.presentation.router import router as checkout_router
+from app.features.integrations.moysklad.presentation.webhook_router import (
+    router as moysklad_webhook_router,
+)
 from app.features.inventory.infrastructure.background.reservation_sweep_scheduler import (
     start_reservation_sweep,
     stop_reservation_sweep,
+)
+from app.features.integrations.moysklad.infrastructure.background.sync_scheduler import (
+    start_moysklad_sync_cron,
+    stop_moysklad_sync_cron,
 )
 
 _LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] [request_id=%(request_id)s] %(message)s"
@@ -65,9 +72,11 @@ _configure_logging()
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     stop_event = asyncio.Event()
     sweep_task = start_reservation_sweep(stop_event)
+    moysklad_sync_task = start_moysklad_sync_cron(stop_event)
     try:
         yield
     finally:
+        await stop_moysklad_sync_cron(moysklad_sync_task, stop_event)
         await stop_reservation_sweep(sweep_task, stop_event)
         await engine.dispose()
 
@@ -130,3 +139,4 @@ app.include_router(admin_router, prefix="/api/v1")
 app.include_router(checkout_router, prefix="/api/v1")
 app.include_router(orders_router, prefix="/api/v1")
 app.include_router(checkout_dev_router, prefix="/api/v1")
+app.include_router(moysklad_webhook_router, prefix="/api/v1")

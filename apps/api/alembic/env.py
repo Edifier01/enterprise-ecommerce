@@ -17,6 +17,9 @@ from app.features.auth.infrastructure.persistence import models as auth_models  
 from app.features.catalog.infrastructure.persistence import models as catalog_models  # noqa: F401
 from app.features.checkout.infrastructure.persistence import models as checkout_models  # noqa: F401
 from app.features.inventory.infrastructure.persistence import models as inventory_models  # noqa: F401
+from app.features.integrations.moysklad.infrastructure.persistence import (  # noqa: F401
+    models as integration_models,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

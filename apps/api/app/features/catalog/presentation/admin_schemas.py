@@ -12,6 +12,15 @@ _SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _SKU_RE = re.compile(r"^[A-Za-z0-9-]{3,64}$")
 
 
+class ProductImageSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    url: str
+    alt_text: str | None = None
+    sort_order: int = 0
+
+
 class AdminProductSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -26,6 +35,14 @@ class AdminProductSchema(BaseModel):
     category_id: UUID | None = None
     description: str | None = None
     image_url: str | None = None
+    sync_source: str = "manual"
+    erp_name: str | None = None
+    moysklad_product_id: str | None = None
+    last_synced_at: str | None = None
+    meta_title: str | None = None
+    meta_description: str | None = None
+    erp_image_url: str | None = None
+    images: list[ProductImageSchema] = []
     variants: list[ProductVariantSchema] = []
 
 
@@ -84,6 +101,8 @@ class AdminUpdateProductRequest(BaseModel):
     clear_category: bool = False
     description: str | None = Field(default=None, max_length=10000)
     image_url: str | None = Field(default=None, max_length=2048)
+    meta_title: str | None = Field(default=None, max_length=255)
+    meta_description: str | None = Field(default=None, max_length=5000)
 
     @field_validator("slug")
     @classmethod
@@ -101,6 +120,18 @@ class AdminUpdateProductRequest(BaseModel):
         if value is not None and value not in PRODUCT_STATUSES:
             raise ValueError("invalid product status")
         return value
+
+
+class AdminCreateProductImageRequest(BaseModel):
+    url: str = Field(min_length=1, max_length=2048)
+    alt_text: str | None = Field(default=None, max_length=255)
+    sort_order: int = Field(default=0, ge=0)
+
+
+class AdminUpdateProductImageRequest(BaseModel):
+    url: str | None = Field(default=None, min_length=1, max_length=2048)
+    alt_text: str | None = Field(default=None, max_length=255)
+    sort_order: int | None = Field(default=None, ge=0)
 
 
 class AdminCreateVariantRequest(BaseModel):

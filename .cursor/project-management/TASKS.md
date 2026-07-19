@@ -755,6 +755,75 @@ admin-assigned. Existing orders are never repriced.
 
 ---
 
+### Epic: MoySklad ERP Integration (ADR-010)
+
+**Status:** IN_PROGRESS
+
+**ADR:** `docs/adr/ADR-010-moysklad-erp-integration.md`
+
+**Warehouse:** single store via `MOYSKLAD_STORE_ID`
+
+#### Phase 1 — Foundation — IN_PROGRESS
+
+- [x] ADR-010 accepted and indexed in `DECISIONS.md`
+- [x] Migration 014 — sync fields, product_images, category mappings, sync logs, orders.moysklad_order_id
+- [x] `integrations/moysklad` module — ACL client, sync guard, admin status API
+- [x] Admin API guards — block MS-owned field edits (catalog + inventory)
+- [x] Config env vars in `.env.example`
+- [x] Pytest: sync guard + status endpoint (7 tests)
+- [ ] Run migration 014 on dev DB
+
+#### Phase 2 — Catalog Import — IN_PROGRESS
+
+- [x] Full product/variant import use case (paginated, rate-limit aware)
+- [x] Price mapping (`Цена продажи` retail, `Розница` wholesale when valid)
+- [x] New MS products → `draft` status
+- [x] Upsert by `moysklad_*_id`; preserve display fields
+- [x] CLI/script: `python -m scripts.import_moysklad_catalog`
+- [x] Admin `POST /sync/trigger` runs full import
+- [x] Stock from single warehouse via `stockByStore` report
+- [ ] Run migration + import on dev DB (requires Docker/PostgreSQL)
+
+#### Phase 3 — Stock Sync + Webhooks — COMPLETED
+
+- [x] `SyncMoySkladStockUseCase` — pull stock from configured warehouse
+- [x] Webhook endpoint `POST /api/v1/integrations/moysklad/webhook` (inbound only)
+- [x] Entity sync on webhook (product/variant CREATE/UPDATE/DELETE)
+- [x] Cron fallback (`MOYSKLAD_SYNC_CRON_ENABLED`) in app lifespan
+- [x] Webhook dedup + `webhooks_enabled` flag (site-side only)
+- [x] Admin: `POST /sync/pull`, `POST /sync/stock` — inbound only, read-only MS client
+- [x] Ops CLI `register_moysklad_webhooks.py` (not in admin — registers in MS)
+- [x] HTTP client restricted to GET (never writes to MoySklad)
+
+#### Phase 4 — Display Layer (8.3–8.7) — COMPLETED
+
+- [x] Product gallery API + admin UI (`product_images`)
+- [x] SEO fields in admin forms + PDP `<head>` (8.5)
+- [x] Category ↔ MS folder mapping UI (8.3)
+- [x] MS photo as placeholder on first import only (8.4) — `erp_image_url` in gallery UI
+- [x] Barcode/weight/dimensions read-only display (8.6)
+- [x] Admin `/admin/integrations/moysklad` monitoring page (8.7)
+- [x] Filter «Требует оформления» (draft without photos)
+- [x] Badge «Из МойСклад» + deep link on product edit
+
+#### Phase 5 — Order Export (8.1) — COMPLETED
+
+- [x] `CreateCustomerOrder` in MoySklad on payment success
+- [x] Counterparty create/link by customer email
+- [x] Idempotent export (`orders.moysklad_order_id`)
+- [x] Retry via cron + manual `POST /orders/{order_number}/export`
+- [x] Outbound client separate from read-only catalog client
+- [x] Admin: export status on order detail + pending count on integration page
+
+#### Phase 6 — Operations & Returns (8.12 backlog) — COMPLETED
+
+- [x] Returns sync hook (MS → site order status)
+- [x] Full resync admin action
+- [x] OpenAPI sync for integration endpoints
+- [x] Playwright: admin MS-synced product read-only fields smoke
+
+---
+
 ## Technical Tasks
 
 **Status:** IN_PROGRESS

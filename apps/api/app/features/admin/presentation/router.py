@@ -9,6 +9,9 @@ from app.features.auth.presentation.admin_customers_router import router as cust
 from app.features.catalog.presentation.admin_router import router as catalog_admin_router
 from app.features.checkout.presentation.admin_router import router as orders_admin_router
 from app.features.inventory.presentation.admin_router import router as inventory_admin_router
+from app.features.integrations.moysklad.presentation.admin_router import (
+    router as moysklad_admin_router,
+)
 
 router = APIRouter()
 router.include_router(auth_router)
@@ -18,3 +21,4 @@ router.include_router(customers_admin_router)
 router.include_router(catalog_admin_router)
 router.include_router(inventory_admin_router)
 router.include_router(orders_admin_router)
+router.include_router(moysklad_admin_router)

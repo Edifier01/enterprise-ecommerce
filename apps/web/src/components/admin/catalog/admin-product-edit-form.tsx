@@ -10,11 +10,16 @@ import {
 } from "@/app/actions/admin-catalog";
 import { AdminCategorySelect } from "@/components/admin/catalog/admin-category-select";
 import { AdminImageField } from "@/components/admin/catalog/admin-image-field";
+import { AdminProductGallery } from "@/components/admin/catalog/admin-product-gallery";
+import { AdminSeoFields } from "@/components/admin/catalog/admin-seo-fields";
 import { AdminVariantPanel } from "@/components/admin/catalog/admin-variant-panel";
+import { MoySkladProductBanner } from "@/components/admin/moysklad/moysklad-product-banner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminCategory, AdminProduct } from "@/lib/admin/catalog";
+import { formatPrice } from "@/lib/admin/catalog";
 import { centsToRubles } from "@/lib/admin/money";
+import { isMoySkladSynced } from "@/lib/admin/moysklad";
 import { siteConfig } from "@/lib/store/site-config";
 
 const inputClass =
@@ -22,6 +27,9 @@ const inputClass =
 
 const textareaClass =
   "min-h-24 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+
+const readOnlyClass =
+  "h-9 w-full rounded-lg border border-input bg-muted px-3 text-sm text-muted-foreground";
 
 function FieldError({
   fieldErrors,
@@ -51,16 +59,21 @@ export function AdminProductEditForm({ product, categories }: AdminProductEditFo
     {},
   );
 
-  const imageSrc = product.image_url ?? siteConfig.images.productPlaceholder;
+  const msSynced = isMoySkladSynced(product.sync_source);
+  const imageSrc = product.image_url ?? product.erp_image_url ?? siteConfig.images.productPlaceholder;
 
   return (
     <div className="space-y-6">
+      <MoySkladProductBanner product={product} />
+
       <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle>Редактирование товара</CardTitle>
         </CardHeader>
         <CardContent>
           <form action={formAction} className="flex flex-col gap-4">
+            <input type="hidden" name="sync_source" value={product.sync_source} />
+
             <div className="relative aspect-square w-full max-w-xs overflow-hidden rounded-lg border bg-muted">
               <Image
                 src={imageSrc}
@@ -74,7 +87,7 @@ export function AdminProductEditForm({ product, categories }: AdminProductEditFo
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2 sm:col-span-2">
                 <label htmlFor="name" className="text-sm font-medium">
-                  Название
+                  Название (витрина)
                 </label>
                 <input
                   id="name"
@@ -100,18 +113,24 @@ export function AdminProductEditForm({ product, categories }: AdminProductEditFo
               </div>
               <div className="flex flex-col gap-2">
                 <label htmlFor="price_rub" className="text-sm font-medium">
-                  Цена, ₽
+                  Цена, ₽ {msSynced ? "(из МойСклад)" : ""}
                 </label>
-                <input
-                  id="price_rub"
-                  name="price_rub"
-                  type="number"
-                  min={0}
-                  step={1}
-                  defaultValue={centsToRubles(product.price_cents)}
-                  required
-                  className={inputClass}
-                />
+                {msSynced ? (
+                  <div className={readOnlyClass}>
+                    {formatPrice(product.price_cents, product.currency)}
+                  </div>
+                ) : (
+                  <input
+                    id="price_rub"
+                    name="price_rub"
+                    type="number"
+                    min={0}
+                    step={1}
+                    defaultValue={centsToRubles(product.price_cents)}
+                    required
+                    className={inputClass}
+                  />
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 <label htmlFor="compare_at_price_rub" className="text-sm font-medium">
@@ -157,9 +176,7 @@ export function AdminProductEditForm({ product, categories }: AdminProductEditFo
                 />
               </div>
               <div className="sm:col-span-2">
-                <AdminImageField
-                  defaultValue={product.image_url ?? ""}
-                />
+                <AdminImageField defaultValue={product.image_url ?? ""} />
               </div>
               <div className="flex flex-col gap-2 sm:col-span-2">
                 <label htmlFor="description" className="text-sm font-medium">
@@ -173,6 +190,11 @@ export function AdminProductEditForm({ product, categories }: AdminProductEditFo
                 />
               </div>
             </div>
+
+            <AdminSeoFields
+              metaTitle={product.meta_title}
+              metaDescription={product.meta_description}
+            />
 
             {state.error && (
               <p className="text-sm text-destructive" role="alert">
@@ -194,6 +216,12 @@ export function AdminProductEditForm({ product, categories }: AdminProductEditFo
           </form>
         </CardContent>
       </Card>
+
+      <AdminProductGallery
+        productId={product.id}
+        images={product.images ?? []}
+        erpImageUrl={product.erp_image_url}
+      />
 
       <AdminVariantPanel product={product} />
     </div>

@@ -181,6 +181,7 @@ class Order:
     payment_record_id: UUID
     created_at: datetime
     updated_at: datetime
+    moysklad_order_id: str | None = None
 
 
 @dataclass(frozen=True)

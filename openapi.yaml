@@ -1209,6 +1209,240 @@ paths:
         "404":
           description: Customer not found
 
+  /api/v1/integrations/moysklad/webhook:
+    post:
+      summary: MoySklad inbound webhook
+      operationId: moySkladWebhook
+      tags: [integrations]
+      parameters:
+        - name: secret
+          in: query
+          schema:
+            type: string
+          description: Optional webhook secret (also accepted via X-MoySklad-Webhook-Secret header)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Webhook acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoySkladWebhookAckResponse"
+        "400":
+          description: Invalid payload
+        "401":
+          description: Invalid webhook secret
+
+  /api/v1/admin/integrations/moysklad/status:
+    get:
+      summary: MoySklad integration status
+      operationId: adminMoySkladStatus
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Integration status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoySkladIntegrationStatusResponse"
+        "401":
+          description: Unauthorized
+
+  /api/v1/admin/integrations/moysklad/sync/pull:
+    post:
+      summary: Pull catalog and stock from MoySklad
+      operationId: adminMoySkladPullCatalog
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoySkladPullResponse"
+        "503":
+          description: MoySklad not configured
+
+  /api/v1/admin/integrations/moysklad/sync/stock:
+    post:
+      summary: Pull stock from MoySklad
+      operationId: adminMoySkladPullStock
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Stock pull result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoySkladStockPullResponse"
+        "503":
+          description: MoySklad not configured
+
+  /api/v1/admin/integrations/moysklad/sync/resync:
+    post:
+      summary: Full resync (catalog, stock, pending order exports)
+      operationId: adminMoySkladFullResync
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Full resync result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoySkladFullResyncResponse"
+        "503":
+          description: MoySklad not configured
+
+  /api/v1/admin/integrations/moysklad/sync/trigger:
+    post:
+      summary: "Deprecated: use sync/pull"
+      operationId: adminMoySkladTriggerSync
+      deprecated: true
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoySkladPullResponse"
+
+  /api/v1/admin/integrations/moysklad/webhooks/enabled:
+    patch:
+      summary: Enable or disable MoySklad webhook processing
+      operationId: adminMoySkladWebhooksEnabled
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoySkladWebhooksEnabledRequest"
+      responses:
+        "200":
+          description: Updated setting
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  webhooks_enabled:
+                    type: boolean
+
+  /api/v1/admin/integrations/moysklad/category-mappings:
+    get:
+      summary: List MoySklad category mappings
+      operationId: adminMoySkladListCategoryMappings
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Category mappings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MoySkladCategoryMappingSchema"
+    post:
+      summary: Create MoySklad category mapping
+      operationId: adminMoySkladCreateCategoryMapping
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoySkladCreateCategoryMappingRequest"
+      responses:
+        "201":
+          description: Created mapping
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoySkladCategoryMappingSchema"
+        "409":
+          description: Duplicate mapping
+
+  /api/v1/admin/integrations/moysklad/category-mappings/{mapping_id}:
+    delete:
+      summary: Delete MoySklad category mapping
+      operationId: adminMoySkladDeleteCategoryMapping
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: mapping_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Mapping not found
+
+  /api/v1/admin/integrations/moysklad/logs:
+    get:
+      summary: MoySklad sync logs
+      operationId: adminMoySkladSyncLogs
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Recent sync logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoySkladSyncLogListResponse"
+
+  /api/v1/admin/integrations/moysklad/orders/{order_number}/export:
+    post:
+      summary: Export order to MoySklad
+      operationId: adminMoySkladExportOrder
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: order_number
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Export result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoySkladOrderExportResponse"
+        "404":
+          description: Order not found
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2198,6 +2432,200 @@ components:
         is_wholesaler:
           type: boolean
 
+    MoySkladWebhookAckResponse:
+      type: object
+      required: [status, processed, skipped]
+      properties:
+        status:
+          type: string
+          enum: [ok, partial]
+        processed:
+          type: integer
+        skipped:
+          type: integer
+
+    MoySkladIntegrationStatusResponse:
+      type: object
+      required:
+        - configured
+        - read_only
+        - order_export_enabled
+        - webhooks_enabled
+        - pending_order_exports
+        - errors_last_24h
+      properties:
+        configured:
+          type: boolean
+        read_only:
+          type: boolean
+          default: true
+        order_export_enabled:
+          type: boolean
+        store_id:
+          type: string
+          nullable: true
+        webhooks_enabled:
+          type: boolean
+        pending_order_exports:
+          type: integer
+        last_full_sync_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_incremental_sync_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_error:
+          type: string
+          nullable: true
+        errors_last_24h:
+          type: integer
+
+    MoySkladPullResponse:
+      type: object
+      required: [status, direction]
+      properties:
+        status:
+          type: string
+        direction:
+          type: string
+          default: inbound
+        products_created:
+          type: integer
+        products_updated:
+          type: integer
+        variants_created:
+          type: integer
+        variants_updated:
+          type: integer
+        stock_rows_applied:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+
+    MoySkladStockPullResponse:
+      type: object
+      required: [status, direction, stock_rows_applied]
+      properties:
+        status:
+          type: string
+        direction:
+          type: string
+        stock_rows_applied:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+
+    MoySkladFullResyncResponse:
+      type: object
+      required: [status, direction]
+      properties:
+        status:
+          type: string
+        direction:
+          type: string
+        products_created:
+          type: integer
+        products_updated:
+          type: integer
+        variants_created:
+          type: integer
+        variants_updated:
+          type: integer
+        stock_rows_applied:
+          type: integer
+        order_exports_succeeded:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+
+    MoySkladWebhooksEnabledRequest:
+      type: object
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
+
+    MoySkladCategoryMappingSchema:
+      type: object
+      required: [id, category_id, moysklad_folder_id, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        category_id:
+          type: string
+          format: uuid
+        moysklad_folder_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    MoySkladCreateCategoryMappingRequest:
+      type: object
+      required: [category_id, moysklad_folder_id]
+      properties:
+        category_id:
+          type: string
+          format: uuid
+        moysklad_folder_id:
+          type: string
+          minLength: 1
+          maxLength: 64
+
+    MoySkladSyncLogSchema:
+      type: object
+      required: [id, direction, entity_type, status, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        direction:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          nullable: true
+        status:
+          type: string
+        error_message:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    MoySkladSyncLogListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MoySkladSyncLogSchema"
+
+    MoySkladOrderExportResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+        moysklad_order_id:
+          type: string
+          nullable: true
+        error:
+          type: string
+          nullable: true
+
 tags:
   - name: catalog
     description: Product catalog
@@ -2211,3 +2639,5 @@ tags:
     description: Payment processing
   - name: admin
     description: Admin backoffice (RBAC-protected)
+  - name: integrations
+    description: External ERP integrations (MoySklad)

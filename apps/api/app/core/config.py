@@ -1,13 +1,19 @@
 """Application configuration."""
 
+from pathlib import Path
+
 from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _JWT_DEV_DEFAULT = "dev-secret-change-in-production"
+_REPO_ROOT_ENV = Path(__file__).resolve().parents[4] / ".env"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=(str(_REPO_ROOT_ENV), ".env"),
+        env_file_encoding="utf-8",
+    )
 
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5433/ecommerce"
     cors_origins: list[str] = ["http://localhost:3000"]
@@ -37,6 +43,17 @@ class Settings(BaseSettings):
     media_upload_dir: str = "uploads"
     media_max_upload_bytes: int = 5 * 1024 * 1024
     media_public_base_url: str = "http://localhost:8000/media"
+
+    # MoySklad integration (ADR-010)
+    moysklad_api_token: SecretStr = SecretStr("")
+    moysklad_store_id: str = ""
+    moysklad_retail_price_type: str = "Цена продажи"
+    moysklad_wholesale_price_type: str = "Розница"
+    moysklad_webhook_secret: SecretStr = SecretStr("")
+    moysklad_sync_cron_enabled: bool = False
+    moysklad_sync_cron_interval_seconds: int = 600
+    moysklad_organization_id: str = ""
+    moysklad_order_export_enabled: bool = True
 
     @field_validator("database_url", mode="before")
     @classmethod

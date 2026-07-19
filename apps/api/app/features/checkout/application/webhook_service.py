@@ -13,6 +13,7 @@ from app.features.inventory.application.inventory_service import (
     InventoryReservationMissingError,
     InventoryService,
 )
+from app.features.integrations.moysklad.application.export_order import OrderExportService
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +30,12 @@ class WebhookService:
         repo: ICheckoutRepository,
         stripe_gateway: IStripeGateway,
         inventory_service: InventoryService,
+        order_export: OrderExportService | None = None,
     ) -> None:
         self._repo = repo
         self._stripe = stripe_gateway
         self._inventory_service = inventory_service
+        self._order_export = order_export
 
     async def handle_stripe_webhook(
         self, payload: bytes, signature_header: str | None
@@ -94,6 +97,7 @@ class WebhookService:
                 payment_method_summary=self._extract_payment_method_summary(data_object),
                 order_id=existing_order.id,
             )
+            await self._try_export_to_moysklad(existing_order.id)
             return
 
         paid_amount, paid_currency = self._extract_paid_amount_and_currency(data_object)
@@ -230,6 +234,12 @@ class WebhookService:
             session.id, CheckoutSessionStatus.COMPLETED.value
         )
         await self._repo.mark_cart_converted(session.cart_id)
+        await self._try_export_to_moysklad(order.id)
+
+    async def _try_export_to_moysklad(self, order_id: uuid.UUID) -> None:
+        if self._order_export is None:
+            return
+        await self._order_export.try_export_order(order_id)
 
     async def _mark_payment_amount_mismatch(
         self,

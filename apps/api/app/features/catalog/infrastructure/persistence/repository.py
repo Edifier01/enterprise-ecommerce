@@ -352,5 +352,7 @@ class ProductRepository(IProductRepository):
             category_id=row.category_id,
             description=row.description,
             image_url=row.image_url,
+            meta_title=row.meta_title,
+            meta_description=row.meta_description,
             variants=variants,
         )

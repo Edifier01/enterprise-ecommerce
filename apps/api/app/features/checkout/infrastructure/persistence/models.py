@@ -233,6 +233,7 @@ class OrderModel(Base):
         ForeignKey("payment_records.id", ondelete="RESTRICT"),
         nullable=False,
     )
+    moysklad_order_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

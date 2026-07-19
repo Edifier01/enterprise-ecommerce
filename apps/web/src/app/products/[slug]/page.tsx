@@ -21,11 +21,14 @@ export async function generateMetadata({
 
   try {
     const product = await getProduct(slug);
+    const title = product.meta_title?.trim() || product.name;
+    const description =
+      product.meta_description?.trim() ||
+      product.description?.trim() ||
+      `${product.name} — купить в ${siteConfig.name}`;
     return {
-      title: product.name,
-      description:
-        product.description?.trim() ||
-        `${product.name} — купить в ${siteConfig.name}`,
+      title,
+      description,
     };
   } catch {
     return { title: "Товар не найден" };

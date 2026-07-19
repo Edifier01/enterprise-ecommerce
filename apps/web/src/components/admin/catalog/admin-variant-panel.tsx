@@ -9,21 +9,36 @@ import {
 } from "@/app/actions/admin-catalog";
 import { Button } from "@/components/ui/button";
 import type { AdminProduct } from "@/lib/admin/catalog";
+import { formatPrice } from "@/lib/admin/catalog";
 import { centsToRubles } from "@/lib/admin/money";
+import { isMoySkladSynced } from "@/lib/admin/moysklad";
 
 const inputClass =
   "h-8 w-full rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+
+const readOnlyClass =
+  "h-8 w-full rounded-lg border border-input bg-muted px-2 text-sm text-muted-foreground";
 
 type AdminVariantPanelProps = {
   product: AdminProduct;
 };
 
+function formatDimensions(dimensions: Record<string, number> | null | undefined): string | null {
+  if (!dimensions) return null;
+  const parts = ["length", "width", "height"]
+    .map((key) => dimensions[key])
+    .filter((value) => value != null);
+  return parts.length > 0 ? parts.map((v) => `${v} см`).join(" × ") : null;
+}
+
 function VariantEditRow({
   productId,
   variant,
+  msSynced,
 }: {
   productId: string;
   variant: AdminProduct["variants"][number];
+  msSynced: boolean;
 }) {
   const boundAction = updateVariantAction.bind(null, variant.id, productId);
   const [state, formAction, pending] = useActionState<CatalogActionState, FormData>(
@@ -31,43 +46,71 @@ function VariantEditRow({
     {},
   );
 
+  const attributeText = Object.entries(variant.attributes ?? {})
+    .map(([key, value]) => `${key}: ${value}`)
+    .join(", ");
+
+  const dimensions = formatDimensions(variant.dimensions_cm);
+
   return (
     <form action={formAction} className="grid gap-2 rounded-md border border-border/60 p-3">
+      <input type="hidden" name="sync_source" value={msSynced ? "moysklad" : "manual"} />
+
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <label className="flex flex-col gap-1 text-xs">
           SKU
-          <input name="sku" defaultValue={variant.sku} required className={inputClass} />
+          {msSynced ? (
+            <div className={readOnlyClass}>{variant.sku}</div>
+          ) : (
+            <input name="sku" defaultValue={variant.sku} required className={inputClass} />
+          )}
         </label>
         <label className="flex flex-col gap-1 text-xs sm:col-span-2">
           Название
-          <input name="name" defaultValue={variant.name} required className={inputClass} />
+          {msSynced ? (
+            <div className={readOnlyClass}>{variant.name}</div>
+          ) : (
+            <input name="name" defaultValue={variant.name} required className={inputClass} />
+          )}
         </label>
         <label className="flex flex-col gap-1 text-xs">
           Цена, ₽
-          <input
-            name="price_rub"
-            type="number"
-            min={0}
-            step={1}
-            defaultValue={centsToRubles(variant.price_cents)}
-            required
-            className={inputClass}
-          />
+          {msSynced ? (
+            <div className={readOnlyClass}>{formatPrice(variant.price_cents)}</div>
+          ) : (
+            <input
+              name="price_rub"
+              type="number"
+              min={0}
+              step={1}
+              defaultValue={centsToRubles(variant.price_cents)}
+              required
+              className={inputClass}
+            />
+          )}
         </label>
         <label className="flex flex-col gap-1 text-xs">
           Опт, ₽
-          <input
-            name="wholesale_price_rub"
-            type="number"
-            min={0}
-            step={1}
-            defaultValue={
-              variant.wholesale_price_cents != null
-                ? centsToRubles(variant.wholesale_price_cents)
-                : ""
-            }
-            className={inputClass}
-          />
+          {msSynced ? (
+            <div className={readOnlyClass}>
+              {variant.wholesale_price_cents != null
+                ? formatPrice(variant.wholesale_price_cents)
+                : "—"}
+            </div>
+          ) : (
+            <input
+              name="wholesale_price_rub"
+              type="number"
+              min={0}
+              step={1}
+              defaultValue={
+                variant.wholesale_price_cents != null
+                  ? centsToRubles(variant.wholesale_price_cents)
+                  : ""
+              }
+              className={inputClass}
+            />
+          )}
         </label>
         <label className="flex flex-col gap-1 text-xs">
           Порядок
@@ -89,6 +132,17 @@ function VariantEditRow({
           По умолчанию
         </label>
       </div>
+
+      {msSynced ? (
+        <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
+          {attributeText ? <p>Атрибуты: {attributeText}</p> : null}
+          {variant.barcode ? <p>Штрихкод: {variant.barcode}</p> : null}
+          {variant.weight_grams != null ? <p>Вес: {variant.weight_grams} г</p> : null}
+          {dimensions ? <p>Габариты: {dimensions}</p> : null}
+          <p>В наличии: {variant.in_stock ? "да" : "нет"}</p>
+        </div>
+      ) : null}
+
       {state.error ? (
         <p className="text-xs text-destructive" role="alert">
           {state.error}
@@ -108,6 +162,7 @@ function VariantEditRow({
 }
 
 export function AdminVariantPanel({ product }: AdminVariantPanelProps) {
+  const msSynced = isMoySkladSynced(product.sync_source);
   const boundCreate = createVariantAction.bind(null, product.id);
   const [createState, createAction, createPending] = useActionState<
     CatalogActionState,
@@ -119,53 +174,62 @@ export function AdminVariantPanel({ product }: AdminVariantPanelProps) {
       <div>
         <p className="font-medium">Варианты товара</p>
         <p className="text-xs text-muted-foreground">
-          SKU, цены и признак варианта по умолчанию.
+          {msSynced
+            ? "Модификации синхронизируются из МойСклад. Можно менять только порядок и вариант по умолчанию."
+            : "SKU, цены и признак варианта по умолчанию."}
         </p>
       </div>
 
       <div className="space-y-3">
         {product.variants.map((variant) => (
-          <VariantEditRow key={variant.id} productId={product.id} variant={variant} />
+          <VariantEditRow
+            key={variant.id}
+            productId={product.id}
+            variant={variant}
+            msSynced={msSynced}
+          />
         ))}
       </div>
 
-      <form action={createAction} className="space-y-3 rounded-md border border-dashed border-border p-3">
-        <p className="text-sm font-medium">Добавить вариант</p>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="flex flex-col gap-1 text-xs">
-            SKU
-            <input name="sku" required className={inputClass} />
-          </label>
-          <label className="flex flex-col gap-1 text-xs sm:col-span-2">
-            Название
-            <input name="name" required className={inputClass} />
-          </label>
-          <label className="flex flex-col gap-1 text-xs">
-            Цена, ₽
-            <input name="price_rub" type="number" min={0} step={1} required className={inputClass} />
-          </label>
-          <label className="flex flex-col gap-1 text-xs">
-            Опт, ₽
-            <input name="wholesale_price_rub" type="number" min={0} step={1} className={inputClass} />
-          </label>
-          <label className="flex flex-col gap-1 text-xs">
-            Порядок
-            <input name="sort_order" type="number" min={0} defaultValue={0} className={inputClass} />
-          </label>
-          <label className="flex items-center gap-2 self-end text-xs">
-            <input type="checkbox" name="is_default" value="true" />
-            По умолчанию
-          </label>
-        </div>
-        {createState.error ? (
-          <p className="text-xs text-destructive" role="alert">
-            {createState.error}
-          </p>
-        ) : null}
-        <Button type="submit" size="sm" disabled={createPending}>
-          {createPending ? "Добавление…" : "Добавить вариант"}
-        </Button>
-      </form>
+      {!msSynced ? (
+        <form action={createAction} className="space-y-3 rounded-md border border-dashed border-border p-3">
+          <p className="text-sm font-medium">Добавить вариант</p>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="flex flex-col gap-1 text-xs">
+              SKU
+              <input name="sku" required className={inputClass} />
+            </label>
+            <label className="flex flex-col gap-1 text-xs sm:col-span-2">
+              Название
+              <input name="name" required className={inputClass} />
+            </label>
+            <label className="flex flex-col gap-1 text-xs">
+              Цена, ₽
+              <input name="price_rub" type="number" min={0} step={1} required className={inputClass} />
+            </label>
+            <label className="flex flex-col gap-1 text-xs">
+              Опт, ₽
+              <input name="wholesale_price_rub" type="number" min={0} step={1} className={inputClass} />
+            </label>
+            <label className="flex flex-col gap-1 text-xs">
+              Порядок
+              <input name="sort_order" type="number" min={0} defaultValue={0} className={inputClass} />
+            </label>
+            <label className="flex items-center gap-2 self-end text-xs">
+              <input type="checkbox" name="is_default" value="true" />
+              По умолчанию
+            </label>
+          </div>
+          {createState.error ? (
+            <p className="text-xs text-destructive" role="alert">
+              {createState.error}
+            </p>
+          ) : null}
+          <Button type="submit" size="sm" disabled={createPending}>
+            {createPending ? "Добавление…" : "Добавить вариант"}
+          </Button>
+        </form>
+      ) : null}
     </div>
   );
 }

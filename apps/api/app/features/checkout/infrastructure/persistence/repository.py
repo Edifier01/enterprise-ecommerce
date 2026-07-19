@@ -126,6 +126,7 @@ def _order_from_model(model: OrderModel) -> Order:
         tax_cents=model.tax_cents,
         total_cents=model.total_cents,
         payment_record_id=model.payment_record_id,
+        moysklad_order_id=model.moysklad_order_id,
         created_at=model.created_at,
         updated_at=model.updated_at,
     )

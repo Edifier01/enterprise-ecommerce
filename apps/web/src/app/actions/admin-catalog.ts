@@ -66,7 +66,11 @@ function readOptionalString(formData: FormData, key: string): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
-function buildProductBody(formData: FormData, includeSku: boolean): Record<string, unknown> {
+function buildProductBody(
+  formData: FormData,
+  includeSku: boolean,
+  options?: { omitPrice?: boolean },
+): Record<string, unknown> {
   const name = formData.get("name");
   const slug = formData.get("slug");
   const status = formData.get("status");
@@ -76,28 +80,46 @@ function buildProductBody(formData: FormData, includeSku: boolean): Record<strin
     throw new Error("INVALID_FORM");
   }
 
-  let priceCents: number;
-  let compareAtCents: number | undefined;
-  let wholesaleCents: number | undefined;
-
-  try {
-    priceCents = parseRequiredRubles(formData.get("price_rub"));
-    compareAtCents = parseOptionalRubles(formData.get("compare_at_price_rub"));
-    wholesaleCents = parseOptionalRubles(formData.get("wholesale_price_rub"));
-  } catch {
-    throw new Error("INVALID_FORM");
-  }
-
   const body: Record<string, unknown> = {
     name,
     slug,
-    price_cents: priceCents,
     currency: siteConfig.defaultCurrency,
     status,
     category_id: typeof categoryId === "string" && categoryId ? categoryId : null,
     description: readOptionalString(formData, "description"),
     image_url: readOptionalString(formData, "image_url"),
+    meta_title: readOptionalString(formData, "meta_title"),
+    meta_description: readOptionalString(formData, "meta_description"),
   };
+
+  if (!options?.omitPrice) {
+    let priceCents: number;
+    let compareAtCents: number | undefined;
+    let wholesaleCents: number | undefined;
+
+    try {
+      priceCents = parseRequiredRubles(formData.get("price_rub"));
+      compareAtCents = parseOptionalRubles(formData.get("compare_at_price_rub"));
+      wholesaleCents = parseOptionalRubles(formData.get("wholesale_price_rub"));
+    } catch {
+      throw new Error("INVALID_FORM");
+    }
+
+    body.price_cents = priceCents;
+
+    if (compareAtCents !== undefined) {
+      body.compare_at_price_cents = compareAtCents;
+    }
+
+    if (includeSku && wholesaleCents !== undefined) {
+      body.wholesale_price_cents = wholesaleCents;
+    }
+  } else {
+    const compareAtCents = parseOptionalRubles(formData.get("compare_at_price_rub"));
+    if (compareAtCents !== undefined) {
+      body.compare_at_price_cents = compareAtCents;
+    }
+  }
 
   if (includeSku) {
     const sku = formData.get("sku");
@@ -105,14 +127,6 @@ function buildProductBody(formData: FormData, includeSku: boolean): Record<strin
       throw new Error("INVALID_FORM");
     }
     body.sku = sku;
-  }
-
-  if (compareAtCents !== undefined) {
-    body.compare_at_price_cents = compareAtCents;
-  }
-
-  if (wholesaleCents !== undefined) {
-    body.wholesale_price_cents = wholesaleCents;
   }
 
   return body;
@@ -155,7 +169,9 @@ export async function updateProductAction(
   const categoryId = formData.get("category_id");
 
   try {
-    body = buildProductBody(formData, false);
+    body = buildProductBody(formData, false, {
+      omitPrice: formData.get("sync_source") === "moysklad",
+    });
   } catch {
     return { error: "Некорректные данные формы." };
   }
@@ -300,7 +316,19 @@ export async function saveVariantWholesaleFormAction(
   }
 }
 
-function buildVariantBody(formData: FormData): Record<string, unknown> {
+function buildVariantBody(
+  formData: FormData,
+  options?: { moyskladSynced?: boolean },
+): Record<string, unknown> {
+  if (options?.moyskladSynced) {
+    const sortOrderRaw = formData.get("sort_order");
+    const isDefault = formData.get("is_default") === "true";
+    return {
+      is_default: isDefault,
+      sort_order: typeof sortOrderRaw === "string" && sortOrderRaw ? Number(sortOrderRaw) : 0,
+    };
+  }
+
   const sku = formData.get("sku");
   const name = formData.get("name");
   const sortOrderRaw = formData.get("sort_order");
@@ -366,7 +394,9 @@ export async function updateVariantAction(
   formData: FormData,
 ): Promise<CatalogActionState> {
   try {
-    const body = buildVariantBody(formData);
+    const body = buildVariantBody(formData, {
+      moyskladSynced: formData.get("sync_source") === "moysklad",
+    });
     const result = await adminMutate(
       `/api/v1/admin/catalog/variants/${variantId}`,
       "PATCH",
@@ -413,4 +443,41 @@ export async function uploadAdminMediaAction(
 
   const data = (await res.json()) as { url: string };
   return { ok: true, url: data.url };
+}
+
+export async function addProductImageAction(
+  productId: string,
+  url: string,
+  sortOrder = 0,
+): Promise<CatalogActionState> {
+  const result = await adminMutate(`/api/v1/admin/catalog/products/${productId}/images`, "POST", {
+    url,
+    sort_order: sortOrder,
+  });
+  if (!result.ok) return result.error;
+  revalidatePath(`/admin/catalog/${productId}/edit`);
+  return { success: true };
+}
+
+export async function deleteProductImageAction(
+  imageId: string,
+  productId: string,
+): Promise<CatalogActionState> {
+  const token = await getAdminAccessToken();
+  if (!token) {
+    return { error: "Требуется вход в админ-панель." };
+  }
+
+  const res = await fetch(`${API_BASE}/api/v1/admin/catalog/products/images/${imageId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const parsed = parseAdminApiError(await res.json().catch(() => null));
+    return { error: parsed.message };
+  }
+
+  revalidatePath(`/admin/catalog/${productId}/edit`);
+  return { success: true };
 }

@@ -59,6 +59,7 @@ def _detail_schema(
         tax_cents=order.tax_cents,
         total_cents=order.total_cents,
         customer_email=customer_email,
+        moysklad_order_id=order.moysklad_order_id,
         created_at=order.created_at,
         updated_at=order.updated_at,
         lines=[
@@ -105,6 +106,7 @@ async def admin_list_orders(
                 currency=row.currency,
                 total_cents=row.total_cents,
                 customer_email=row.customer_email,
+                moysklad_order_id=row.moysklad_order_id,
                 created_at=row.created_at,
             )
             for row in items

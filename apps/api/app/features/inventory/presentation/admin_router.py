@@ -16,6 +16,7 @@ from app.features.inventory.domain.admin_ports import (
     InventoryItemNotFoundError,
     VersionConflictError,
 )
+from app.features.integrations.moysklad.domain.sync_guard import SyncProtectedFieldError
 from app.features.inventory.infrastructure.persistence.admin_inventory_repository import (
     AdminInventoryRepository,
 )
@@ -104,6 +105,8 @@ async def admin_adjust_inventory(
             status_code=422,
             detail=f"quantity_on_hand cannot be less than reserved quantity ({exc.reserved_quantity})",
         )
+    except SyncProtectedFieldError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
 
     logger.info(
         "admin_inventory_adjusted",

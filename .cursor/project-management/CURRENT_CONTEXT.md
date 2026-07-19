@@ -6,13 +6,13 @@
 
 ## Current Module
 
-`apps/web` — storefront mobile UX (Wave 1)
+`apps/api` + `apps/web` — MoySklad Phase 6 complete
 
 ---
 
 ## Current Feature
 
-**Mobile storefront Wave 3** — SW, CDN images, admin cards (2026-07-19)
+**MoySklad ERP Integration** — Phases 1–6 done (2026-07-19)
 
 ---
 
@@ -26,11 +26,13 @@ Implementation Agent
 
 **Phase 24 — Internet Store Design** (~99%)
 
+**Epic:** MoySklad ERP Integration — **complete** (pending live DB validation)
+
 ---
 
 ## Current Blockers
 
-None.
+None. Live MS validation requires Docker/Postgres + credentials.
 
 ---
 
@@ -38,14 +40,8 @@ None.
 
 | Area | Status |
 |------|--------|
-| Admin Wave A–C | ✅ |
-| E2E smoke suite | ✅ 24/24 passing |
-| Homepage search UX | ✅ |
-| Mobile storefront Wave 1 | ✅ |
-| Mobile storefront Wave 2 | ✅ |
-| Mobile storefront Wave 3 | ✅ |
-| Prod S3/CDN (production) | ⏳ Backlog |
-| Prod SMTP / YooKassa | ⏳ Next gate |
+| Phase 1–5 | ✅ |
+| Phase 6 Operations | ✅ |
 
 ---
 
@@ -53,14 +49,13 @@ None.
 
 | Resource | Path |
 |----------|------|
-| Admin search | `GET /api/v1/admin/catalog/products?q=` |
-| Media upload | `POST /api/v1/admin/media/upload` → `/media/{file}` |
-| Variant panel | `apps/web/src/components/admin/catalog/admin-variant-panel.tsx` |
-| Category hierarchy UI | `apps/web/src/lib/admin/category-options.ts` |
-| Admin tests | `tests/test_admin_catalog.py` (15 tests) |
+| Returns sync | `sync_order_return.py` + webhook `customerorder` |
+| Full resync | `POST /admin/integrations/moysklad/sync/resync` |
+| E2E seed | `scripts/seed_moysklad_e2e.py` |
+| ADR | `docs/adr/ADR-010-moysklad-erp-integration.md` |
 
 ---
 
 ## Last Updated
 
-2026-07-19 (mobile storefront Wave 1)
+2026-07-19 (MoySklad Phase 6)

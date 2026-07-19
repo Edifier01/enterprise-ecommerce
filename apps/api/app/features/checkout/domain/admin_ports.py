@@ -36,6 +36,7 @@ class AdminOrderListRow:
     currency: str
     total_cents: int
     customer_email: str | None
+    moysklad_order_id: str | None
     created_at: datetime
 
 

@@ -18,6 +18,7 @@ from app.features.catalog.domain.admin_ports import (
     DuplicateSlugError,
     IAdminCatalogRepository,
     ProductNotFoundError,
+    SyncProtectedFieldError,
     UpdateCategoryData,
     UpdateProductData,
     UpdateVariantData,
@@ -30,15 +31,22 @@ from app.features.catalog.infrastructure.persistence.admin_catalog_repository im
 from app.features.catalog.presentation.admin_schemas import (
     AdminCategoryListResponse,
     AdminCreateCategoryRequest,
+    AdminCreateProductImageRequest,
     AdminCreateProductRequest,
     AdminCreateVariantRequest,
     AdminProductListResponse,
     AdminProductSchema,
     AdminUpdateCategoryRequest,
+    AdminUpdateProductImageRequest,
     AdminUpdateProductRequest,
     AdminUpdateVariantRequest,
+    ProductImageSchema,
 )
 from app.features.catalog.presentation.schemas import CategorySchema, ProductVariantSchema
+from app.features.catalog.infrastructure.persistence.product_image_repository import (
+    ProductImageNotFoundError,
+    ProductImageRepository,
+)
 
 router = APIRouter(prefix="/admin/catalog", tags=["admin"])
 
@@ -49,7 +57,25 @@ def get_admin_catalog_repository(
     return AdminCatalogRepository(session)
 
 
-def _product_schema(product: Product) -> AdminProductSchema:
+def get_product_image_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> ProductImageRepository:
+    return ProductImageRepository(session)
+
+
+async def _load_product_schema(
+    product_id: UUID,
+    repo: IAdminCatalogRepository,
+    image_repo: ProductImageRepository,
+) -> AdminProductSchema | None:
+    product = await repo.get_product_by_id(product_id)
+    if product is None:
+        return None
+    images = await image_repo.list_for_product(product_id)
+    return _product_schema(product, images)
+
+
+def _product_schema(product: Product, images: list | None = None) -> AdminProductSchema:
     return AdminProductSchema(
         id=product.id,
         name=product.name,
@@ -62,6 +88,14 @@ def _product_schema(product: Product) -> AdminProductSchema:
         category_id=product.category_id,
         description=product.description,
         image_url=product.image_url,
+        sync_source=product.sync_source,
+        erp_name=product.erp_name,
+        moysklad_product_id=product.moysklad_product_id,
+        last_synced_at=product.last_synced_at.isoformat() if product.last_synced_at else None,
+        meta_title=product.meta_title,
+        meta_description=product.meta_description,
+        erp_image_url=product.erp_image_url,
+        images=[ProductImageSchema.model_validate(img) for img in (images or [])],
         variants=[ProductVariantSchema.model_validate(v) for v in product.variants],
     )
 
@@ -74,6 +108,7 @@ async def admin_list_products(
     q: str | None = Query(default=None, max_length=200),
     category_id: UUID | None = Query(default=None),
     uncategorized: bool = Query(default=False),
+    needs_styling: bool = Query(default=False),
     _admin: AdminUser = Depends(require_permission("admin:read")),
     repo: IAdminCatalogRepository = Depends(get_admin_catalog_repository),
 ) -> AdminProductListResponse:
@@ -84,6 +119,7 @@ async def admin_list_products(
         q=q,
         category_id=category_id,
         uncategorized=uncategorized,
+        needs_styling=needs_styling,
     )
     return AdminProductListResponse(
         items=[_product_schema(p) for p in products],
@@ -154,11 +190,12 @@ async def admin_get_product(
     product_id: UUID,
     _admin: AdminUser = Depends(require_permission("admin:read")),
     repo: IAdminCatalogRepository = Depends(get_admin_catalog_repository),
+    image_repo: ProductImageRepository = Depends(get_product_image_repository),
 ) -> AdminProductSchema:
-    product = await repo.get_product_by_id(product_id)
-    if product is None:
+    schema = await _load_product_schema(product_id, repo, image_repo)
+    if schema is None:
         raise HTTPException(status_code=404, detail="Product not found")
-    return _product_schema(product)
+    return schema
 
 
 @router.patch(
@@ -171,6 +208,7 @@ async def admin_update_product(
     request: AdminUpdateProductRequest,
     _admin: AdminUser = Depends(require_permission("catalog:write")),
     repo: IAdminCatalogRepository = Depends(get_admin_catalog_repository),
+    image_repo: ProductImageRepository = Depends(get_product_image_repository),
     session: AsyncSession = Depends(get_db_session),
 ) -> AdminProductSchema:
     existing = await repo.get_product_by_id(product_id)
@@ -203,14 +241,107 @@ async def admin_update_product(
                 clear_category=request.clear_category,
                 description=request.description,
                 image_url=request.image_url,
+                meta_title=request.meta_title,
+                meta_description=request.meta_description,
             ),
         )
     except ProductNotFoundError:
         raise HTTPException(status_code=404, detail="Product not found")
+    except SyncProtectedFieldError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     except DuplicateSlugError:
         raise HTTPException(status_code=409, detail="Slug already exists")
     await session.commit()
-    return _product_schema(product)
+    images = await image_repo.list_for_product(product_id)
+    return _product_schema(product, images)
+
+
+@router.get(
+    "/products/{product_id}/images",
+    response_model=list[ProductImageSchema],
+    operation_id="adminListProductImages",
+)
+async def admin_list_product_images(
+    product_id: UUID,
+    _admin: AdminUser = Depends(require_permission("admin:read")),
+    repo: IAdminCatalogRepository = Depends(get_admin_catalog_repository),
+    image_repo: ProductImageRepository = Depends(get_product_image_repository),
+) -> list[ProductImageSchema]:
+    product = await repo.get_product_by_id(product_id)
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    images = await image_repo.list_for_product(product_id)
+    return [ProductImageSchema.model_validate(img) for img in images]
+
+
+@router.post(
+    "/products/{product_id}/images",
+    response_model=ProductImageSchema,
+    status_code=201,
+    operation_id="adminCreateProductImage",
+)
+async def admin_create_product_image(
+    product_id: UUID,
+    request: AdminCreateProductImageRequest,
+    _admin: AdminUser = Depends(require_permission("catalog:write")),
+    repo: IAdminCatalogRepository = Depends(get_admin_catalog_repository),
+    image_repo: ProductImageRepository = Depends(get_product_image_repository),
+    session: AsyncSession = Depends(get_db_session),
+) -> ProductImageSchema:
+    product = await repo.get_product_by_id(product_id)
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    row = await image_repo.create(
+        product_id=product_id,
+        url=request.url,
+        alt_text=request.alt_text,
+        sort_order=request.sort_order,
+    )
+    await session.commit()
+    return ProductImageSchema.model_validate(row)
+
+
+@router.patch(
+    "/products/images/{image_id}",
+    response_model=ProductImageSchema,
+    operation_id="adminUpdateProductImage",
+)
+async def admin_update_product_image(
+    image_id: UUID,
+    request: AdminUpdateProductImageRequest,
+    _admin: AdminUser = Depends(require_permission("catalog:write")),
+    image_repo: ProductImageRepository = Depends(get_product_image_repository),
+    session: AsyncSession = Depends(get_db_session),
+) -> ProductImageSchema:
+    try:
+        row = await image_repo.update(
+            image_id,
+            url=request.url,
+            alt_text=request.alt_text,
+            sort_order=request.sort_order,
+        )
+    except ProductImageNotFoundError:
+        raise HTTPException(status_code=404, detail="Image not found")
+    await session.commit()
+    return ProductImageSchema.model_validate(row)
+
+
+@router.delete(
+    "/products/images/{image_id}",
+    status_code=204,
+    operation_id="adminDeleteProductImage",
+)
+async def admin_delete_product_image(
+    image_id: UUID,
+    _admin: AdminUser = Depends(require_permission("catalog:write")),
+    image_repo: ProductImageRepository = Depends(get_product_image_repository),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    try:
+        await image_repo.delete(image_id)
+    except ProductImageNotFoundError:
+        raise HTTPException(status_code=404, detail="Image not found")
+    await session.commit()
 
 
 @router.post(
@@ -241,6 +372,8 @@ async def admin_create_variant(
         )
     except ProductNotFoundError:
         raise HTTPException(status_code=404, detail="Product not found")
+    except SyncProtectedFieldError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     except DuplicateSkuError:
         raise HTTPException(status_code=409, detail="SKU already exists")
     await session.commit()
@@ -274,6 +407,8 @@ async def admin_update_variant(
         )
     except VariantNotFoundError:
         raise HTTPException(status_code=404, detail="Variant not found")
+    except SyncProtectedFieldError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     except DuplicateSkuError:
         raise HTTPException(status_code=409, detail="SKU already exists")
     await session.commit()

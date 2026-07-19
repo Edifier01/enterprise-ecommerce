@@ -17,10 +17,18 @@ from app.features.catalog.domain.admin_ports import (
     DuplicateSlugError,
     IAdminCatalogRepository,
     ProductNotFoundError,
+    SyncProtectedFieldError,
     UpdateCategoryData,
     UpdateProductData,
     UpdateVariantData,
     VariantNotFoundError,
+)
+from app.features.integrations.moysklad.domain.sync_guard import (
+    UpdateProductDataLike,
+    UpdateVariantDataLike,
+    assert_product_update_allowed,
+    assert_variant_create_allowed,
+    assert_variant_update_allowed,
 )
 from app.features.catalog.domain.entities import Category, Product, ProductVariant
 from app.features.catalog.infrastructure.persistence.models import (
@@ -28,6 +36,7 @@ from app.features.catalog.infrastructure.persistence.models import (
     ProductModel,
     ProductVariantModel,
 )
+from app.features.integrations.moysklad.infrastructure.persistence.models import ProductImageModel
 
 
 class AdminCatalogRepository(IAdminCatalogRepository):
@@ -42,11 +51,25 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         q: str | None = None,
         category_id: uuid.UUID | None = None,
         uncategorized: bool = False,
+        needs_styling: bool = False,
     ) -> tuple[list[Product], int]:
         offset = (page - 1) * limit
         filters = []
         if status is not None:
             filters.append(ProductModel.status == status)
+        if needs_styling:
+            filters.append(ProductModel.status == "draft")
+            filters.append(
+                or_(
+                    ProductModel.image_url.is_(None),
+                    ProductModel.image_url == "",
+                )
+            )
+            filters.append(
+                ~exists(
+                    select(1).where(ProductImageModel.product_id == ProductModel.id)
+                )
+            )
         if q is not None and q.strip():
             filters.append(self._admin_search_filter(q.strip()))
         if uncategorized:
@@ -141,6 +164,11 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         if product is None:
             raise ProductNotFoundError(str(product_id))
 
+        assert_product_update_allowed(
+            product.sync_source,
+            UpdateProductDataLike(price_cents=data.price_cents, currency=data.currency),
+        )
+
         if data.name is not None:
             product.name = data.name
         if data.slug is not None:
@@ -161,6 +189,10 @@ class AdminCatalogRepository(IAdminCatalogRepository):
             product.description = data.description
         if data.image_url is not None:
             product.image_url = data.image_url
+        if data.meta_title is not None:
+            product.meta_title = data.meta_title
+        if data.meta_description is not None:
+            product.meta_description = data.meta_description
 
         try:
             await self._session.flush()
@@ -174,6 +206,8 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         product = await self._session.get(ProductModel, data.product_id)
         if product is None:
             raise ProductNotFoundError(str(data.product_id))
+
+        assert_variant_create_allowed(product.sync_source)
 
         if data.is_default:
             existing = (
@@ -211,6 +245,18 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         variant = await self._session.get(ProductVariantModel, variant_id)
         if variant is None:
             raise VariantNotFoundError(str(variant_id))
+
+        product = await self._session.get(ProductModel, variant.product_id)
+        sync_source = product.sync_source if product is not None else "manual"
+        assert_variant_update_allowed(
+            sync_source,
+            UpdateVariantDataLike(
+                sku=data.sku,
+                price_cents=data.price_cents,
+                wholesale_price_cents=data.wholesale_price_cents,
+                attributes=data.attributes,
+            ),
+        )
 
         if data.is_default is True:
             siblings = (
@@ -376,6 +422,13 @@ class AdminCatalogRepository(IAdminCatalogRepository):
             category_id=row.category_id,
             description=row.description,
             image_url=row.image_url,
+            sync_source=row.sync_source,
+            erp_name=row.erp_name,
+            moysklad_product_id=row.moysklad_product_id,
+            last_synced_at=row.last_synced_at,
+            meta_title=row.meta_title,
+            meta_description=row.meta_description,
+            erp_image_url=row.erp_image_url,
             variants=variants,
         )
 
@@ -392,6 +445,10 @@ class AdminCatalogRepository(IAdminCatalogRepository):
             is_default=row.is_default,
             sort_order=row.sort_order,
             attributes=dict(row.attributes or {}),
+            moysklad_variant_id=row.moysklad_variant_id,
+            barcode=row.barcode,
+            weight_grams=row.weight_grams,
+            dimensions_cm=dict(row.dimensions_cm) if row.dimensions_cm else None,
         )
 
     @staticmethod

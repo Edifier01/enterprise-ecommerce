@@ -70,6 +70,7 @@ class AdminOrdersRepository(IAdminOrdersRepository):
                 currency=order.currency,
                 total_cents=order.total_cents,
                 customer_email=customer_email or order.guest_email,
+                moysklad_order_id=order.moysklad_order_id,
                 created_at=order.created_at,
             )
             for order, customer_email in rows

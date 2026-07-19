@@ -6,6 +6,7 @@ type AdminCatalogSearchProps = {
   categoryId?: string;
   uncategorized?: boolean;
   showAll?: boolean;
+  needsStyling?: boolean;
 };
 
 export function AdminCatalogSearch({
@@ -14,12 +15,14 @@ export function AdminCatalogSearch({
   categoryId,
   uncategorized,
   showAll,
+  needsStyling,
 }: AdminCatalogSearchProps) {
   return (
     <form method="get" action="/admin/catalog" className="flex flex-wrap items-center gap-2">
       {status ? <input type="hidden" name="status" value={status} /> : null}
       {uncategorized ? <input type="hidden" name="uncategorized" value="1" /> : null}
       {showAll ? <input type="hidden" name="all" value="1" /> : null}
+      {needsStyling ? <input type="hidden" name="needs_styling" value="1" /> : null}
       {categoryId ? <input type="hidden" name="category_id" value={categoryId} /> : null}
       <input
         type="search"

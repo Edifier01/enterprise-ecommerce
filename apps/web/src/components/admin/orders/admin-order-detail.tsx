@@ -126,6 +126,23 @@ export function AdminOrderDetail({ order, canWrite }: AdminOrderDetailProps) {
             <span className="text-muted-foreground">Клиент</span>
             <span>{order.customer_email ?? "—"}</span>
           </div>
+          <div className="mb-3 flex justify-between gap-2">
+            <span className="text-muted-foreground">МойСклад</span>
+            {order.moysklad_order_id ? (
+              <a
+                href={`https://online.moysklad.ru/app/#customerorder/edit?id=${order.moysklad_order_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Экспортирован ↗
+              </a>
+            ) : order.status === "confirmed" ? (
+              <span className="text-amber-700">Ожидает экспорта</span>
+            ) : (
+              <span>—</span>
+            )}
+          </div>
           <div className="mb-3 flex justify-between">
             <span className="text-muted-foreground">Подытог</span>
             <span>{formatOrderMoney(order.subtotal_cents, order.currency)}</span>

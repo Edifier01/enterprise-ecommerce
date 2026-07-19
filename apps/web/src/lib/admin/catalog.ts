@@ -5,6 +5,13 @@ import { getApiBase } from "@/lib/api-base";
 
 const API_BASE = getApiBase();
 
+export type ProductImage = {
+  id: string;
+  url: string;
+  alt_text: string | null;
+  sort_order: number;
+};
+
 export type AdminProduct = {
   id: string;
   name: string;
@@ -17,6 +24,14 @@ export type AdminProduct = {
   category_id: string | null;
   description: string | null;
   image_url: string | null;
+  sync_source: string;
+  erp_name: string | null;
+  moysklad_product_id: string | null;
+  last_synced_at: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
+  erp_image_url: string | null;
+  images: ProductImage[];
   variants: Array<{
     id: string;
     sku: string;
@@ -27,6 +42,10 @@ export type AdminProduct = {
     is_default: boolean;
     sort_order: number;
     attributes: Record<string, string>;
+    moysklad_variant_id?: string | null;
+    barcode?: string | null;
+    weight_grams?: number | null;
+    dimensions_cm?: Record<string, number> | null;
   }>;
 };
 
@@ -74,7 +93,7 @@ export async function listAdminProducts(
   page = 1,
   status?: string,
   q?: string,
-  options?: { categoryId?: string; uncategorized?: boolean },
+  options?: { categoryId?: string; uncategorized?: boolean; needsStyling?: boolean },
 ): Promise<AdminProductList | null> {
   const params = new URLSearchParams({
     page: String(page),
@@ -82,6 +101,7 @@ export async function listAdminProducts(
   });
   if (status) params.set("status", status);
   if (q?.trim()) params.set("q", q.trim());
+  if (options?.needsStyling) params.set("needs_styling", "true");
   if (options?.uncategorized) params.set("uncategorized", "true");
   else if (options?.categoryId) params.set("category_id", options.categoryId);
   return adminFetch<AdminProductList>(`/api/v1/admin/catalog/products?${params}`);

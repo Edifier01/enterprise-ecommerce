@@ -27,6 +27,8 @@ export type Product = {
   category_id: string | null;
   description: string | null;
   image_url: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
   variants: ProductVariant[];
 };
 

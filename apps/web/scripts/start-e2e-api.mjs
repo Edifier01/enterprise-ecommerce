@@ -30,6 +30,7 @@ function run(command, args) {
 
 run("python", ["-m", "alembic", "upgrade", "head"]);
 run("python", ["-m", "scripts.seed_dev"]);
+run("python", ["-m", "scripts.seed_moysklad_e2e"]);
 run("python", ["-m", "scripts.reset_e2e_checkout"]);
 
 const apiPort = process.env.E2E_API_PORT ?? "8001";

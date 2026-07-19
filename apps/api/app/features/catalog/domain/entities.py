@@ -1,6 +1,7 @@
 """Catalog domain entities."""
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from uuid import UUID
 
 
@@ -18,6 +19,10 @@ class ProductVariant:
     sort_order: int
     wholesale_price_cents: int | None = None
     attributes: dict[str, str] = field(default_factory=dict)
+    moysklad_variant_id: str | None = None
+    barcode: str | None = None
+    weight_grams: int | None = None
+    dimensions_cm: dict[str, float] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +38,13 @@ class Product:
     category_id: UUID | None = None
     description: str | None = None
     image_url: str | None = None
+    sync_source: str = "manual"
+    erp_name: str | None = None
+    moysklad_product_id: str | None = None
+    last_synced_at: datetime | None = None
+    meta_title: str | None = None
+    meta_description: str | None = None
+    erp_image_url: str | None = None
     variants: tuple[ProductVariant, ...] = ()
 
     def __post_init__(self) -> None:

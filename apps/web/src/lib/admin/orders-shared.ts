@@ -5,6 +5,7 @@ export type AdminOrderSummary = {
   currency: string;
   total_cents: number;
   customer_email: string | null;
+  moysklad_order_id: string | null;
   created_at: string;
 };
 

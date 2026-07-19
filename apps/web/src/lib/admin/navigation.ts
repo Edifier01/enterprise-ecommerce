@@ -4,6 +4,7 @@ export const ADMIN_NAV_ITEMS = [
   { href: "/admin/inventory", label: "Склад", exact: false },
   { href: "/admin/orders", label: "Заказы", exact: false },
   { href: "/admin/customers", label: "Клиенты", exact: false },
+  { href: "/admin/integrations/moysklad", label: "МойСклад", exact: false },
 ] as const;
 
 export function isAdminNavActive(

@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.catalog.infrastructure.persistence.models import ProductModel, ProductVariantModel
+from app.features.integrations.moysklad.domain.sync_guard import assert_inventory_adjust_allowed
 from app.features.inventory.domain.admin_ports import (
     AdminInventoryRow,
     IAdminInventoryRepository,
@@ -97,6 +98,13 @@ class AdminInventoryRepository(IAdminInventoryRepository):
             raise VersionConflictError()
         if quantity_on_hand < item.quantity_reserved:
             raise InsufficientOnHandError(item.quantity_reserved)
+
+        product = await self._session.scalar(
+            select(ProductModel.sync_source)
+            .join(ProductVariantModel, ProductVariantModel.product_id == ProductModel.id)
+            .where(ProductVariantModel.id == variant_id)
+        )
+        assert_inventory_adjust_allowed(product or "manual")
 
         item.quantity_on_hand = quantity_on_hand
         item.version += 1

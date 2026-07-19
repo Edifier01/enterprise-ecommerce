@@ -19,6 +19,8 @@ import {
   listAdminProducts,
   PRODUCT_STATUS_LABELS,
 } from "@/lib/admin/catalog";
+import { isMoySkladSynced } from "@/lib/admin/moysklad";
+import { MoySkladBadge } from "@/components/admin/moysklad/moysklad-badge";
 import { getCurrentAdmin } from "@/lib/admin/session";
 import { productImageRenderProps } from "@/lib/store/product-image";
 
@@ -42,6 +44,7 @@ type PageProps = {
     category_id?: string;
     uncategorized?: string;
     all?: string;
+    needs_styling?: string;
   }>;
 };
 
@@ -66,15 +69,21 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
 
-  const { page: pageRaw, status, q, category_id, uncategorized, all } = await searchParams;
+  const { page: pageRaw, status, q, category_id, uncategorized, all, needs_styling } =
+    await searchParams;
   const page = parsePage(pageRaw);
   const searchQuery = q?.trim() ?? "";
   const activeStatus =
     status === "active" || status === "draft" || status === "archived" ? status : undefined;
   const isUncategorized = uncategorized === "1" || uncategorized === "true";
   const showAll = all === "1" || all === "true";
+  const needsStyling = needs_styling === "1" || needs_styling === "true";
   const showProductList =
-    Boolean(searchQuery) || showAll || isUncategorized || Boolean(category_id);
+    Boolean(searchQuery) ||
+    showAll ||
+    isUncategorized ||
+    needsStyling ||
+    Boolean(category_id);
 
   const categories = await listAdminCategories();
 
@@ -106,6 +115,7 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
   const products = await listAdminProducts(page, activeStatus, searchQuery || undefined, {
     categoryId: category_id,
     uncategorized: isUncategorized,
+    needsStyling,
   });
 
   if (!products) {
@@ -126,6 +136,7 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
     if (searchQuery) params.set("q", searchQuery);
     if (isUncategorized) params.set("uncategorized", "1");
     else if (showAll) params.set("all", "1");
+    else if (needsStyling) params.set("needs_styling", "1");
     else if (category_id) params.set("category_id", category_id);
     const query = params.toString();
     return query ? `/admin/catalog?${query}` : "/admin/catalog";
@@ -174,15 +185,34 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
         categoryId={category_id}
         uncategorized={isUncategorized}
         showAll={showAll}
+        needsStyling={needsStyling}
       />
 
       <div className="flex flex-wrap gap-2 text-sm">
+        <Link
+          href={(() => {
+            const params = new URLSearchParams();
+            params.set("needs_styling", "1");
+            params.set("all", "1");
+            if (searchQuery) params.set("q", searchQuery);
+            return `/admin/catalog?${params}`;
+          })()}
+          className={
+            needsStyling
+              ? "font-medium text-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          }
+        >
+          Требует оформления
+        </Link>
+        <span className="text-muted-foreground">·</span>
         {STATUS_FILTERS.map((filter) => {
           const params = new URLSearchParams();
           if (filter.value) params.set("status", filter.value);
           if (searchQuery) params.set("q", searchQuery);
           if (isUncategorized) params.set("uncategorized", "1");
           else if (showAll) params.set("all", "1");
+          else if (needsStyling) params.set("needs_styling", "1");
           else if (category_id) params.set("category_id", category_id);
           const href = params.size > 0 ? `/admin/catalog?${params}` : "/admin/catalog";
           const isActive = (activeStatus ?? "") === filter.value;
@@ -227,6 +257,9 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
                     </div>
                     <div className="min-w-0 flex-1 space-y-2">
                       <p className="font-medium leading-snug">{product.name}</p>
+                      {isMoySkladSynced(product.sync_source) ? (
+                        <MoySkladBadge />
+                      ) : null}
                       <AdminMobileCardRow label="Slug">
                         <span className="break-all font-normal text-muted-foreground">
                           {product.slug}
@@ -281,7 +314,12 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
                           />
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-medium">{product.name}</td>
+                      <td className="px-4 py-3 font-medium">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {product.name}
+                          {isMoySkladSynced(product.sync_source) ? <MoySkladBadge /> : null}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">{product.slug}</td>
                       <td className="px-4 py-3">
                         {PRODUCT_STATUS_LABELS[product.status] ?? product.status}

@@ -17,6 +17,10 @@ class ProductVariantSchema(BaseModel):
     is_default: bool
     sort_order: int
     attributes: dict[str, str]
+    moysklad_variant_id: str | None = None
+    barcode: str | None = None
+    weight_grams: int | None = None
+    dimensions_cm: dict[str, float] | None = None
 
 
 class ProductSchema(BaseModel):
@@ -32,6 +36,8 @@ class ProductSchema(BaseModel):
     category_id: UUID | None = None
     description: str | None = None
     image_url: str | None = None
+    meta_title: str | None = None
+    meta_description: str | None = None
     variants: list[ProductVariantSchema] = []
 
 

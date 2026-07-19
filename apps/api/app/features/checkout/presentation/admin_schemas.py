@@ -27,6 +27,7 @@ class AdminOrderSummarySchema(BaseModel):
     currency: str
     total_cents: int
     customer_email: str | None
+    moysklad_order_id: str | None = None
     created_at: datetime
 
 
@@ -50,6 +51,7 @@ class AdminOrderDetailSchema(BaseModel):
     tax_cents: int
     total_cents: int
     customer_email: str | None
+    moysklad_order_id: str | None = None
     created_at: datetime
     updated_at: datetime
     lines: list[OrderLineSchema]

@@ -50,6 +50,13 @@ class ProductModel(Base):
     )
     description: Mapped[str | None] = mapped_column(Text(), nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    sync_source: Mapped[str] = mapped_column(String(32), nullable=False, default="manual")
+    moysklad_product_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    erp_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    meta_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    meta_description: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    erp_image_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -90,6 +97,10 @@ class ProductVariantModel(Base):
     in_stock: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    moysklad_variant_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    barcode: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    weight_grams: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    dimensions_cm: Mapped[dict[str, float] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

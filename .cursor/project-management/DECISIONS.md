@@ -538,6 +538,51 @@ retail only. Checkout already prices at variant level (ADR-002).
 
 ---
 
+## ADR-010
+
+| Field | Value |
+|-------|-------|
+| **Decision ID** | ADR-010 |
+| **Date** | 2026-07-19 |
+| **Status** | Accepted |
+| **Full ADR** | `docs/adr/ADR-010-moysklad-erp-integration.md` |
+
+**Context:**
+
+Business maintains SKU, prices, stock, and product modifications (size/color) in
+МойСклад. The site must display merchandised content (photos, names, SEO,
+categories) editable in admin while operational data syncs unidirectionally from MS.
+
+**Decision:**
+
+- Overlay pattern: MS owns ERP snapshot; site owns display layer.
+- New bounded context `integrations/moysklad` with ACL (JSON API 1.2).
+- Single warehouse via `MOYSKLAD_STORE_ID`.
+- Webhooks + cron fallback; webhooks off until initial import.
+- Phased delivery: foundation → catalog import → stock → display/SEO → order export.
+- Admin API rejects edits to MS-owned fields when `sync_source=moysklad`.
+
+**Alternatives Considered:**
+
+| Alternative | Reason Rejected |
+|-------------|-----------------|
+| MS as sole source (no overlay) | Cannot customize storefront display/SEO |
+| Bidirectional price/stock edit | Conflicts with requirement; complex resolution |
+| Webhooks only (no cron) | Missed events cause catalog drift |
+
+**Consequences:**
+
+- Positive: clear field ownership; reuses ADR-005 inventory/checkout; phased rollout.
+- Negative: admin UX complexity; order export required for long-term MS stock parity.
+
+**Related Rules:**
+
+- `integrations/00-integrations.mdc`
+- `architecture/01-ddd`, `architecture/02-module-boundaries`
+- ADR-002, ADR-005, ADR-007, ADR-008, ADR-009
+
+---
+
 ## Decision Log Template
 
 Use when recording new decisions:
