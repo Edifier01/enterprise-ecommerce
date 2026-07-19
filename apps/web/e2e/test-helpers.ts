@@ -23,10 +23,7 @@ export async function loginAsWholesaler(page: Page) {
   await form.getByLabel("Пароль").fill("wholesale12345");
   await form.getByRole("button", { name: "Войти" }).click();
   await expect(page).toHaveURL("/", { timeout: 15_000 });
-  await expect(page.getByRole("link", { name: "Личный кабинет" })).toHaveAttribute(
-    "href",
-    "/account",
-  );
+  await expect(page.locator('a[href="/account"]')).toBeVisible({ timeout: 15_000 });
 }
 
 export async function ensureCartEmpty(page: Page) {
@@ -49,8 +46,18 @@ export function productDetailPanel(page: Page, productName: string): Locator {
 
 export function primaryAddToCartButton(page: Page, scope?: Locator) {
   const root = scope ?? page;
-  const button = root.getByRole("button", { name: "В корзину" });
+  const button = root.getByRole("button", { name: /^(В корзину|Купить)$/ });
   return scope ? button : button.first();
+}
+
+async function openPrimaryProductDetail(page: Page) {
+  const buyLink = page.getByRole("link", { name: "Купить" }).first();
+  if (await buyLink.isVisible()) {
+    await buyLink.click();
+  } else {
+    await page.getByRole("article").first().locator("a.line-clamp-2").click();
+  }
+  await expect(page).toHaveURL(/\/products\//, { timeout: 15_000 });
 }
 
 export function pageSearchInput(page: Page) {
@@ -65,6 +72,13 @@ export function productResultLink(page: Page, productName: string) {
 }
 
 export async function addPrimaryProductToCart(page: Page, scope?: Locator) {
+  if (!scope && !page.url().includes("/products/")) {
+    const addButton = primaryAddToCartButton(page);
+    if ((await addButton.count()) === 0 || !(await addButton.isVisible())) {
+      await openPrimaryProductDetail(page);
+    }
+  }
+
   const button = primaryAddToCartButton(page, scope);
   await expect(button).toBeEnabled({ timeout: 10_000 });
 

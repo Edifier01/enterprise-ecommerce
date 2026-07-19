@@ -11,6 +11,8 @@ test.describe("Admin wholesale smoke", () => {
 
     await page.goto("/admin/customers");
     await expect(page.getByRole("heading", { name: "Клиенты" })).toBeVisible();
-    await expect(page.getByRole("table")).toBeVisible();
+    await expect(
+      page.getByRole("table").or(page.locator("li.rounded-lg.border")),
+    ).toBeVisible();
   });
 });

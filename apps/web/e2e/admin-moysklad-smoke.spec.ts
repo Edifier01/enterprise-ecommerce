@@ -12,9 +12,9 @@ test.describe("Admin MoySklad smoke", () => {
     await loginAsAdmin(page);
     await page.goto("/admin/catalog?all=1");
 
-    const row = page.getByRole("row").filter({ hasText: E2E_MS_SLUG });
-    await expect(row).toBeVisible();
-    await row.getByRole("link", { name: "Изменить" }).click();
+    const productEntry = page.locator("li, tr").filter({ hasText: E2E_MS_SLUG });
+    await expect(productEntry).toBeVisible();
+    await productEntry.getByRole("link", { name: "Изменить" }).click();
 
     await expect(page).toHaveURL(/\/admin\/catalog\/[^/]+\/edit/, { timeout: 15_000 });
     await expect(page.getByText("Из МойСклад").first()).toBeVisible();

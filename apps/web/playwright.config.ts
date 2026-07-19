@@ -16,6 +16,7 @@ export default defineConfig({
     {
       name: "chromium",
       use: { browserName: "chromium" },
+      testIgnore: [/mobile-admin\.spec\.ts/, /mobile-storefront\.spec\.ts/],
     },
     {
       name: "mobile-chrome",

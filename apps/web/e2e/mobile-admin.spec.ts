@@ -5,7 +5,7 @@ import { loginAsAdmin } from "./test-helpers";
 const MOBILE_VIEWPORT = { width: 390, height: 844 };
 
 test.describe("Mobile admin panel", () => {
-  test.use(MOBILE_VIEWPORT);
+  test.use({ viewport: MOBILE_VIEWPORT });
 
   test("admin routes hide storefront chrome", async ({ page }) => {
     await page.goto("/admin/login");
@@ -22,7 +22,7 @@ test.describe("Mobile admin panel", () => {
     await page.getByRole("button", { name: "Меню админ-панели" }).click();
     await expect(page.getByRole("dialog", { name: "Навигация админ-панели" })).toBeVisible();
 
-    await page.getByRole("link", { name: "Каталог" }).click();
+    await page.getByRole("link", { name: "Товары" }).click();
     await expect(page).toHaveURL(/\/admin\/catalog/, { timeout: 15_000 });
     await expect(page.getByRole("dialog", { name: "Навигация админ-панели" })).toHaveCount(0);
   });

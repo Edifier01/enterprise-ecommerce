@@ -18,6 +18,7 @@ test.describe("Homepage", () => {
   });
 
   test("trust bar is visible", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto("/");
     await expect(page.getByLabel("Преимущества магазина")).toBeVisible();
     await expect(page.getByText("Собственный бренд")).toBeVisible();

@@ -5,7 +5,7 @@ import { addPrimaryProductToCart, ensureCartEmpty } from "./test-helpers";
 const MOBILE_VIEWPORT = { width: 390, height: 844 };
 
 test.describe("Mobile storefront", () => {
-  test.use(MOBILE_VIEWPORT);
+  test.use({ viewport: MOBILE_VIEWPORT });
 
   test("compact header hides desktop-only top bar", async ({ page }) => {
     await page.goto("/");

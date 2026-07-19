@@ -13,7 +13,7 @@ test.describe("Admin orders smoke", () => {
     await page.goto("/admin/orders");
     await expect(page.getByRole("heading", { name: "Заказы" })).toBeVisible();
 
-    const orderLink = page.locator("table tbody tr a").first();
+    const orderLink = page.getByRole("link", { name: /^ORD-/ }).first();
     const hasOrders = await orderLink.count();
     if (hasOrders > 0) {
       await orderLink.click();
