@@ -22,6 +22,7 @@ export async function pullMoySkladCatalogAction(): Promise<IntegrationActionStat
     return { error: "Не удалось запустить импорт каталога." };
   }
   revalidatePath("/admin/integrations/moysklad");
+  revalidatePath("/admin/integrations/moysklad/import");
   revalidatePath("/admin/catalog");
   return {
     success: true,
@@ -47,6 +48,7 @@ export async function fullResyncMoySkladAction(): Promise<IntegrationActionState
     return { error: "Не удалось выполнить полную синхронизацию." };
   }
   revalidatePath("/admin/integrations/moysklad");
+  revalidatePath("/admin/integrations/moysklad/import");
   revalidatePath("/admin/catalog");
   return {
     success: true,
@@ -67,67 +69,61 @@ export async function setMoySkladWebhooksAction(enabled: boolean): Promise<Integ
   return { success: true };
 }
 
-export async function createCategoryMappingAction(
-  _prev: IntegrationActionState | null,
-  formData: FormData,
+async function patchProduct(
+  productId: string,
+  body: Record<string, unknown>,
 ): Promise<IntegrationActionState> {
-  const categoryId = formData.get("category_id");
-  const folderId = formData.get("moysklad_folder_id");
-
-  if (typeof categoryId !== "string" || typeof folderId !== "string" || !folderId.trim()) {
-    return { error: "Укажите категорию и UUID папки МойСклад." };
-  }
-
-  const result = await mutateMoySklad(
-    "/api/v1/admin/integrations/moysklad/category-mappings",
-    "POST",
-    { category_id: categoryId, moysklad_folder_id: folderId.trim() },
-  );
-
-  if (!result.ok) {
-    const token = await getAdminAccessToken();
-    if (!token) {
-      return { error: "Требуется вход в админ-панель." };
-    }
-    const res = await fetch(`${API_BASE}/api/v1/admin/integrations/moysklad/category-mappings`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        category_id: categoryId,
-        moysklad_folder_id: folderId.trim(),
-      }),
-    });
-    if (!res.ok) {
-      const parsed = parseAdminApiError(await res.json().catch(() => null));
-      return { error: parsed.message };
-    }
-  }
-
-  revalidatePath("/admin/integrations/moysklad");
-  return { success: true };
-}
-
-export async function deleteCategoryMappingAction(mappingId: string): Promise<IntegrationActionState> {
   const token = await getAdminAccessToken();
   if (!token) {
     return { error: "Требуется вход в админ-панель." };
   }
 
-  const res = await fetch(
-    `${API_BASE}/api/v1/admin/integrations/moysklad/category-mappings/${mappingId}`,
-    {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
+  const res = await fetch(`${API_BASE}/api/v1/admin/catalog/products/${productId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify(body),
+  });
 
   if (!res.ok) {
-    return { error: "Не удалось удалить сопоставление." };
+    const parsed = parseAdminApiError(await res.json().catch(() => null));
+    return { error: parsed.message };
   }
 
+  revalidatePath("/admin/catalog");
   revalidatePath("/admin/integrations/moysklad");
+  revalidatePath("/admin/integrations/moysklad/import");
+  revalidatePath("/");
+  revalidatePath("/catalog");
   return { success: true };
+}
+
+export async function assignMoySkladProductCategoryAction(
+  productId: string,
+  categoryId: string,
+): Promise<IntegrationActionState> {
+  if (!categoryId) {
+    return { error: "Выберите категорию." };
+  }
+
+  const result = await patchProduct(productId, { category_id: categoryId });
+  if (result.error) {
+    return result;
+  }
+
+  return {
+    success: true,
+    message: "Категория назначена. Добавьте фото и опубликуйте товар на странице редактирования.",
+  };
+}
+
+export async function hideProductAction(productId: string): Promise<IntegrationActionState> {
+  const result = await patchProduct(productId, { status: "archived" });
+  if (result.error) {
+    return result;
+  }
+
+  return { success: true, message: "Товар скрыт с витрины." };
 }

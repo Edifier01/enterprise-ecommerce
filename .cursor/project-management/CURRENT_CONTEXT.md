@@ -6,13 +6,13 @@
 
 ## Current Module
 
-`apps/api` + `apps/web` — MoySklad Phase 6 complete
+`apps/api` + `apps/web` — MoySklad import queue workflow
 
 ---
 
 ## Current Feature
 
-**MoySklad ERP Integration** — Phases 1–6 done (2026-07-19)
+**MoySklad Import Queue** — per-product category assignment, visibility rules, stock threshold (2026-07-19)
 
 ---
 
@@ -26,13 +26,13 @@ Implementation Agent
 
 **Phase 24 — Internet Store Design** (~99%)
 
-**Epic:** MoySklad ERP Integration — **complete** (pending live DB validation)
+**Epic:** MoySklad ERP Integration — workflow update complete
 
 ---
 
 ## Current Blockers
 
-None. Live MS validation requires Docker/Postgres + credentials.
+None. Run live catalog import after API restart with MoySklad credentials in `apps/api/.env`.
 
 ---
 
@@ -40,8 +40,11 @@ None. Live MS validation requires Docker/Postgres + credentials.
 
 | Area | Status |
 |------|--------|
-| Phase 1–5 | ✅ |
-| Phase 6 Operations | ✅ |
+| Import queue tab | ✅ |
+| Category delete | ✅ |
+| Hide product | ✅ |
+| Stock threshold `< 3` | ✅ |
+| Folder mapping removed | ✅ |
 
 ---
 
@@ -49,13 +52,13 @@ None. Live MS validation requires Docker/Postgres + credentials.
 
 | Resource | Path |
 |----------|------|
-| Returns sync | `sync_order_return.py` + webhook `customerorder` |
-| Full resync | `POST /admin/integrations/moysklad/sync/resync` |
-| E2E seed | `scripts/seed_moysklad_e2e.py` |
+| Import queue UI | `/admin/integrations/moysklad/import` |
+| Visibility rule | `storefront_visibility.py` |
+| Stock threshold | `STOREFRONT_MIN_AVAILABLE_STOCK=3` |
 | ADR | `docs/adr/ADR-010-moysklad-erp-integration.md` |
 
 ---
 
 ## Last Updated
 
-2026-07-19 (MoySklad Phase 6)
+2026-07-19 (MoySklad import queue workflow)

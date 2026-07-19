@@ -109,6 +109,8 @@ async def admin_list_products(
     category_id: UUID | None = Query(default=None),
     uncategorized: bool = Query(default=False),
     needs_styling: bool = Query(default=False),
+    sync_source: str | None = Query(default=None),
+    moysklad_pending: bool = Query(default=False),
     _admin: AdminUser = Depends(require_permission("admin:read")),
     repo: IAdminCatalogRepository = Depends(get_admin_catalog_repository),
 ) -> AdminProductListResponse:
@@ -120,6 +122,8 @@ async def admin_list_products(
         category_id=category_id,
         uncategorized=uncategorized,
         needs_styling=needs_styling,
+        sync_source=sync_source,
+        moysklad_pending=moysklad_pending,
     )
     return AdminProductListResponse(
         items=[_product_schema(p) for p in products],
@@ -499,3 +503,21 @@ async def admin_update_category(
         )
     await session.commit()
     return CategorySchema.model_validate(category)
+
+
+@router.delete(
+    "/categories/{category_id}",
+    status_code=204,
+    operation_id="adminDeleteCategory",
+)
+async def admin_delete_category(
+    category_id: UUID,
+    _admin: AdminUser = Depends(require_permission("catalog:write")),
+    repo: IAdminCatalogRepository = Depends(get_admin_catalog_repository),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    try:
+        await repo.delete_category(category_id)
+    except CategoryNotFoundError:
+        raise HTTPException(status_code=404, detail="Category not found")
+    await session.commit()

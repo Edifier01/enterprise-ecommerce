@@ -53,7 +53,12 @@ export async function listAdminProducts(
   page = 1,
   status?: string,
   q?: string,
-  options?: { categoryId?: string; uncategorized?: boolean; needsStyling?: boolean },
+  options?: {
+    categoryId?: string;
+    uncategorized?: boolean;
+    needsStyling?: boolean;
+    moyskladPending?: boolean;
+  },
 ): Promise<AdminProductList | null> {
   const params = new URLSearchParams({
     page: String(page),
@@ -62,6 +67,7 @@ export async function listAdminProducts(
   if (status) params.set("status", status);
   if (q?.trim()) params.set("q", q.trim());
   if (options?.needsStyling) params.set("needs_styling", "true");
+  if (options?.moyskladPending) params.set("moysklad_pending", "true");
   if (options?.uncategorized) params.set("uncategorized", "true");
   else if (options?.categoryId) params.set("category_id", options.categoryId);
   return adminFetch<AdminProductList>(`/api/v1/admin/catalog/products?${params}`);

@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import exists, func, or_, select
+from sqlalchemy import exists, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -52,11 +52,18 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         category_id: uuid.UUID | None = None,
         uncategorized: bool = False,
         needs_styling: bool = False,
+        sync_source: str | None = None,
+        moysklad_pending: bool = False,
     ) -> tuple[list[Product], int]:
         offset = (page - 1) * limit
         filters = []
         if status is not None:
             filters.append(ProductModel.status == status)
+        if sync_source is not None:
+            filters.append(ProductModel.sync_source == sync_source)
+        if moysklad_pending:
+            filters.append(ProductModel.sync_source == "moysklad")
+            filters.append(ProductModel.category_id.is_(None))
         if needs_styling:
             filters.append(ProductModel.status == "draft")
             filters.append(
@@ -395,6 +402,19 @@ class AdminCatalogRepository(IAdminCatalogRepository):
             self._raise_integrity(exc)
 
         return self._category_to_domain(category)
+
+    async def delete_category(self, category_id: uuid.UUID) -> None:
+        category = await self._session.get(CategoryModel, category_id)
+        if category is None:
+            raise CategoryNotFoundError(str(category_id))
+
+        await self._session.execute(
+            update(ProductModel)
+            .where(ProductModel.category_id == category_id)
+            .values(category_id=None)
+        )
+        await self._session.delete(category)
+        await self._session.flush()
 
     @staticmethod
     def _raise_integrity(exc: IntegrityError) -> None:

@@ -11,6 +11,7 @@ export type MoySkladIntegrationStatus = {
   store_id: string | null;
   webhooks_enabled: boolean;
   pending_order_exports: number;
+  pending_imports: number;
   last_full_sync_at: string | null;
   last_incremental_sync_at: string | null;
   last_error: string | null;
@@ -33,13 +34,6 @@ export type MoySkladStockPullResult = {
   direction: string;
   stock_rows_applied: number;
   errors: string[];
-};
-
-export type CategoryMapping = {
-  id: string;
-  category_id: string;
-  moysklad_folder_id: string;
-  created_at: string;
 };
 
 export type SyncLogEntry = {
@@ -77,12 +71,6 @@ async function integrationFetch<T>(
 export async function getMoySkladStatus(): Promise<MoySkladIntegrationStatus | null> {
   return integrationFetch<MoySkladIntegrationStatus>(
     "/api/v1/admin/integrations/moysklad/status",
-  );
-}
-
-export async function listCategoryMappings(): Promise<CategoryMapping[] | null> {
-  return integrationFetch<CategoryMapping[]>(
-    "/api/v1/admin/integrations/moysklad/category-mappings",
   );
 }
 

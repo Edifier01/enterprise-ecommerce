@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import {
   createCategoryAction,
+  deleteCategoryAction,
   updateCategoryActiveAction,
   updateCategoryDetailsAction,
   type CatalogActionState,
@@ -286,6 +287,29 @@ export function AdminCategoryPanel({ categories }: AdminCategoryPanelProps) {
                               }}
                             >
                               {category.is_active ? "Скрыть" : "Показать"}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              disabled={pendingCategoryId === category.id}
+                              onClick={() => {
+                                if (
+                                  !window.confirm(
+                                    `Удалить категорию «${category.name}»? Товары останутся без категории и скроются с витрины.`,
+                                  )
+                                ) {
+                                  return;
+                                }
+                                setPendingCategoryId(category.id);
+                                startTransition(async () => {
+                                  await deleteCategoryAction(category.id);
+                                  setPendingCategoryId(null);
+                                  router.refresh();
+                                });
+                              }}
+                            >
+                              Удалить
                             </Button>
                           </div>
                         </td>

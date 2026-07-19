@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     inventory_reservation_sweep_enabled: bool = True
     inventory_reservation_sweep_interval_seconds: int = 60
     admin_low_stock_threshold: int = 5
+    storefront_min_available_stock: int = 3
     admin_dev_email: str = "admin@localhost"
     admin_dev_password: str = "admin12345"
     media_upload_dir: str = "uploads"

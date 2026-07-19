@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.catalog.domain.stock_availability import is_in_stock_for_storefront
 from app.features.catalog.infrastructure.persistence.models import ProductModel, ProductVariantModel
 from app.features.integrations.moysklad.domain.sync_guard import assert_inventory_adjust_allowed
 from app.features.inventory.domain.admin_ports import (
@@ -108,6 +109,23 @@ class AdminInventoryRepository(IAdminInventoryRepository):
 
         item.quantity_on_hand = quantity_on_hand
         item.version += 1
+
+        variant = await self._session.get(ProductVariantModel, variant_id)
+        if variant is not None:
+            new_available = item.quantity_on_hand - item.quantity_reserved
+            variant.in_stock = is_in_stock_for_storefront(new_available)
+            product = await self._session.get(ProductModel, variant.product_id)
+            if product is not None:
+                any_in_stock = (
+                    await self._session.scalar(
+                        select(ProductVariantModel.in_stock).where(
+                            ProductVariantModel.product_id == product.id,
+                            ProductVariantModel.in_stock.is_(True),
+                        )
+                    )
+                )
+                product.in_stock = any_in_stock is not None
+
         await self._session.flush()
 
         new_available = item.quantity_on_hand - item.quantity_reserved

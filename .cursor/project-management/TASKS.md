@@ -822,6 +822,16 @@ admin-assigned. Existing orders are never repriced.
 - [x] OpenAPI sync for integration endpoints
 - [x] Playwright: admin MS-synced product read-only fields smoke
 
+#### Phase 7 — Import Queue Workflow — COMPLETED
+
+- [x] Remove MS folder category mapping (UI + API)
+- [x] Admin import queue tab for uncategorized MS products
+- [x] Storefront visibility: MS products require admin-assigned category
+- [x] DELETE admin category (products unlinked, MS products re-hidden)
+- [x] Hide product from storefront (`status=archived`)
+- [x] Stock threshold: available `< 3` → out of stock on storefront
+- [x] Tests: `test_moysklad_catalog_workflow.py`
+
 ---
 
 ## Technical Tasks

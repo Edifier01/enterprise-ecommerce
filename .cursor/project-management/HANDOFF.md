@@ -6,46 +6,45 @@ Implementation Agent
 
 ## Completed Work
 
-**MoySklad Phase 6 — Operations & Returns (2026-07-19):**
+**MoySklad Import Queue Workflow (2026-07-19):**
 
-- **Returns sync** — `SyncMoySkladOrderReturnUseCase`: MS `customerorder` DELETE/cancelled state → local order `canceled` via `UpdateAdminOrderStatusUseCase` (`changed_by=moysklad`)
-- **Webhook** — `customerorder` in supported types; router passes `inventory_service` for stock restore on cancel
-- **Full resync** — `POST /admin/integrations/moysklad/sync/resync` (catalog + stock + pending order exports)
-- **OpenAPI** — all MoySklad integration paths + schemas in `openapi.yaml`
-- **E2E** — `seed_moysklad_e2e.py` + `admin-moysklad-smoke.spec.ts` (read-only price/SKU on MS-synced product)
-- **Ops** — `register_moysklad_webhooks.py` now includes `customerorder`
-- **Admin UI** — «Полная синхронизация» button on integration page
+- Removed category folder mapping UI/API — categories assigned per product in admin
+- New admin tab `/admin/integrations/moysklad/import` for MS products without category
+- MoySklad products hidden from storefront until `category_id` is set (`storefront_visibility.py`)
+- `DELETE /api/v1/admin/catalog/categories/{id}` — products unlinked, MS products re-hidden
+- Hide product action → `status=archived` on catalog list + import queue
+- Stock threshold: available `< 3` → `in_stock=false` (`STOREFRONT_MIN_AVAILABLE_STOCK=3`)
+- Status API: `pending_imports` count for uncategorized MS products
+- Tests: `tests/test_moysklad_catalog_workflow.py` (6 tests)
 
 ## Files Changed
 
 | Area | Key paths |
 |------|-----------|
-| Returns | `application/sync_order_return.py`, `webhook_handler.py`, `webhook_router.py` |
-| Resync | `application/full_resync.py`, `admin_router.py` |
-| OpenAPI | `openapi.yaml` |
-| E2E | `scripts/seed_moysklad_e2e.py`, `e2e/admin-moysklad-smoke.spec.ts`, `start-e2e-api.mjs` |
-| Frontend | `admin-moysklad.ts`, `moysklad-integration-panel.tsx` |
-| Tests | `test_moysklad_order_return.py`, `test_moysklad_webhook.py` |
+| Backend visibility/stock | `storefront_visibility.py`, `stock_availability.py`, `catalog_sync_repository.py`, `repository.py` |
+| Admin API | `admin_router.py` (delete category, moysklad_pending filter), `moysklad/admin_router.py` |
+| Frontend | `moysklad-import-panel.tsx`, `moysklad-integration-panel.tsx`, `import/page.tsx`, `admin-category-panel.tsx`, `admin-product-hide-button.tsx` |
+| Config | `.env.example` — `STOREFRONT_MIN_AVAILABLE_STOCK=3` |
+| Tests | `test_moysklad_catalog_workflow.py` |
 
 ## Known Issues
 
-- Docker/Postgres often not running locally — migration 014 + live import/export not validated on dev DB
-- E2E MoySklad smoke requires `seed_moysklad_e2e` in webServer bootstrap (added)
-- Full resync calls live MS API when credentials configured; otherwise 503
+- MoySklad credentials must live in `apps/api/.env` (that file takes precedence over repo root `.env`)
+- Restart API after env changes
+- OpenAPI still lists removed category-mapping paths until next sync (optional cleanup)
 
 ## Next Recommended Action
 
-1. Run Docker + migration 014 + catalog import with live MS credentials
-2. Register webhooks including `customerorder`: `python -m scripts.register_moysklad_webhooks --url <public-url>`
-3. Test live order export + return cancel flow in MS
-4. Proceed to YooKassa payment integration (release gate)
+1. Restart API and confirm «Настроено: да» on `/admin/integrations/moysklad`
+2. Click «Импорт каталога и остатков»
+3. Open `/admin/integrations/moysklad/import` — assign categories, edit, publish
+4. Register webhooks after first import (if public URL available)
 
-## Returns Flow
+## Import Workflow
 
 ```
-MS customerorder UPDATE/DELETE webhook
-  → run_order_return_sync
-  → fetch MS state (GET customerorder)
-  → if cancelled/deleted → UpdateAdminOrderStatusUseCase(CANCELED)
-  → inventory restore via InventoryService
+MS import → draft, no category → hidden from storefront
+Admin assigns category on import tab → still draft until published
+Admin adds photos + status=active → visible on storefront (if stock ≥ 3)
+Delete category → products lose category → MS products hidden again
 ```

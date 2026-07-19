@@ -9,6 +9,8 @@ type AdminCategorySelectProps = {
   name?: string;
   id?: string;
   defaultValue?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
   allowEmpty?: boolean;
   emptyLabel?: string;
   excludeId?: string;
@@ -22,6 +24,8 @@ export function AdminCategorySelect({
   name = "category_id",
   id,
   defaultValue = "",
+  value,
+  onValueChange,
   allowEmpty = true,
   emptyLabel = "Без категории",
   excludeId,
@@ -40,7 +44,9 @@ export function AdminCategorySelect({
     <select
       id={id ?? name}
       name={name}
-      defaultValue={defaultValue}
+      defaultValue={value === undefined ? defaultValue : undefined}
+      value={value}
+      onChange={onValueChange ? (event) => onValueChange(event.target.value) : undefined}
       disabled={disabled}
       className={selectClass}
     >

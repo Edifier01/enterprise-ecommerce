@@ -4,12 +4,14 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db_session
 from app.features.admin.domain.entities import AdminUser
 from app.features.admin.presentation.dependencies import require_permission
+from app.features.catalog.infrastructure.persistence.models import ProductModel
 from app.features.integrations.moysklad.application.export_order import export_order_by_id
 from app.features.integrations.moysklad.application.full_resync import run_full_resync
 from app.features.integrations.moysklad.application.import_catalog import run_moysklad_catalog_import
@@ -17,11 +19,6 @@ from app.features.integrations.moysklad.application.sync_stock import run_moyskl
 from app.features.integrations.moysklad.infrastructure.http_client import build_moysklad_client
 from app.features.integrations.moysklad.infrastructure.persistence.order_export_repository import (
     OrderExportRepository,
-)
-from app.features.integrations.moysklad.infrastructure.persistence.category_mapping_repository import (
-    CategoryMappingNotFoundError,
-    CategoryMappingRepository,
-    DuplicateCategoryMappingError,
 )
 from app.features.integrations.moysklad.infrastructure.persistence.sync_repository import (
     SyncStateRepository,
@@ -41,6 +38,7 @@ class MoySkladIntegrationStatusResponse(BaseModel):
     last_incremental_sync_at: str | None
     last_error: str | None
     errors_last_24h: int
+    pending_imports: int = 0
 
 
 class MoySkladPullResponse(BaseModel):
@@ -77,18 +75,6 @@ class WebhooksEnabledRequest(BaseModel):
     enabled: bool
 
 
-class CategoryMappingSchema(BaseModel):
-    id: UUID
-    category_id: UUID
-    moysklad_folder_id: str
-    created_at: str
-
-
-class CreateCategoryMappingRequest(BaseModel):
-    category_id: UUID
-    moysklad_folder_id: str = Field(min_length=1, max_length=64)
-
-
 class SyncLogSchema(BaseModel):
     id: UUID
     direction: str
@@ -109,12 +95,6 @@ class OrderExportResponse(BaseModel):
     error: str | None = None
 
 
-def get_category_mapping_repository(
-    session: AsyncSession = Depends(get_db_session),
-) -> CategoryMappingRepository:
-    return CategoryMappingRepository(session)
-
-
 @router.get(
     "/status",
     response_model=MoySkladIntegrationStatusResponse,
@@ -133,6 +113,19 @@ async def admin_moysklad_status(
     export_enabled = settings.moysklad_order_export_enabled and token_set and bool(
         settings.moysklad_store_id
     )
+    pending_imports = int(
+        (
+            await session.scalar(
+                select(func.count())
+                .select_from(ProductModel)
+                .where(
+                    ProductModel.sync_source == "moysklad",
+                    ProductModel.category_id.is_(None),
+                )
+            )
+        )
+        or 0
+    )
 
     return MoySkladIntegrationStatusResponse(
         configured=token_set and bool(settings.moysklad_store_id),
@@ -140,6 +133,7 @@ async def admin_moysklad_status(
         store_id=settings.moysklad_store_id or None,
         webhooks_enabled=state.webhooks_enabled,
         pending_order_exports=pending_exports,
+        pending_imports=pending_imports,
         last_full_sync_at=state.last_full_sync_at.isoformat() if state.last_full_sync_at else None,
         last_incremental_sync_at=(
             state.last_incremental_sync_at.isoformat() if state.last_incremental_sync_at else None
@@ -269,73 +263,6 @@ async def admin_moysklad_trigger_sync_deprecated(
     session: AsyncSession = Depends(get_db_session),
 ) -> MoySkladPullResponse:
     return await admin_moysklad_pull_catalog(_admin=admin, session=session)
-
-
-@router.get(
-    "/category-mappings",
-    response_model=list[CategoryMappingSchema],
-    operation_id="adminMoySkladListCategoryMappings",
-)
-async def admin_moysklad_list_category_mappings(
-    _admin: AdminUser = Depends(require_permission("admin:read")),
-    mapping_repo: CategoryMappingRepository = Depends(get_category_mapping_repository),
-) -> list[CategoryMappingSchema]:
-    rows = await mapping_repo.list_all()
-    return [
-        CategoryMappingSchema(
-            id=row.id,
-            category_id=row.category_id,
-            moysklad_folder_id=row.moysklad_folder_id,
-            created_at=row.created_at.isoformat(),
-        )
-        for row in rows
-    ]
-
-
-@router.post(
-    "/category-mappings",
-    response_model=CategoryMappingSchema,
-    status_code=201,
-    operation_id="adminMoySkladCreateCategoryMapping",
-)
-async def admin_moysklad_create_category_mapping(
-    request: CreateCategoryMappingRequest,
-    _admin: AdminUser = Depends(require_permission("integrations:write")),
-    mapping_repo: CategoryMappingRepository = Depends(get_category_mapping_repository),
-    session: AsyncSession = Depends(get_db_session),
-) -> CategoryMappingSchema:
-    try:
-        row = await mapping_repo.create(
-            category_id=request.category_id,
-            moysklad_folder_id=request.moysklad_folder_id,
-        )
-    except DuplicateCategoryMappingError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
-    await session.commit()
-    return CategoryMappingSchema(
-        id=row.id,
-        category_id=row.category_id,
-        moysklad_folder_id=row.moysklad_folder_id,
-        created_at=row.created_at.isoformat(),
-    )
-
-
-@router.delete(
-    "/category-mappings/{mapping_id}",
-    status_code=204,
-    operation_id="adminMoySkladDeleteCategoryMapping",
-)
-async def admin_moysklad_delete_category_mapping(
-    mapping_id: UUID,
-    _admin: AdminUser = Depends(require_permission("integrations:write")),
-    mapping_repo: CategoryMappingRepository = Depends(get_category_mapping_repository),
-    session: AsyncSession = Depends(get_db_session),
-) -> None:
-    try:
-        await mapping_repo.delete(mapping_id)
-    except CategoryMappingNotFoundError:
-        raise HTTPException(status_code=404, detail="Mapping not found")
-    await session.commit()
 
 
 @router.get(

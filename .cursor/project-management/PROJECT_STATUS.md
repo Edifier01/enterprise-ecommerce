@@ -53,6 +53,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Recently Completed
 
+- [x] **MoySklad Import Queue** — per-product category, visibility gate, stock threshold, category delete (2026-07-19)
 - [x] **MoySklad Phase 6** — returns hook, full resync, OpenAPI, E2E smoke (2026-07-19)
 - [x] **MoySklad Phase 5** — order export to MS on payment success (2026-07-19)
 - [x] **MoySklad Phase 4** — admin display UI, gallery, SEO, integration page (2026-07-19)

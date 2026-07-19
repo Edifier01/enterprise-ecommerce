@@ -2,12 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { MoySkladIntegrationPanel } from "@/components/admin/integrations/moysklad-integration-panel";
-import { listAdminCategories } from "@/lib/admin/catalog";
-import {
-  getMoySkladStatus,
-  listCategoryMappings,
-  listSyncLogs,
-} from "@/lib/admin/integrations/moysklad";
+import { getMoySkladStatus, listSyncLogs } from "@/lib/admin/integrations/moysklad";
 import { getCurrentAdmin } from "@/lib/admin/session";
 
 export const metadata: Metadata = {
@@ -19,12 +14,7 @@ export default async function MoySkladIntegrationPage() {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
 
-  const [status, mappings, logs, categories] = await Promise.all([
-    getMoySkladStatus(),
-    listCategoryMappings(),
-    listSyncLogs(),
-    listAdminCategories(),
-  ]);
+  const [status, logs] = await Promise.all([getMoySkladStatus(), listSyncLogs()]);
 
   if (!status) {
     return (
@@ -43,12 +33,7 @@ export default async function MoySkladIntegrationPage() {
         </p>
       </div>
 
-      <MoySkladIntegrationPanel
-        status={status}
-        mappings={mappings ?? []}
-        logs={logs ?? []}
-        categories={categories ?? []}
-      />
+      <MoySkladIntegrationPanel status={status} logs={logs ?? []} />
     </div>
   );
 }

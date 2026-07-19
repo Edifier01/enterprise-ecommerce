@@ -274,6 +274,29 @@ export async function updateCategoryDetailsAction(
   return { success: true };
 }
 
+export async function deleteCategoryAction(categoryId: string): Promise<CatalogActionState> {
+  const token = await getAdminAccessToken();
+  if (!token) {
+    return { error: "Требуется вход в админ-панель." };
+  }
+
+  const res = await fetch(`${API_BASE}/api/v1/admin/catalog/categories/${categoryId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const parsed = parseAdminApiError(await res.json().catch(() => null));
+    return { error: parsed.message };
+  }
+
+  revalidateStorefrontCategories();
+  revalidatePath("/admin/catalog/categories");
+  revalidatePath("/admin/catalog");
+  revalidatePath("/admin/integrations/moysklad/import");
+  return { success: true };
+}
+
 /** @deprecated Use updateCategoryActiveAction */
 export async function updateCategoryAction(
   categoryId: string,

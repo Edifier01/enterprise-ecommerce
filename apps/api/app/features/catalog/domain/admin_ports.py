@@ -123,6 +123,8 @@ class IAdminCatalogRepository(ABC):
         category_id: UUID | None = None,
         uncategorized: bool = False,
         needs_styling: bool = False,
+        sync_source: str | None = None,
+        moysklad_pending: bool = False,
     ) -> tuple[list[Product], int]:
         ...
 
@@ -160,4 +162,8 @@ class IAdminCatalogRepository(ABC):
 
     @abstractmethod
     async def update_category(self, category_id: UUID, data: UpdateCategoryData) -> Category:
+        ...
+
+    @abstractmethod
+    async def delete_category(self, category_id: UUID) -> None:
         ...

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { AdminCatalogCategoryPicker } from "@/components/admin/catalog/admin-catalog-category-picker";
 import { AdminCatalogSearch } from "@/components/admin/catalog/admin-catalog-search";
+import { AdminProductHideButton } from "@/components/admin/catalog/admin-product-hide-button";
 import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
 import {
   AdminDesktopTable,
@@ -277,6 +278,10 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
                       >
                         Изменить
                       </Link>
+                      <AdminProductHideButton
+                        productId={product.id}
+                        hidden={product.status === "archived"}
+                      />
                     </div>
                   </div>
                 </AdminMobileCard>
@@ -328,12 +333,18 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
                         {formatPrice(product.price_cents, product.currency)}
                       </td>
                       <td className="px-4 py-3">
-                        <Link
-                          href={`/admin/catalog/${product.id}/edit`}
-                          className="text-primary hover:underline"
-                        >
-                          Изменить
-                        </Link>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <Link
+                            href={`/admin/catalog/${product.id}/edit`}
+                            className="text-primary hover:underline"
+                          >
+                            Изменить
+                          </Link>
+                          <AdminProductHideButton
+                            productId={product.id}
+                            hidden={product.status === "archived"}
+                          />
+                        </div>
                       </td>
                     </tr>
                   );

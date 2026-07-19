@@ -11,6 +11,7 @@ from dataclasses import replace
 
 from app.features.catalog.domain.product_list_filters import ProductListFacets, ProductListFilters
 from app.features.catalog.domain.ports import IProductRepository
+from app.features.catalog.domain.storefront_visibility import storefront_visibility_filter
 from app.features.catalog.domain.variant_filter import (
     build_facets_from_products,
     build_facets_with_scoped_products,
@@ -42,11 +43,15 @@ class ProductRepository(IProductRepository):
         offset = (page - 1) * limit
 
         count_stmt = select(func.count()).select_from(ProductModel).where(
-            ProductModel.status == _ACTIVE_STATUS
+            ProductModel.status == _ACTIVE_STATUS,
+            storefront_visibility_filter(),
         )
         stmt = (
             select(ProductModel)
-            .where(ProductModel.status == _ACTIVE_STATUS)
+            .where(
+                ProductModel.status == _ACTIVE_STATUS,
+                storefront_visibility_filter(),
+            )
             .options(selectinload(ProductModel.variants))
         )
 
@@ -98,11 +103,15 @@ class ProductRepository(IProductRepository):
         filters: ProductListFilters,
     ) -> list[Product]:
         count_stmt = select(func.count()).select_from(ProductModel).where(
-            ProductModel.status == _ACTIVE_STATUS
+            ProductModel.status == _ACTIVE_STATUS,
+            storefront_visibility_filter(),
         )
         stmt = (
             select(ProductModel)
-            .where(ProductModel.status == _ACTIVE_STATUS)
+            .where(
+                ProductModel.status == _ACTIVE_STATUS,
+                storefront_visibility_filter(),
+            )
             .options(selectinload(ProductModel.variants))
         )
 
@@ -131,11 +140,19 @@ class ProductRepository(IProductRepository):
         count_stmt = (
             select(func.count())
             .select_from(ProductModel)
-            .where(search_filter, ProductModel.status == _ACTIVE_STATUS)
+            .where(
+                search_filter,
+                ProductModel.status == _ACTIVE_STATUS,
+                storefront_visibility_filter(),
+            )
         )
         stmt = (
             select(ProductModel)
-            .where(search_filter, ProductModel.status == _ACTIVE_STATUS)
+            .where(
+                search_filter,
+                ProductModel.status == _ACTIVE_STATUS,
+                storefront_visibility_filter(),
+            )
             .options(selectinload(ProductModel.variants))
         )
 
@@ -158,7 +175,11 @@ class ProductRepository(IProductRepository):
     async def get_by_slug(self, slug: str) -> Product | None:
         stmt = (
             select(ProductModel)
-            .where(ProductModel.slug == slug, ProductModel.status == _ACTIVE_STATUS)
+            .where(
+                ProductModel.slug == slug,
+                ProductModel.status == _ACTIVE_STATUS,
+                storefront_visibility_filter(),
+            )
             .options(selectinload(ProductModel.variants))
         )
         row = (await self._session.scalars(stmt)).first()

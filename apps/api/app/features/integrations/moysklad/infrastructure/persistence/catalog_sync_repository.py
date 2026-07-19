@@ -6,15 +6,13 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.catalog.domain.stock_availability import is_in_stock_for_storefront
 from app.features.catalog.infrastructure.persistence.models import (
     ProductModel,
     ProductVariantModel,
 )
 from app.features.integrations.moysklad.application.slug import unique_slug
 from app.features.integrations.moysklad.domain.ports import MoySkladProduct, MoySkladVariant
-from app.features.integrations.moysklad.infrastructure.persistence.models import (
-    CategoryMoySkladMappingModel,
-)
 from app.features.inventory.infrastructure.persistence.models import InventoryItemModel
 
 
@@ -31,14 +29,6 @@ class CatalogSyncRepository:
             ProductVariantModel.moysklad_variant_id == ms_variant_id
         )
         return (await self._session.scalars(stmt)).first()
-
-    async def resolve_category_id(self, folder_id: str | None) -> uuid.UUID | None:
-        if not folder_id:
-            return None
-        stmt = select(CategoryMoySkladMappingModel.category_id).where(
-            CategoryMoySkladMappingModel.moysklad_folder_id == folder_id
-        )
-        return await self._session.scalar(stmt)
 
     async def upsert_product(
         self,
@@ -69,13 +59,11 @@ class CatalogSyncRepository:
                 erp_image_url=ms_product.image_url,
                 last_synced_at=now,
             )
-            category_id = await self.resolve_category_id(ms_product.folder_id)
-            if category_id is not None:
-                product.category_id = category_id
             self._session.add(product)
             await self._session.flush()
             return product, True
 
+        # Category is assigned manually in admin — never overwritten by sync.
         existing.erp_name = ms_product.name
         existing.last_synced_at = now
         if ms_product.archived:
@@ -187,7 +175,8 @@ class CatalogSyncRepository:
             return
         reserved = item.quantity_reserved
         item.quantity_on_hand = max(quantity, reserved)
-        variant.in_stock = item.quantity_on_hand > reserved
+        available = item.quantity_on_hand - reserved
+        variant.in_stock = is_in_stock_for_storefront(available)
         product = await self._session.get(ProductModel, variant.product_id)
         if product is not None:
             any_in_stock = (
@@ -211,6 +200,12 @@ class CatalogSyncRepository:
                 version=0,
             )
         )
+        variant = await self._session.get(ProductVariantModel, variant_id)
+        if variant is not None:
+            variant.in_stock = is_in_stock_for_storefront(quantity)
+            product = await self._session.get(ProductModel, variant.product_id)
+            if product is not None:
+                product.in_stock = variant.in_stock
         await self._session.flush()
 
     async def _slug_exists(self, slug: str) -> bool:
