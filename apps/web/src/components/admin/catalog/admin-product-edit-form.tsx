@@ -74,7 +74,14 @@ export function AdminProductEditForm({ product, categories }: AdminProductEditFo
   const imageSrc = product.image_url ?? product.erp_image_url ?? siteConfig.images.productPlaceholder;
   const colorOptions = getColorOptionsFromVariants(
     product.variants.map((variant) => ({
-      ...variant,
+      id: variant.id,
+      sku: variant.sku,
+      name: variant.name,
+      price_cents: variant.price_cents,
+      wholesale_price_cents: variant.wholesale_price_cents ?? undefined,
+      in_stock: variant.in_stock,
+      is_default: variant.is_default,
+      sort_order: variant.sort_order,
       attributes: variant.attributes ?? {},
     })),
   );
