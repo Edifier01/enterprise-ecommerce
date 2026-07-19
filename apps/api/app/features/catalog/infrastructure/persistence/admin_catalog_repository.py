@@ -18,7 +18,6 @@ from app.features.catalog.domain.admin_ports import (
     DuplicateSlugError,
     IAdminCatalogRepository,
     ProductNotFoundError,
-    SyncProtectedFieldError,
     UpdateCategoryData,
     UpdateProductData,
     UpdateVariantData,

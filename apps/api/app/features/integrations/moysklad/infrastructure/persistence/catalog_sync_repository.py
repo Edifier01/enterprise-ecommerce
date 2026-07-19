@@ -38,7 +38,6 @@ class CatalogSyncRepository:
     ) -> tuple[ProductModel, bool]:
         now = datetime.now(tz=UTC)
         existing = await self.get_product_by_ms_id(ms_product.external_id)
-        created = existing is None
 
         if existing is None:
             slug = await unique_slug(
@@ -84,7 +83,6 @@ class CatalogSyncRepository:
         sort_order: int,
     ) -> tuple[ProductVariantModel, bool]:
         existing = await self.get_variant_by_ms_id(ms_variant.external_id)
-        created = existing is None
         in_stock = not ms_variant.archived
 
         if existing is None:

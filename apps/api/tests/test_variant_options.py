@@ -2,8 +2,6 @@
 
 import uuid
 
-import pytest
-
 from app.features.catalog.domain.entities import ProductVariant
 from app.features.catalog.domain.variant_options import (
     build_option_groups,

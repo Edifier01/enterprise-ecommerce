@@ -13,7 +13,6 @@ from app.features.catalog.domain.admin_ports import (
     CategoryNotFoundError,
     InvalidCategoryParentError,
     CreateCategoryData,
-    CreateProductData,
     CreateVariantData,
     DuplicateSkuError,
     DuplicateSlugError,

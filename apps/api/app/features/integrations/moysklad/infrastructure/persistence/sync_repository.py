@@ -42,7 +42,6 @@ class SyncStateRepository:
         return int((await self._session.scalar(stmt)) or 0) > 0
 
     async def count_recent_errors(self, *, hours: int = 24) -> int:
-        since = datetime.now(tz=UTC).replace(microsecond=0)
         # SQLite tests may not support interval; use simple filter
         stmt = (
             select(func.count())
