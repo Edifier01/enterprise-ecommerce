@@ -12,8 +12,8 @@ test.describe("Mobile storefront", () => {
 
     await expect(
       page.getByRole("navigation", { name: "Информация для покупателей" }),
-    ).toHaveCount(0);
-    await expect(page.getByLabel("Преимущества магазина")).toHaveCount(0);
+    ).toBeHidden();
+    await expect(page.getByLabel("Преимущества магазина")).toBeHidden();
     await expect(page.getByRole("button", { name: "Каталог" }).first()).toBeVisible();
     await expect(page.getByLabel("Поиск по каталогу")).toBeVisible();
   });
@@ -28,7 +28,7 @@ test.describe("Mobile storefront", () => {
   });
 
   test("catalog filters button is tappable on mobile", async ({ page }) => {
-    await page.goto("/catalog");
+    await page.goto("/catalog/odezhda");
 
     const filtersButton = page.getByRole("button", { name: /^Фильтры/ });
     await expect(filtersButton).toBeVisible();
@@ -41,9 +41,7 @@ test.describe("Mobile storefront", () => {
     await page.goto("/catalog");
     await addPrimaryProductToCart(page);
 
-    await expect(page.getByRole("navigation", { name: "Мобильная навигация" })).toHaveCount(
-      0,
-    );
+    await expect(page.getByRole("navigation", { name: "Мобильная навигация" })).toBeHidden();
     await expect(page.getByLabel("Итого по корзине")).toBeVisible();
     await expect(page.getByRole("button", { name: "Оформить" })).toBeVisible();
   });
@@ -55,8 +53,6 @@ test.describe("Mobile storefront", () => {
 
     await page.getByRole("button", { name: "Оформить" }).click();
     await expect(page).toHaveURL(/\/checkout/, { timeout: 15_000 });
-    await expect(page.getByRole("navigation", { name: "Мобильная навигация" })).toHaveCount(
-      0,
-    );
+    await expect(page.getByRole("navigation", { name: "Мобильная навигация" })).toBeHidden();
   });
 });

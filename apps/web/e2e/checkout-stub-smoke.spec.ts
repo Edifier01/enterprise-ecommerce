@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { addPrimaryProductToCart, primaryAddToCartButton } from "./test-helpers";
+import { addPrimaryProductToCart, cartCheckoutButton, primaryAddToCartButton } from "./test-helpers";
 
 /**
  * Full guest checkout via dev payment stub (ADR-006).
@@ -17,7 +17,7 @@ test.describe("Checkout stub smoke", () => {
 
     await addPrimaryProductToCart(page);
 
-    await page.getByRole("button", { name: "Перейти к оформлению" }).click();
+    await cartCheckoutButton(page).click();
     await page.waitForURL("**/checkout");
 
     await expect(

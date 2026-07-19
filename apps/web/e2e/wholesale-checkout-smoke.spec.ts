@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   addPrimaryProductToCart,
+  cartCheckoutButton,
   ensureCartEmpty,
   loginAsWholesaler,
   productDetailPanel,
@@ -27,7 +28,7 @@ test.describe("Wholesale checkout smoke", () => {
 
     await addPrimaryProductToCart(page, detail);
 
-    await page.getByRole("button", { name: "Перейти к оформлению" }).click();
+    await cartCheckoutButton(page).click();
     await page.waitForURL("**/checkout");
 
     await page.getByRole("button", { name: "Перейти к оплате" }).click();

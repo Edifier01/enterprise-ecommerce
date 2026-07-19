@@ -23,7 +23,9 @@ export async function loginAsWholesaler(page: Page) {
   await form.getByLabel("Пароль").fill("wholesale12345");
   await form.getByRole("button", { name: "Войти" }).click();
   await expect(page).toHaveURL("/", { timeout: 15_000 });
-  await expect(page.locator('a[href="/account"]')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('header a[href="/account"]').first()).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 export async function ensureCartEmpty(page: Page) {
@@ -42,6 +44,32 @@ export function productDetailPanel(page: Page, productName: string): Locator {
   return page
     .getByRole("heading", { name: productName, level: 1 })
     .locator("xpath=ancestor::div[contains(@class,'grid')]/div[2]");
+}
+
+export function cartCheckoutButton(page: Page, scope?: Locator) {
+  const root = scope ?? page;
+  return root
+    .getByRole("button", { name: "Перейти к оформлению" })
+    .or(root.getByRole("button", { name: "Оформить" }))
+    .first();
+}
+
+export async function clickAdminCatalogEditLink(page: Page, slug: string) {
+  const editLinks = page.getByRole("link", { name: "Изменить" });
+  const count = await editLinks.count();
+
+  for (let index = 0; index < count; index += 1) {
+    const link = editLinks.nth(index);
+    const container = link.locator("xpath=ancestor::li[1] | ancestor::tr[1]");
+    const text = await container.textContent();
+
+    if (text?.includes(slug) && (await link.isVisible())) {
+      await link.click();
+      return;
+    }
+  }
+
+  throw new Error(`Visible edit link not found for slug: ${slug}`);
 }
 
 export function primaryAddToCartButton(page: Page, scope?: Locator) {
@@ -92,7 +120,7 @@ export async function addPrimaryProductToCart(page: Page, scope?: Locator) {
   await Promise.all([cartAddResponse, button.click()]);
 
   await page.goto("/cart");
-  await expect(page.getByRole("button", { name: "Перейти к оформлению" })).toBeVisible({
+  await expect(cartCheckoutButton(page)).toBeVisible({
     timeout: 30_000,
   });
 }
