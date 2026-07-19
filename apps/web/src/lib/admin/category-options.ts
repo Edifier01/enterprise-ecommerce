@@ -1,4 +1,4 @@
-import type { AdminCategory } from "@/lib/admin/catalog";
+import type { AdminCategory } from "@/lib/admin/catalog-shared";
 
 export type CategoryOption = {
   id: string;

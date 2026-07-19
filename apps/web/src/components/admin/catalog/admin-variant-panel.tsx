@@ -8,8 +8,8 @@ import {
   type CatalogActionState,
 } from "@/app/actions/admin-catalog";
 import { Button } from "@/components/ui/button";
-import type { AdminProduct } from "@/lib/admin/catalog";
-import { formatPrice } from "@/lib/admin/catalog";
+import type { AdminProduct } from "@/lib/admin/catalog-shared";
+import { formatPrice } from "@/lib/admin/catalog-shared";
 import { centsToRubles } from "@/lib/admin/money";
 import { isMoySkladSynced } from "@/lib/admin/moysklad";
 

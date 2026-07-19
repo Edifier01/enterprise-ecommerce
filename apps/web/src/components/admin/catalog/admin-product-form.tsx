@@ -11,7 +11,7 @@ import { AdminCategorySelect } from "@/components/admin/catalog/admin-category-s
 import { AdminImageField } from "@/components/admin/catalog/admin-image-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { AdminCategory } from "@/lib/admin/catalog";
+import type { AdminCategory } from "@/lib/admin/catalog-shared";
 import { siteConfig } from "@/lib/store/site-config";
 
 const initialState: CatalogActionState = {};

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import type { AdminCategory } from "@/lib/admin/catalog";
+import type { AdminCategory } from "@/lib/admin/catalog-shared";
 import { buildCategoryOptions } from "@/lib/admin/category-options";
 
 type AdminCatalogCategoryPickerProps = {

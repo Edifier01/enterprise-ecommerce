@@ -1,5 +1,5 @@
 import { MoySkladBadge } from "@/components/admin/moysklad/moysklad-badge";
-import type { AdminProduct } from "@/lib/admin/catalog";
+import type { AdminProduct } from "@/lib/admin/catalog-shared";
 import { isMoySkladSynced, moyskladProductUrl } from "@/lib/admin/moysklad";
 
 type MoySkladProductBannerProps = {

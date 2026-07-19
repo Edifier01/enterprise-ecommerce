@@ -16,8 +16,8 @@ import { AdminVariantPanel } from "@/components/admin/catalog/admin-variant-pane
 import { MoySkladProductBanner } from "@/components/admin/moysklad/moysklad-product-banner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { AdminCategory, AdminProduct } from "@/lib/admin/catalog";
-import { formatPrice } from "@/lib/admin/catalog";
+import type { AdminCategory, AdminProduct } from "@/lib/admin/catalog-shared";
+import { formatPrice } from "@/lib/admin/catalog-shared";
 import { centsToRubles } from "@/lib/admin/money";
 import { isMoySkladSynced } from "@/lib/admin/moysklad";
 import { siteConfig } from "@/lib/store/site-config";

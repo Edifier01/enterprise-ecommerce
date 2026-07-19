@@ -15,7 +15,7 @@ import {
 import { AdminCategorySelect } from "@/components/admin/catalog/admin-category-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { AdminCategory } from "@/lib/admin/catalog";
+import type { AdminCategory } from "@/lib/admin/catalog-shared";
 import type {
   CategoryMapping,
   MoySkladIntegrationStatus,
