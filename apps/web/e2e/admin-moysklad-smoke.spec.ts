@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { clickAdminCatalogEditLink, loginAsAdmin } from "./test-helpers";
+import { clickAdminCatalogEditLink, loginAsAdmin, visibleText } from "./test-helpers";
 
 const E2E_MS_SLUG = "e2e-moysklad-synced-product";
 
@@ -12,7 +12,7 @@ test.describe("Admin MoySklad smoke", () => {
     await loginAsAdmin(page);
     await page.goto(`/admin/catalog?all=1&q=${E2E_MS_SLUG}`);
 
-    await expect(page.getByText(E2E_MS_SLUG).first()).toBeVisible();
+    await expect(visibleText(page, E2E_MS_SLUG)).toBeVisible();
     await clickAdminCatalogEditLink(page, E2E_MS_SLUG);
 
     await expect(page).toHaveURL(/\/admin\/catalog\/[^/]+\/edit/, { timeout: 15_000 });

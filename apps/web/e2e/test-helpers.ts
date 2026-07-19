@@ -46,6 +46,10 @@ export function productDetailPanel(page: Page, productName: string): Locator {
     .locator("xpath=ancestor::div[contains(@class,'grid')]/div[2]");
 }
 
+export function visibleText(page: Page, text: string | RegExp): Locator {
+  return page.getByText(text).and(page.locator(":visible"));
+}
+
 export function cartCheckoutButton(page: Page, scope?: Locator) {
   const root = scope ?? page;
   return root
