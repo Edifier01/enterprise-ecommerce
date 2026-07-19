@@ -6,19 +6,21 @@ import {
   adjustInventoryAction,
   type InventoryActionState,
 } from "@/app/actions/admin-inventory";
+import {
+  AdminDesktopTable,
+  AdminMobileCard,
+  AdminMobileCardList,
+  AdminMobileCardRow,
+} from "@/components/admin/admin-mobile-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { AdminInventoryItem } from "@/lib/admin/inventory-shared";
 import { INVENTORY_REASONS } from "@/lib/admin/inventory-shared";
 
 const inputClass =
-  "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+  "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:h-9";
 
-type InventoryAdjustRowProps = {
-  item: AdminInventoryItem;
-};
-
-function InventoryAdjustRow({ item }: InventoryAdjustRowProps) {
+function InventoryAdjustForm({ item }: { item: AdminInventoryItem }) {
   const boundAction = adjustInventoryAction.bind(null, item.variant_id);
   const [state, formAction, pending] = useActionState<InventoryActionState, FormData>(
     boundAction,
@@ -26,53 +28,37 @@ function InventoryAdjustRow({ item }: InventoryAdjustRowProps) {
   );
 
   return (
-    <tr className="border-b border-border/60 align-top">
-      <td className="px-4 py-3">
-        <div className="font-medium">{item.sku}</div>
-        <div className="text-xs text-muted-foreground">{item.product_name}</div>
-      </td>
-      <td className="px-4 py-3">{item.quantity_on_hand}</td>
-      <td className="px-4 py-3">{item.quantity_reserved}</td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span>{item.available}</span>
-          {item.is_low_stock && <Badge variant="destructive">Низкий</Badge>}
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        <form action={formAction} className="flex min-w-[280px] flex-col gap-2">
-          <input type="hidden" name="version" value={item.version} />
-          <input
-            name="quantity_on_hand"
-            type="number"
-            min={item.quantity_reserved}
-            defaultValue={item.quantity_on_hand}
-            className={inputClass}
-            aria-label={`Новое количество для ${item.sku}`}
-          />
-          <select name="reason" defaultValue="restock" className={inputClass}>
-            {INVENTORY_REASONS.map((reason) => (
-              <option key={reason.value} value={reason.value}>
-                {reason.label}
-              </option>
-            ))}
-          </select>
-          {state.error && (
-            <p className="text-xs text-destructive" role="alert">
-              {state.error}
-            </p>
-          )}
-          {state.success && (
-            <p className="text-xs text-green-600" role="status">
-              Сохранено
-            </p>
-          )}
-          <Button type="submit" size="sm" disabled={pending}>
-            {pending ? "Сохранение..." : "Обновить"}
-          </Button>
-        </form>
-      </td>
-    </tr>
+    <form action={formAction} className="flex w-full flex-col gap-2">
+      <input type="hidden" name="version" value={item.version} />
+      <input
+        name="quantity_on_hand"
+        type="number"
+        min={item.quantity_reserved}
+        defaultValue={item.quantity_on_hand}
+        className={inputClass}
+        aria-label={`Новое количество для ${item.sku}`}
+      />
+      <select name="reason" defaultValue="restock" className={inputClass}>
+        {INVENTORY_REASONS.map((reason) => (
+          <option key={reason.value} value={reason.value}>
+            {reason.label}
+          </option>
+        ))}
+      </select>
+      {state.error ? (
+        <p className="text-xs text-destructive" role="alert">
+          {state.error}
+        </p>
+      ) : null}
+      {state.success ? (
+        <p className="text-xs text-green-600" role="status">
+          Сохранено
+        </p>
+      ) : null}
+      <Button type="submit" size="sm" disabled={pending} className="w-full md:w-auto">
+        {pending ? "Сохранение..." : "Обновить"}
+      </Button>
+    </form>
   );
 }
 
@@ -95,7 +81,35 @@ export function AdminInventoryTable({ items, lowStockThreshold }: AdminInventory
       <p className="text-sm text-muted-foreground">
         Порог низкого остатка: {lowStockThreshold} шт. (доступно = на складе − резерв).
       </p>
-      <div className="overflow-x-auto rounded-xl border border-border">
+
+      <AdminMobileCardList>
+        {items.map((item) => (
+          <AdminMobileCard key={item.variant_id}>
+            <div className="space-y-3">
+              <div>
+                <p className="font-medium">{item.sku}</p>
+                <p className="text-xs text-muted-foreground">{item.product_name}</p>
+              </div>
+              <AdminMobileCardRow label="На складе">{item.quantity_on_hand}</AdminMobileCardRow>
+              <AdminMobileCardRow label="Резерв">{item.quantity_reserved}</AdminMobileCardRow>
+              <AdminMobileCardRow label="Доступно">
+                <span className="inline-flex items-center gap-2">
+                  {item.available}
+                  {item.is_low_stock ? <Badge variant="destructive">Низкий</Badge> : null}
+                </span>
+              </AdminMobileCardRow>
+              <div className="border-t border-border pt-3">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Корректировка
+                </p>
+                <InventoryAdjustForm item={item} />
+              </div>
+            </div>
+          </AdminMobileCard>
+        ))}
+      </AdminMobileCardList>
+
+      <AdminDesktopTable className="rounded-xl">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40 text-left text-muted-foreground">
@@ -108,11 +122,29 @@ export function AdminInventoryTable({ items, lowStockThreshold }: AdminInventory
           </thead>
           <tbody>
             {items.map((item) => (
-              <InventoryAdjustRow key={item.variant_id} item={item} />
+              <tr key={item.variant_id} className="border-b border-border/60 align-top">
+                <td className="px-4 py-3">
+                  <div className="font-medium">{item.sku}</div>
+                  <div className="text-xs text-muted-foreground">{item.product_name}</div>
+                </td>
+                <td className="px-4 py-3">{item.quantity_on_hand}</td>
+                <td className="px-4 py-3">{item.quantity_reserved}</td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <span>{item.available}</span>
+                    {item.is_low_stock ? <Badge variant="destructive">Низкий</Badge> : null}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="min-w-[280px]">
+                    <InventoryAdjustForm item={item} />
+                  </div>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
-      </div>
+      </AdminDesktopTable>
     </div>
   );
 }

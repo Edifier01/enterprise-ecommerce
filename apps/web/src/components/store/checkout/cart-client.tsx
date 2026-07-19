@@ -170,13 +170,36 @@ export function CartClient() {
             type="button"
             size="lg"
             disabled={isPending}
-            className="w-full bg-store-cta text-store-cta-foreground hover:bg-store-cta/90"
+            className="hidden w-full bg-store-cta text-store-cta-foreground hover:bg-store-cta/90 md:inline-flex"
             onClick={() => router.push("/checkout")}
           >
             Перейти к оформлению
           </Button>
         </CardContent>
       </Card>
+
+      <div
+        className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 p-3 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur md:hidden"
+        aria-label="Итого по корзине"
+      >
+        <div className="mx-auto flex max-w-7xl items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-muted-foreground">К оплате</p>
+            <p className="text-lg font-semibold tabular-nums">
+              {formatPrice(cart.total_cents, currency)}
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="lg"
+            disabled={isPending}
+            className="shrink-0 bg-store-cta px-5 text-store-cta-foreground hover:bg-store-cta/90"
+            onClick={() => router.push("/checkout")}
+          >
+            Оформить
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

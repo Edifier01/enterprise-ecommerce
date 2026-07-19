@@ -679,6 +679,45 @@ admin-assigned. Existing orders are never repriced.
 
 ---
 
+### Feature: Mobile Storefront Optimization (Wave 3)
+
+**Status:** COMPLETED (2026-07-19)
+
+- [x] Service worker (`public/sw.js`) + `PwaRegister` + `/offline` page
+- [x] Product image CDN helper + blur placeholders (`lib/store/product-image.ts`)
+- [x] Admin mobile card layouts: orders, customers, inventory, catalog list
+- [x] `next.config` remotePatterns for CDN/API images; `.env.example` docs
+- [x] E2E: mobile admin customers card layout test
+- [x] `tsc --noEmit` green
+
+---
+
+### Feature: Mobile Storefront Optimization (Wave 2)
+
+**Status:** COMPLETED (2026-07-19)
+
+- [x] Hide storefront chrome on `/admin/*` (`ConditionalStoreChrome`)
+- [x] Admin mobile drawer nav + responsive panel padding
+- [x] PWA: `manifest.ts`, appleWebApp, icons, themeColor
+- [x] Core Web Vitals baseline: viewport metadata, font swap + cyrillic, text-size-adjust
+- [x] E2E: `mobile-admin.spec.ts` (2 tests)
+- [x] `tsc --noEmit` green
+
+---
+
+### Feature: Mobile Storefront Optimization (Wave 1)
+
+**Status:** COMPLETED (2026-07-19)
+
+- [x] Compact mobile header (hide TopBar/TrustBar on `< md`, 2-row layout)
+- [x] Route-aware bottom nav (hidden on `/cart`, `/checkout*`)
+- [x] Cart sticky checkout bar on mobile
+- [x] Catalog mobile sort/filters touch targets
+- [x] Playwright `mobile-chrome` project + 5 smoke tests
+- [x] `tsc --noEmit` green
+
+---
+
 ### Feature: Storefront Header Structure (stich.su layout)
 
 **Status:** COMPLETED (2026-07-15)

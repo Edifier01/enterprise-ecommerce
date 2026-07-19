@@ -7,8 +7,8 @@ import { siteConfig } from "@/lib/store/site-config";
 
 /**
  * Storefront header (stich.su-inspired structure):
- * Row 1 — utility links (scrolls away)
- * Row 1b — trust / USP strip (scrolls away)
+ * Row 1 — utility links (scrolls away, desktop only)
+ * Row 1b — trust / USP strip (scrolls away, desktop only)
  * Rows 2–3 — logo + search + account/cart + categories (sticky)
  */
 export async function StoreHeader() {
@@ -16,8 +16,10 @@ export async function StoreHeader() {
 
   return (
     <header>
-      <TopBar />
-      <TrustBar />
+      <div className="hidden md:block">
+        <TopBar />
+        <TrustBar />
+      </div>
       <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <MainHeader
           navItems={categoryData.navItems}

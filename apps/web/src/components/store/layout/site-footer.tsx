@@ -1,12 +1,23 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { siteConfig } from "@/lib/store/site-config";
+import { getMobileFooterPaddingClass } from "@/lib/store/mobile-layout";
+import { cn } from "@/lib/utils";
 
 export function SiteFooter() {
+  const pathname = usePathname();
   const { footer, contact, name, description } = siteConfig;
 
   return (
-    <footer className="border-t bg-primary text-primary-foreground">
+    <footer
+      className={cn(
+        "border-t bg-primary text-primary-foreground",
+        getMobileFooterPaddingClass(pathname),
+      )}
+    >
       <div className={`${siteConfig.layout.containerClass} py-10`}>
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div className="sm:col-span-2 lg:col-span-1">

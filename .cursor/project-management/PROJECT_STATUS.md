@@ -53,6 +53,9 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Recently Completed
 
+- [x] **Mobile storefront Wave 3** — service worker, CDN/blur images, admin card layouts (2026-07-19)
+- [x] **Mobile storefront Wave 2** — admin mobile nav, PWA manifest, store chrome isolation (2026-07-19)
+- [x] **Mobile storefront Wave 1** — header, nav, cart sticky CTA, catalog toolbar (2026-07-19)
 - [x] **Admin UX polish** — category-first catalog, RUB pricing, read-only wholesaler status (2026-07-16)
 - [x] **E2E test stabilization** — 24/24 Playwright green; cart upsert race fix (2026-07-16)
 - [x] **Homepage search UX** — placeholder «Название», promo cards removed (2026-07-16)
@@ -77,7 +80,7 @@ None.
 
 ## Last Updated
 
-2026-07-16 (admin UX polish)
+2026-07-19 (mobile storefront Wave 1)
 
 ---
 

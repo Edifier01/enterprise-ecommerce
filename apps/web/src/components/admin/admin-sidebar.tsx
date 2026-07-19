@@ -8,7 +8,7 @@ type AdminSidebarProps = {
 
 export function AdminSidebar({ admin }: AdminSidebarProps) {
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-muted/30">
+    <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-muted/30 md:flex">
       <div className="border-b border-border px-4 py-5">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Админ-панель

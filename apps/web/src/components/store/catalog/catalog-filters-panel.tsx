@@ -32,12 +32,12 @@ function CheckboxFilter({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 text-sm">
+    <label className="flex min-h-11 cursor-pointer items-center gap-3 py-1.5 text-sm">
       <input
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        className="size-4 rounded border-input accent-primary"
+        className="size-5 shrink-0 rounded border-input accent-primary"
       />
       <span>{label}</span>
     </label>
@@ -68,12 +68,15 @@ function MultiCheckboxGroup({
         {options.map((option) => {
           const count = counts?.[option];
           return (
-            <label key={option} className="flex cursor-pointer items-center gap-2 text-sm">
+            <label
+              key={option}
+              className="flex min-h-11 cursor-pointer items-center gap-3 py-1.5 text-sm"
+            >
               <input
                 type="checkbox"
                 checked={selected.includes(option)}
                 onChange={() => onToggle(option)}
-                className="size-4 rounded border-input accent-primary"
+                className="size-5 shrink-0 rounded border-input accent-primary"
               />
               <span className="flex flex-1 items-center justify-between gap-2">
                 <span>{option}</span>

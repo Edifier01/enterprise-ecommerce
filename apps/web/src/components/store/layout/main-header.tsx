@@ -25,40 +25,39 @@ export async function MainHeader({
   return (
     <div className="bg-background">
       <div className={siteConfig.layout.containerClass}>
-        <div className="grid gap-3 py-3 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:gap-6 md:py-4">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2.5 py-2.5 md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:gap-6 md:py-4">
+          <div className="flex items-center gap-2 md:contents">
             <MobileCategoryDrawer navItems={navItems} tree={categoryTree} />
             <Link
               href="/"
-              className="flex shrink-0 items-center gap-2.5 text-xl font-bold uppercase tracking-wide text-primary"
+              className="flex min-w-0 flex-1 items-center gap-2 text-lg font-bold uppercase tracking-wide text-primary md:flex-none md:text-xl"
             >
               <Image
                 src={siteConfig.images.logo}
                 alt=""
                 width={40}
                 height={40}
-                className="size-10 rounded-sm object-cover"
+                className="size-9 shrink-0 rounded-sm object-cover sm:size-10"
                 priority
               />
-              <span>{siteConfig.name}</span>
+              <span className="truncate">{siteConfig.name}</span>
             </Link>
+            <div className="flex shrink-0 items-center gap-2 sm:gap-4 md:col-start-3 md:justify-end">
+              <Link
+                href={accountHref}
+                className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-foreground transition-colors hover:text-primary sm:text-sm"
+              >
+                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  <User className="size-4" aria-hidden />
+                </span>
+                <span className="hidden sm:inline">Личный кабинет</span>
+              </Link>
+              <CartHeaderSummary />
+            </div>
           </div>
 
-          <div className="min-w-0 md:max-w-2xl md:justify-self-center lg:max-w-3xl">
+          <div className="min-w-0 md:col-start-2 md:max-w-2xl md:justify-self-center lg:max-w-3xl">
             <CatalogSearchForm variant="header" />
-          </div>
-
-          <div className="flex items-center justify-end gap-4 sm:gap-6">
-            <Link
-              href={accountHref}
-              className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-foreground transition-colors hover:text-primary sm:text-sm"
-            >
-              <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <User className="size-4" aria-hidden />
-              </span>
-              <span className="hidden sm:inline">Личный кабинет</span>
-            </Link>
-            <CartHeaderSummary />
           </div>
         </div>
       </div>

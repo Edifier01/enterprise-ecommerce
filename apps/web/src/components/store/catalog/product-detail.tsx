@@ -6,6 +6,7 @@ import { ProductPurchasePanel } from "@/components/store/catalog/product-purchas
 import { ProductSpecsTable } from "@/components/store/catalog/product-specs-table";
 import type { Product } from "@/lib/api";
 import { siteConfig } from "@/lib/store/site-config";
+import { productImageRenderProps } from "@/lib/store/product-image";
 
 export interface ProductDetailProps {
   product: Product;
@@ -23,7 +24,7 @@ export function ProductDetail({
   categoryBreadcrumb,
 }: ProductDetailProps) {
   const placeholder = siteConfig.images.productPlaceholder;
-  const imageSrc = product.image_url ?? placeholder;
+  const image = productImageRenderProps(product.image_url ?? placeholder);
   const variant = defaultVariant(product);
   const sku = variant?.sku ?? product.slug;
 
@@ -52,13 +53,15 @@ export function ProductDetail({
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
         <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted ring-1 ring-foreground/5">
           <Image
-            src={imageSrc}
+            src={image.src}
             alt={product.name}
             fill
             priority
             sizes="(max-width: 1024px) 100vw, 50vw"
             className="object-cover"
-            unoptimized={imageSrc.startsWith("http")}
+            unoptimized={image.unoptimized}
+            placeholder={image.placeholder}
+            blurDataURL={image.blurDataURL}
           />
         </div>
 

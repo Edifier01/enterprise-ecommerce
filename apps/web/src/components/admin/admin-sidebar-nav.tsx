@@ -3,39 +3,35 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const NAV_ITEMS = [
-  { href: "/admin", label: "Сводка", exact: true },
-  { href: "/admin/catalog", label: "Каталог", exact: false },
-  { href: "/admin/inventory", label: "Склад", exact: false },
-  { href: "/admin/orders", label: "Заказы", exact: false },
-  { href: "/admin/customers", label: "Клиенты", exact: false },
-] as const;
+import { ADMIN_NAV_ITEMS, isAdminNavActive } from "@/lib/admin/navigation";
+import { cn } from "@/lib/utils";
 
-function isActive(pathname: string, href: string, exact: boolean): boolean {
-  if (exact) {
-    return pathname === href;
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-export function AdminSidebarNav() {
+export function AdminSidebarNav({
+  onNavigate,
+  className,
+}: {
+  onNavigate?: () => void;
+  className?: string;
+}) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-1 flex-col gap-1 p-3">
-      {NAV_ITEMS.map((item) => {
-        const active = isActive(pathname, item.href, item.exact);
+    <nav className={cn("flex flex-1 flex-col gap-1 p-3", className)}>
+      {ADMIN_NAV_ITEMS.map((item) => {
+        const active = isAdminNavActive(pathname, item.href, item.exact);
 
         return (
           <Link
             key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
-            className={
+            onClick={onNavigate}
+            className={cn(
+              "min-h-11 rounded-md px-3 py-2.5 text-sm font-medium",
               active
-                ? "rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground"
-                : "rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
-            }
+                ? "bg-muted text-foreground"
+                : "text-foreground hover:bg-muted",
+            )}
           >
             {item.label}
           </Link>

@@ -7,6 +7,12 @@ import { AdminCatalogCategoryPicker } from "@/components/admin/catalog/admin-cat
 import { AdminCatalogSearch } from "@/components/admin/catalog/admin-catalog-search";
 import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
 import {
+  AdminDesktopTable,
+  AdminMobileCard,
+  AdminMobileCardList,
+  AdminMobileCardRow,
+} from "@/components/admin/admin-mobile-card";
+import {
   ADMIN_CATALOG_PAGE_SIZE,
   formatPrice,
   listAdminCategories,
@@ -14,7 +20,7 @@ import {
   PRODUCT_STATUS_LABELS,
 } from "@/lib/admin/catalog";
 import { getCurrentAdmin } from "@/lib/admin/session";
-import { siteConfig } from "@/lib/store/site-config";
+import { productImageRenderProps } from "@/lib/store/product-image";
 
 export const metadata: Metadata = {
   title: "Каталог — Админ-панель",
@@ -196,64 +202,109 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
         })}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/40 text-left text-muted-foreground">
-              <th className="px-4 py-3">Фото</th>
-              <th className="px-4 py-3">Название</th>
-              <th className="px-4 py-3">Slug</th>
-              <th className="px-4 py-3">Статус</th>
-              <th className="px-4 py-3">Цена</th>
-              <th className="px-4 py-3">Действия</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.items.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                  {searchQuery ? "Ничего не найдено." : "Товаров пока нет."}
-                </td>
-              </tr>
-            ) : (
-              products.items.map((product) => {
-                const imageSrc = product.image_url ?? siteConfig.images.productPlaceholder;
-                return (
-                  <tr key={product.id} className="border-b border-border/60">
-                    <td className="px-4 py-3">
-                      <div className="relative size-10 overflow-hidden rounded-md border bg-muted">
-                        <Image
-                          src={imageSrc}
-                          alt=""
-                          fill
-                          className="object-cover"
-                          unoptimized={imageSrc.startsWith("http")}
-                        />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 font-medium">{product.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{product.slug}</td>
-                    <td className="px-4 py-3">
-                      {PRODUCT_STATUS_LABELS[product.status] ?? product.status}
-                    </td>
-                    <td className="px-4 py-3">
-                      {formatPrice(product.price_cents, product.currency)}
-                    </td>
-                    <td className="px-4 py-3">
+      {products.items.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+          {searchQuery ? "Ничего не найдено." : "Товаров пока нет."}
+        </p>
+      ) : (
+        <>
+          <AdminMobileCardList>
+            {products.items.map((product) => {
+              const image = productImageRenderProps(product.image_url);
+              return (
+                <AdminMobileCard key={product.id}>
+                  <div className="flex gap-3">
+                    <div className="relative size-16 shrink-0 overflow-hidden rounded-md border bg-muted">
+                      <Image
+                        src={image.src}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        unoptimized={image.unoptimized}
+                        placeholder={image.placeholder}
+                        blurDataURL={image.blurDataURL}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <p className="font-medium leading-snug">{product.name}</p>
+                      <AdminMobileCardRow label="Slug">
+                        <span className="break-all font-normal text-muted-foreground">
+                          {product.slug}
+                        </span>
+                      </AdminMobileCardRow>
+                      <AdminMobileCardRow label="Статус">
+                        {PRODUCT_STATUS_LABELS[product.status] ?? product.status}
+                      </AdminMobileCardRow>
+                      <AdminMobileCardRow label="Цена">
+                        {formatPrice(product.price_cents, product.currency)}
+                      </AdminMobileCardRow>
                       <Link
                         href={`/admin/catalog/${product.id}/edit`}
-                        className="text-primary hover:underline"
+                        className="inline-flex text-sm font-medium text-primary hover:underline"
                       >
                         Изменить
                       </Link>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                    </div>
+                  </div>
+                </AdminMobileCard>
+              );
+            })}
+          </AdminMobileCardList>
+
+          <AdminDesktopTable className="rounded-xl">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/40 text-left text-muted-foreground">
+                  <th className="px-4 py-3">Фото</th>
+                  <th className="px-4 py-3">Название</th>
+                  <th className="px-4 py-3">Slug</th>
+                  <th className="px-4 py-3">Статус</th>
+                  <th className="px-4 py-3">Цена</th>
+                  <th className="px-4 py-3">Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.items.map((product) => {
+                  const image = productImageRenderProps(product.image_url);
+                  return (
+                    <tr key={product.id} className="border-b border-border/60">
+                      <td className="px-4 py-3">
+                        <div className="relative size-10 overflow-hidden rounded-md border bg-muted">
+                          <Image
+                            src={image.src}
+                            alt=""
+                            fill
+                            className="object-cover"
+                            unoptimized={image.unoptimized}
+                            placeholder={image.placeholder}
+                            blurDataURL={image.blurDataURL}
+                          />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-medium">{product.name}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{product.slug}</td>
+                      <td className="px-4 py-3">
+                        {PRODUCT_STATUS_LABELS[product.status] ?? product.status}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatPrice(product.price_cents, product.currency)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/admin/catalog/${product.id}/edit`}
+                          className="text-primary hover:underline"
+                        >
+                          Изменить
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </AdminDesktopTable>
+        </>
+      )}
 
       <AdminPagination page={page} totalPages={totalPages} buildHref={buildHref} />
     </div>

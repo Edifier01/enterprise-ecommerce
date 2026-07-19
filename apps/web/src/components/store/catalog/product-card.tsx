@@ -8,7 +8,7 @@ import {
   formatPrice,
   getDiscountPercent,
 } from "@/lib/store/format";
-import { siteConfig } from "@/lib/store/site-config";
+import { productImageRenderProps } from "@/lib/store/product-image";
 import { cn } from "@/lib/utils";
 
 export type ProductCardProduct = Pick<
@@ -39,7 +39,7 @@ export function ProductCard({
     ? getDiscountPercent(product.price_cents, compareAtCents)
     : null;
   const onSale = discount !== null && discount > 0;
-  const placeholder = siteConfig.images.productPlaceholder;
+  const image = productImageRenderProps(imageSrc);
 
   return (
     <article
@@ -53,11 +53,14 @@ export function ProductCard({
         className="relative block aspect-square overflow-hidden bg-muted"
       >
         <Image
-          src={imageSrc ?? placeholder}
+          src={image.src}
           alt={product.name}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          unoptimized={image.unoptimized}
+          placeholder={image.placeholder}
+          blurDataURL={image.blurDataURL}
         />
         {onSale ? (
           <span className="absolute left-2 top-2 inline-flex items-center rounded-full bg-store-sale px-2 py-0.5 text-xs font-medium text-store-sale-foreground">

@@ -17,6 +17,15 @@ export default defineConfig({
       name: "chromium",
       use: { browserName: "chromium" },
     },
+    {
+      name: "mobile-chrome",
+      use: {
+        browserName: "chromium",
+        viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
+      },
+    },
   ],
   webServer: [
     {

@@ -106,10 +106,10 @@ export function FilteredProductList({
       />
 
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
           <button
             type="button"
-            className="inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium lg:hidden"
+            className="inline-flex h-11 min-h-11 w-full items-center justify-center rounded-md border px-3 text-sm font-medium sm:w-auto lg:hidden"
             onClick={() => setMobileFiltersOpen(true)}
           >
             Фильтры{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
@@ -119,7 +119,7 @@ export function FilteredProductList({
             onChange={updateSort}
             totalCount={total}
             disabled={products.length === 0 && total === 0}
-            className="flex-1"
+            className="w-full sm:flex-1"
           />
         </div>
 

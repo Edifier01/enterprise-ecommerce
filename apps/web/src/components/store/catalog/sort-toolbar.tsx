@@ -31,7 +31,7 @@ export function SortToolbar({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5 sm:px-4",
+        "flex flex-col gap-2 rounded-lg border bg-muted/30 px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-4",
         className
       )}
     >
@@ -44,13 +44,13 @@ export function SortToolbar({
         <span className="text-sm text-muted-foreground">Сортировка</span>
       )}
 
-      <label className="flex items-center gap-2 text-sm">
-        <span className="sr-only">Сортировка товаров</span>
+      <label className="flex w-full items-center gap-2 text-sm sm:w-auto">
+        <span className="shrink-0 text-muted-foreground sm:sr-only">Сортировка</span>
         <select
           value={value}
           disabled={disabled}
           onChange={(event) => onChange(event.target.value as SortOptionValue)}
-          className="h-8 rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-11 w-full rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:w-auto sm:min-w-[12rem]"
         >
           {SORT_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>

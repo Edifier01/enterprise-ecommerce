@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { mobileNavigation } from "@/lib/store/navigation";
+import { shouldShowMobileBottomNav } from "@/lib/store/mobile-layout";
 import { cn } from "@/lib/utils";
 
 function isNavItemActive(pathname: string, href: string): boolean {
@@ -16,6 +17,10 @@ function isNavItemActive(pathname: string, href: string): boolean {
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+
+  if (!shouldShowMobileBottomNav(pathname)) {
+    return null;
+  }
 
   return (
     <nav
@@ -33,7 +38,7 @@ export function MobileBottomNav() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-full flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors",
+                  "flex h-full min-h-11 flex-col items-center justify-center gap-0.5 px-1 text-[11px] font-medium transition-colors",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >

@@ -6,13 +6,13 @@
 
 ## Current Module
 
-`apps/web` + `apps/api` — admin panel Wave C complete.
+`apps/web` — storefront mobile UX (Wave 1)
 
 ---
 
 ## Current Feature
 
-**Homepage recommendations** — popular sort by sales (2026-07-16)
+**Mobile storefront Wave 3** — SW, CDN images, admin cards (2026-07-19)
 
 ---
 
@@ -41,6 +41,9 @@ None.
 | Admin Wave A–C | ✅ |
 | E2E smoke suite | ✅ 24/24 passing |
 | Homepage search UX | ✅ |
+| Mobile storefront Wave 1 | ✅ |
+| Mobile storefront Wave 2 | ✅ |
+| Mobile storefront Wave 3 | ✅ |
 | Prod S3/CDN (production) | ⏳ Backlog |
 | Prod SMTP / YooKassa | ⏳ Next gate |
 
@@ -60,4 +63,4 @@ None.
 
 ## Last Updated
 
-2026-07-16 (admin UX — category catalog, RUB, wholesaler read-only)
+2026-07-19 (mobile storefront Wave 1)
