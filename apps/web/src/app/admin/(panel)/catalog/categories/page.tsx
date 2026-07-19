@@ -32,8 +32,8 @@ export default async function AdminCategoriesPage() {
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">Категории</h1>
         <p className="text-sm text-muted-foreground">
-          Создание корневых категорий и подкатегорий (не более 2 уровней). Активные категории
-          сразу появляются на сайте.
+          Структура витрины: корневые категории и подкатегории. Товары добавляются только через
+          МойСклад.
         </p>
       </div>
       <AdminCategoryPanel categories={categories} />

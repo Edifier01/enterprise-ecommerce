@@ -8,7 +8,7 @@ import {
   assignMoySkladProductCategoryAction,
   hideProductAction,
 } from "@/app/actions/admin-moysklad";
-import { AdminCategorySelect } from "@/components/admin/catalog/admin-category-select";
+import { AdminCascadingCategorySelect } from "@/components/admin/catalog/admin-cascading-category-select";
 import { MoySkladBadge } from "@/components/admin/moysklad/moysklad-badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -162,13 +162,10 @@ function ImportRow({
       </td>
       <td className="px-4 py-3 capitalize">{product.status}</td>
       <td className="px-4 py-3 min-w-[12rem]">
-        <AdminCategorySelect
-          name={`category_${product.id}`}
+        <AdminCascadingCategorySelect
           categories={categories}
-          value={categoryId}
           onValueChange={setCategoryId}
-          defaultValue=""
-          emptyLabel="Выберите категорию"
+          disabled={disabled}
         />
       </td>
       <td className="px-4 py-3">
@@ -187,7 +184,7 @@ function ImportRow({
             Назначить
           </Button>
           <Link
-            href={`/admin/catalog/${product.id}`}
+            href={`/admin/catalog/${product.id}/edit`}
             className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
           >
             Редактировать

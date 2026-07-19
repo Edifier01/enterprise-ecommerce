@@ -832,6 +832,15 @@ admin-assigned. Existing orders are never repriced.
 - [x] Stock threshold: available `< 3` → out of stock on storefront
 - [x] Tests: `test_moysklad_catalog_workflow.py`
 
+#### Phase 8 — MS-Only Admin Workflow — COMPLETED
+
+- [x] Block manual product creation (API 403 + UI redirect)
+- [x] Admin catalog filters `sync_source=moysklad` only
+- [x] Category delete: guard subcategories + UI error feedback
+- [x] Sidebar/dashboard UX for import queue
+- [x] Cascading subcategory picker in import queue
+- [x] Tests updated (`test_admin_catalog.py`, E2E smoke)
+
 ---
 
 ## Technical Tasks

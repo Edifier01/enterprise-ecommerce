@@ -6,45 +6,40 @@ Implementation Agent
 
 ## Completed Work
 
-**MoySklad Import Queue Workflow (2026-07-19):**
+**Admin MS-only workflow + category delete fix (2026-07-19):**
 
-- Removed category folder mapping UI/API — categories assigned per product in admin
-- New admin tab `/admin/integrations/moysklad/import` for MS products without category
-- MoySklad products hidden from storefront until `category_id` is set (`storefront_visibility.py`)
-- `DELETE /api/v1/admin/catalog/categories/{id}` — products unlinked, MS products re-hidden
-- Hide product action → `status=archived` on catalog list + import queue
-- Stock threshold: available `< 3` → `in_stock=false` (`STOREFRONT_MIN_AVAILABLE_STOCK=3`)
-- Status API: `pending_imports` count for uncategorized MS products
-- Tests: `tests/test_moysklad_catalog_workflow.py` (6 tests)
+- Blocked manual product creation: API `POST /admin/catalog/products` → 403; `/admin/catalog/new` redirects to MoySklad
+- Admin catalog lists only `sync_source=moysklad` products; removed «Новый товар» button
+- Category delete: backend rejects root with subcategories (422); UI shows errors; delete disabled when children exist
+- Admin UX: sidebar «МойСклад» + «Очередь импорта» first; dashboard pending-imports widget; catalog links to import queue
+- Cascading subcategory picker in import queue (prior session)
+- Fixed «Редактировать» 404 → `/admin/catalog/{id}/edit`
+- Tests: 25 pytest (admin catalog + MS workflow); E2E admin-catalog-smoke updated
 
 ## Files Changed
 
 | Area | Key paths |
 |------|-----------|
-| Backend visibility/stock | `storefront_visibility.py`, `stock_availability.py`, `catalog_sync_repository.py`, `repository.py` |
-| Admin API | `admin_router.py` (delete category, moysklad_pending filter), `moysklad/admin_router.py` |
-| Frontend | `moysklad-import-panel.tsx`, `moysklad-integration-panel.tsx`, `import/page.tsx`, `admin-category-panel.tsx`, `admin-product-hide-button.tsx` |
-| Config | `.env.example` — `STOREFRONT_MIN_AVAILABLE_STOCK=3` |
-| Tests | `test_moysklad_catalog_workflow.py` |
+| Backend | `admin_router.py`, `admin_catalog_repository.py`, `admin_ports.py` |
+| Frontend | `catalog/page.tsx`, `catalog/new/page.tsx`, `admin-category-panel.tsx`, `admin-catalog-category-picker.tsx`, `admin-dashboard.tsx`, `navigation.ts`, `catalog.ts`, `moysklad-import-panel.tsx`, `admin-cascading-category-select.tsx` |
+| Tests | `test_admin_catalog.py`, `admin-catalog-smoke.spec.ts` |
 
 ## Known Issues
 
-- MoySklad credentials must live in `apps/api/.env` (that file takes precedence over repo root `.env`)
-- Restart API after env changes
-- OpenAPI still lists removed category-mapping paths until next sync (optional cleanup)
+- Legacy manual products (`sync_source=manual`) may still exist in DB from seed/dev — hidden from admin catalog list but not deleted
+- Legacy seed categories remain until admin deletes them via `/admin/catalog/categories`
+- MoySklad credentials in `apps/api/.env`; restart API after env changes
 
 ## Next Recommended Action
 
-1. Restart API and confirm «Настроено: да» on `/admin/integrations/moysklad`
-2. Click «Импорт каталога и остатков»
-3. Open `/admin/integrations/moysklad/import` — assign categories, edit, publish
-4. Register webhooks after first import (if public URL available)
+1. Open `/admin/catalog/categories` — delete unused seed categories (subcategories first, then root)
+2. Run MoySklad import on `/admin/integrations/moysklad`
+3. Process `/admin/integrations/moysklad/import` — assign categories, edit, publish
 
-## Import Workflow
+## Workflow
 
 ```
-MS import → draft, no category → hidden from storefront
-Admin assigns category on import tab → still draft until published
-Admin adds photos + status=active → visible on storefront (if stock ≥ 3)
-Delete category → products lose category → MS products hidden again
+МойСклад → импорт → очередь (без категории)
+Создать категории в админке → назначить в очереди → редактировать → опубликовать
+Ручное создание товаров отключено
 ```

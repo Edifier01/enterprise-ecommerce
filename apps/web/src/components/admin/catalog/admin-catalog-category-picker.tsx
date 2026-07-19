@@ -17,7 +17,7 @@ export function AdminCatalogCategoryPicker({ categories }: AdminCatalogCategoryP
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Выберите категорию, чтобы просмотреть и редактировать товары.
+          Выберите категорию, чтобы просмотреть товары из МойСклад.
         </p>
         <Link
           href="/admin/catalog/categories"
@@ -48,11 +48,13 @@ export function AdminCatalogCategoryPicker({ categories }: AdminCatalogCategoryP
         })}
 
         <Link
-          href="/admin/catalog?uncategorized=1"
+          href="/admin/integrations/moysklad/import"
           className="rounded-xl border border-dashed border-border bg-card p-4 transition-colors hover:bg-muted/40"
         >
-          <p className="font-medium">Без категории</p>
-          <p className="mt-1 text-sm text-muted-foreground">Товары без привязки к категории</p>
+          <p className="font-medium">Очередь импорта</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Товары из МойСклад без категории
+          </p>
         </Link>
 
         <Link

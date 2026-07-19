@@ -9,6 +9,7 @@ from app.core.database import get_db_session
 from app.features.admin.domain.entities import AdminUser
 from app.features.admin.presentation.dependencies import require_permission
 from app.features.catalog.domain.admin_ports import (
+    CategoryHasChildrenError,
     CategoryNotFoundError,
     InvalidCategoryParentError,
     CreateCategoryData,
@@ -142,47 +143,11 @@ async def admin_list_products(
 async def admin_create_product(
     request: AdminCreateProductRequest,
     _admin: AdminUser = Depends(require_permission("catalog:write")),
-    repo: IAdminCatalogRepository = Depends(get_admin_catalog_repository),
-    session: AsyncSession = Depends(get_db_session),
 ) -> AdminProductSchema:
-    if (
-        request.compare_at_price_cents is not None
-        and request.compare_at_price_cents <= request.price_cents
-    ):
-        raise HTTPException(
-            status_code=422,
-            detail="compare_at_price_cents must be greater than price_cents",
-        )
-    if (
-        request.wholesale_price_cents is not None
-        and request.wholesale_price_cents > request.price_cents
-    ):
-        raise HTTPException(
-            status_code=422,
-            detail="wholesale_price_cents must not exceed price_cents",
-        )
-    try:
-        product = await repo.create_product(
-            CreateProductData(
-                name=request.name.strip(),
-                slug=request.slug,
-                sku=request.sku,
-                price_cents=request.price_cents,
-                currency=request.currency.upper(),
-                status=request.status,
-                compare_at_price_cents=request.compare_at_price_cents,
-                category_id=request.category_id,
-                wholesale_price_cents=request.wholesale_price_cents,
-                description=request.description,
-                image_url=request.image_url,
-            )
-        )
-    except DuplicateSlugError:
-        raise HTTPException(status_code=409, detail="Slug already exists")
-    except DuplicateSkuError:
-        raise HTTPException(status_code=409, detail="SKU already exists")
-    await session.commit()
-    return _product_schema(product)
+    raise HTTPException(
+        status_code=403,
+        detail="Товары создаются только через импорт из МойСклад.",
+    )
 
 
 @router.get(
@@ -520,4 +485,9 @@ async def admin_delete_category(
         await repo.delete_category(category_id)
     except CategoryNotFoundError:
         raise HTTPException(status_code=404, detail="Category not found")
+    except CategoryHasChildrenError:
+        raise HTTPException(
+            status_code=422,
+            detail="Сначала удалите подкатегории.",
+        )
     await session.commit()

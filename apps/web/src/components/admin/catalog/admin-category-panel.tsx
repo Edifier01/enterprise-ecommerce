@@ -119,6 +119,7 @@ export function AdminCategoryPanel({ categories }: AdminCategoryPanelProps) {
   const router = useRouter();
   const [pendingCategoryId, setPendingCategoryId] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [createState, createAction, createPending] = useActionState(
     createCategoryAction,
     {} as CatalogActionState,
@@ -237,6 +238,7 @@ export function AdminCategoryPanel({ categories }: AdminCategoryPanelProps) {
                 {treeRows.map((row) => {
                   const category = categories.find((item) => item.id === row.id);
                   if (!category) return null;
+                  const hasSubcategories = categoryHasChildren(categories, category.id);
 
                   return (
                     <Fragment key={category.id}>
@@ -292,7 +294,12 @@ export function AdminCategoryPanel({ categories }: AdminCategoryPanelProps) {
                               type="button"
                               variant="destructive"
                               size="sm"
-                              disabled={pendingCategoryId === category.id}
+                              disabled={pendingCategoryId === category.id || hasSubcategories}
+                              title={
+                                hasSubcategories
+                                  ? "Сначала удалите подкатегории"
+                                  : undefined
+                              }
                               onClick={() => {
                                 if (
                                   !window.confirm(
@@ -301,10 +308,15 @@ export function AdminCategoryPanel({ categories }: AdminCategoryPanelProps) {
                                 ) {
                                   return;
                                 }
+                                setActionError(null);
                                 setPendingCategoryId(category.id);
                                 startTransition(async () => {
-                                  await deleteCategoryAction(category.id);
+                                  const result = await deleteCategoryAction(category.id);
                                   setPendingCategoryId(null);
+                                  if (result.error) {
+                                    setActionError(result.error);
+                                    return;
+                                  }
                                   router.refresh();
                                 });
                               }}
@@ -327,6 +339,11 @@ export function AdminCategoryPanel({ categories }: AdminCategoryPanelProps) {
               </tbody>
             </table>
           </div>
+          {actionError ? (
+            <p className="mt-4 text-sm text-destructive" role="alert">
+              {actionError}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     </div>

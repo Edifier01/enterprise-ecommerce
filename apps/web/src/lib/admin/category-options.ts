@@ -51,9 +51,25 @@ export function getRootCategories(categories: AdminCategory[]): AdminCategory[] 
   return categories.filter((category) => category.parent_id === null);
 }
 
-export function categoryHasChildren(
+export function getChildCategories(
   categories: AdminCategory[],
-  categoryId: string,
-): boolean {
-  return categories.some((category) => category.parent_id === categoryId);
+  parentId: string,
+): AdminCategory[] {
+  return categories
+    .filter((category) => category.parent_id === parentId)
+    .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name, "ru"));
+}
+
+export function resolveEffectiveCategoryId(
+  categories: AdminCategory[],
+  parentId: string,
+  subcategoryId: string,
+): string {
+  if (!parentId) {
+    return "";
+  }
+  if (categoryHasChildren(categories, parentId)) {
+    return subcategoryId;
+  }
+  return parentId;
 }

@@ -16,9 +16,10 @@ function orderStatusHref(status: string): string | null {
 
 type AdminDashboardProps = {
   summary: DashboardSummary;
+  pendingImports?: number;
 };
 
-export function AdminDashboard({ summary }: AdminDashboardProps) {
+export function AdminDashboard({ summary, pendingImports = 0 }: AdminDashboardProps) {
   const statusEntries = Object.entries(summary.orders_by_status);
 
   return (
@@ -30,7 +31,7 @@ export function AdminDashboard({ summary }: AdminDashboardProps) {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -76,6 +77,20 @@ export function AdminDashboard({ summary }: AdminDashboardProps) {
             <CardContent>
               <p className="text-3xl font-semibold">{summary.low_stock_count}</p>
               <p className="mt-1 text-xs text-primary">Перейти на склад →</p>
+            </CardContent>
+          </Link>
+        </Card>
+
+        <Card className="transition-colors hover:bg-muted/30">
+          <Link href="/admin/integrations/moysklad/import" className="block">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Очередь импорта
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-semibold">{pendingImports}</p>
+              <p className="mt-1 text-xs text-primary">Без категории →</p>
             </CardContent>
           </Link>
         </Card>

@@ -88,7 +88,7 @@ async def _token(client: AsyncClient, email: str = _ADMIN_EMAIL) -> str:
 
 
 @pytest.mark.asyncio
-async def test_admin_create_product_success(admin_catalog_client: AsyncClient) -> None:
+async def test_admin_create_product_returns_403_moysklad_only(admin_catalog_client: AsyncClient) -> None:
     token = await _token(admin_catalog_client)
     response = await admin_catalog_client.post(
         "/api/v1/admin/catalog/products",
@@ -101,12 +101,8 @@ async def test_admin_create_product_success(admin_catalog_client: AsyncClient) -
             "status": "draft",
         },
     )
-    assert response.status_code == 201
-    data = response.json()
-    assert data["slug"] == "new-admin-product"
-    assert data["status"] == "draft"
-    assert len(data["variants"]) == 1
-    assert data["variants"][0]["sku"] == "NEW-ADMIN-1"
+    assert response.status_code == 403
+    assert "МойСклад" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
@@ -152,7 +148,7 @@ async def test_admin_archive_product(admin_catalog_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_admin_create_duplicate_slug_returns_409(admin_catalog_client: AsyncClient) -> None:
+async def test_admin_create_duplicate_slug_returns_403(admin_catalog_client: AsyncClient) -> None:
     token = await _token(admin_catalog_client)
     response = await admin_catalog_client.post(
         "/api/v1/admin/catalog/products",
@@ -165,7 +161,7 @@ async def test_admin_create_duplicate_slug_returns_409(admin_catalog_client: Asy
             "status": "draft",
         },
     )
-    assert response.status_code == 409
+    assert response.status_code == 403
 
 
 @pytest.mark.asyncio
@@ -186,7 +182,9 @@ async def test_viewer_cannot_create_product_returns_403(admin_catalog_client: As
 
 
 @pytest.mark.asyncio
-async def test_admin_create_product_with_wholesale_price(admin_catalog_client: AsyncClient) -> None:
+async def test_admin_create_product_with_wholesale_price_returns_403(
+    admin_catalog_client: AsyncClient,
+) -> None:
     token = await _token(admin_catalog_client)
     response = await admin_catalog_client.post(
         "/api/v1/admin/catalog/products",
@@ -200,8 +198,7 @@ async def test_admin_create_product_with_wholesale_price(admin_catalog_client: A
             "status": "active",
         },
     )
-    assert response.status_code == 201
-    assert response.json()["variants"][0]["wholesale_price_cents"] == 4000
+    assert response.status_code == 403
 
 
 @pytest.mark.asyncio
@@ -219,11 +216,13 @@ async def test_admin_rejects_wholesale_above_retail(admin_catalog_client: AsyncC
             "status": "draft",
         },
     )
-    assert response.status_code == 422
+    assert response.status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_admin_create_product_with_content_fields(admin_catalog_client: AsyncClient) -> None:
+async def test_admin_create_product_with_content_fields_returns_403(
+    admin_catalog_client: AsyncClient,
+) -> None:
     token = await _token(admin_catalog_client)
     response = await admin_catalog_client.post(
         "/api/v1/admin/catalog/products",
@@ -239,11 +238,7 @@ async def test_admin_create_product_with_content_fields(admin_catalog_client: As
             "status": "active",
         },
     )
-    assert response.status_code == 201
-    data = response.json()
-    assert data["description"] == "Detailed product description for storefront."
-    assert data["image_url"] == "https://cdn.example.com/products/content-rich.jpg"
-    assert data["compare_at_price_cents"] == 12900
+    assert response.status_code == 403
 
 
 @pytest.mark.asyncio
@@ -280,6 +275,56 @@ async def test_admin_create_and_list_categories(admin_catalog_client: AsyncClien
     )
     assert updated.status_code == 200
     assert updated.json()["is_active"] is False
+
+
+@pytest.mark.asyncio
+async def test_admin_delete_category_with_children_returns_422(
+    admin_catalog_client: AsyncClient,
+) -> None:
+    token = await _token(admin_catalog_client)
+    root = await admin_catalog_client.post(
+        "/api/v1/admin/catalog/categories",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"slug": "root-delete-test", "name": "Root Delete Test"},
+    )
+    assert root.status_code == 201
+    root_id = root.json()["id"]
+
+    child = await admin_catalog_client.post(
+        "/api/v1/admin/catalog/categories",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "slug": "child-delete-test",
+            "name": "Child Delete Test",
+            "parent_id": root_id,
+        },
+    )
+    assert child.status_code == 201
+
+    delete_root = await admin_catalog_client.delete(
+        f"/api/v1/admin/catalog/categories/{root_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert delete_root.status_code == 422
+    assert "подкатегори" in delete_root.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_admin_delete_leaf_category(admin_catalog_client: AsyncClient) -> None:
+    token = await _token(admin_catalog_client)
+    created = await admin_catalog_client.post(
+        "/api/v1/admin/catalog/categories",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"slug": "leaf-delete-test", "name": "Leaf Delete Test"},
+    )
+    assert created.status_code == 201
+    category_id = created.json()["id"]
+
+    deleted = await admin_catalog_client.delete(
+        f"/api/v1/admin/catalog/categories/{category_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert deleted.status_code == 204
 
 
 @pytest.mark.asyncio
@@ -424,18 +469,18 @@ async def test_admin_list_products_filter_by_category(admin_catalog_client: Asyn
     assert category.status_code == 201
     category_id = category.json()["id"]
 
-    in_category = await admin_catalog_client.post(
-        "/api/v1/admin/catalog/products",
+    listed = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products?status=active",
         headers={"Authorization": f"Bearer {token}"},
-        json={
-            "name": "Category Product",
-            "slug": "category-product",
-            "sku": "CAT-PROD-1",
-            "price_cents": 5000,
-            "category_id": category_id,
-        },
     )
-    assert in_category.status_code == 201
+    product_id = listed.json()["items"][0]["id"]
+
+    assigned = await admin_catalog_client.patch(
+        f"/api/v1/admin/catalog/products/{product_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"category_id": category_id},
+    )
+    assert assigned.status_code == 200
 
     filtered = await admin_catalog_client.get(
         f"/api/v1/admin/catalog/products?category_id={category_id}",
@@ -443,8 +488,8 @@ async def test_admin_list_products_filter_by_category(admin_catalog_client: Asyn
     )
     assert filtered.status_code == 200
     slugs = {item["slug"] for item in filtered.json()["items"]}
-    assert "category-product" in slugs
-    assert "visible-product" not in slugs
+    assert "visible-product" in slugs
+    assert "draft-product" not in slugs
 
     uncategorized = await admin_catalog_client.get(
         "/api/v1/admin/catalog/products?uncategorized=true",
@@ -452,5 +497,5 @@ async def test_admin_list_products_filter_by_category(admin_catalog_client: Asyn
     )
     assert uncategorized.status_code == 200
     uncategorized_slugs = {item["slug"] for item in uncategorized.json()["items"]}
-    assert "category-product" not in uncategorized_slugs
-    assert "visible-product" in uncategorized_slugs
+    assert "visible-product" not in uncategorized_slugs
+    assert "draft-product" in uncategorized_slugs

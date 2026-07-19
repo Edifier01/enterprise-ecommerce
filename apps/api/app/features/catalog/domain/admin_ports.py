@@ -33,6 +33,10 @@ class InvalidCategoryParentError(Exception):
     """Raised when parent is invalid (non-root parent or root with children)."""
 
 
+class CategoryHasChildrenError(Exception):
+    """Raised when deleting a category that still has subcategories."""
+
+
 class SyncProtectedFieldError(Exception):
     """Raised when admin attempts to edit MoySklad-owned fields."""
 

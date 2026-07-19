@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.features.catalog.domain.admin_ports import (
+    CategoryHasChildrenError,
     CategoryNotFoundError,
     InvalidCategoryParentError,
     CreateCategoryData,
@@ -306,6 +307,7 @@ class AdminCatalogRepository(IAdminCatalogRepository):
             .where(
                 ProductModel.status == "active",
                 ProductModel.category_id.is_not(None),
+                ProductModel.sync_source == "moysklad",
             )
             .group_by(ProductModel.category_id)
         )
@@ -407,6 +409,14 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         category = await self._session.get(CategoryModel, category_id)
         if category is None:
             raise CategoryNotFoundError(str(category_id))
+
+        child_count = await self._session.scalar(
+            select(func.count())
+            .select_from(CategoryModel)
+            .where(CategoryModel.parent_id == category_id)
+        )
+        if child_count and child_count > 0:
+            raise CategoryHasChildrenError(str(category_id))
 
         await self._session.execute(
             update(ProductModel)

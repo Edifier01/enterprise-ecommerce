@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
+import { getMoySkladStatus } from "@/lib/admin/integrations/moysklad";
 import { getCurrentAdmin, getDashboardSummary } from "@/lib/admin/session";
 
 export const metadata: Metadata = {
@@ -15,7 +16,10 @@ export default async function AdminDashboardPage() {
     redirect("/admin/login");
   }
 
-  const summary = await getDashboardSummary();
+  const [summary, moyskladStatus] = await Promise.all([
+    getDashboardSummary(),
+    getMoySkladStatus(),
+  ]);
   if (!summary) {
     return (
       <p className="text-sm text-destructive">
@@ -24,5 +28,10 @@ export default async function AdminDashboardPage() {
     );
   }
 
-  return <AdminDashboard summary={summary} />;
+  return (
+    <AdminDashboard
+      summary={summary}
+      pendingImports={moyskladStatus?.pending_imports ?? 0}
+    />
+  );
 }

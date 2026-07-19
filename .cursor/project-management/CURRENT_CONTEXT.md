@@ -6,13 +6,13 @@
 
 ## Current Module
 
-`apps/api` + `apps/web` — MoySklad import queue workflow
+`apps/api` + `apps/web` — Admin MS-only catalog workflow
 
 ---
 
 ## Current Feature
 
-**MoySklad Import Queue** — per-product category assignment, visibility rules, stock threshold (2026-07-19)
+**MoySklad-only admin** — no manual products, category delete fix, UX polish (2026-07-19)
 
 ---
 
@@ -26,13 +26,11 @@ Implementation Agent
 
 **Phase 24 — Internet Store Design** (~99%)
 
-**Epic:** MoySklad ERP Integration — workflow update complete
-
 ---
 
 ## Current Blockers
 
-None. Run live catalog import after API restart with MoySklad credentials in `apps/api/.env`.
+None. Delete legacy seed categories manually if not needed.
 
 ---
 
@@ -40,11 +38,11 @@ None. Run live catalog import after API restart with MoySklad credentials in `ap
 
 | Area | Status |
 |------|--------|
-| Import queue tab | ✅ |
-| Category delete | ✅ |
-| Hide product | ✅ |
-| Stock threshold `< 3` | ✅ |
-| Folder mapping removed | ✅ |
+| Manual product create blocked | ✅ |
+| MS-only catalog list | ✅ |
+| Category delete (with children guard) | ✅ |
+| Import queue UX | ✅ |
+| Dashboard pending imports | ✅ |
 
 ---
 
@@ -52,13 +50,12 @@ None. Run live catalog import after API restart with MoySklad credentials in `ap
 
 | Resource | Path |
 |----------|------|
-| Import queue UI | `/admin/integrations/moysklad/import` |
-| Visibility rule | `storefront_visibility.py` |
-| Stock threshold | `STOREFRONT_MIN_AVAILABLE_STOCK=3` |
+| Import queue | `/admin/integrations/moysklad/import` |
+| Categories | `/admin/catalog/categories` |
 | ADR | `docs/adr/ADR-010-moysklad-erp-integration.md` |
 
 ---
 
 ## Last Updated
 
-2026-07-19 (MoySklad import queue workflow)
+2026-07-19 (MS-only admin workflow)

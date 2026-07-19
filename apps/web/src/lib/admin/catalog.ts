@@ -58,6 +58,7 @@ export async function listAdminProducts(
     uncategorized?: boolean;
     needsStyling?: boolean;
     moyskladPending?: boolean;
+    syncSource?: string;
   },
 ): Promise<AdminProductList | null> {
   const params = new URLSearchParams({
@@ -70,6 +71,7 @@ export async function listAdminProducts(
   if (options?.moyskladPending) params.set("moysklad_pending", "true");
   if (options?.uncategorized) params.set("uncategorized", "true");
   else if (options?.categoryId) params.set("category_id", options.categoryId);
+  params.set("sync_source", options?.syncSource ?? "moysklad");
   return adminFetch<AdminProductList>(`/api/v1/admin/catalog/products?${params}`);
 }
 

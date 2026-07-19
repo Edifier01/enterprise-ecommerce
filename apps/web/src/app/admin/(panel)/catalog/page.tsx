@@ -94,14 +94,28 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Каталог</h1>
-            <p className="text-sm text-muted-foreground">Управление товарами по категориям.</p>
+            <p className="text-sm text-muted-foreground">
+              Товары импортируются из МойСклад. Создайте категории и назначьте их в{" "}
+              <Link href="/admin/integrations/moysklad/import" className="text-foreground underline">
+                очереди импорта
+              </Link>
+              .
+            </p>
           </div>
-          <Link
-            href="/admin/catalog/categories"
-            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
-          >
-            Категории
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/integrations/moysklad/import"
+              className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80"
+            >
+              Очередь импорта
+            </Link>
+            <Link
+              href="/admin/catalog/categories"
+              className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
+            >
+              Категории
+            </Link>
+          </div>
         </div>
 
         {categories ? (
@@ -143,10 +157,6 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
     return query ? `/admin/catalog?${query}` : "/admin/catalog";
   }
 
-  const newProductHref = category_id
-    ? `/admin/catalog/new?category_id=${category_id}`
-    : "/admin/catalog/new";
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -166,16 +176,16 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
         </div>
         <div className="flex gap-2">
           <Link
+            href="/admin/integrations/moysklad/import"
+            className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80"
+          >
+            Очередь импорта
+          </Link>
+          <Link
             href="/admin/catalog/categories"
             className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
           >
             Категории
-          </Link>
-          <Link
-            href={newProductHref}
-            className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80"
-          >
-            Новый товар
           </Link>
         </div>
       </div>
@@ -235,7 +245,9 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
 
       {products.items.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          {searchQuery ? "Ничего не найдено." : "Товаров пока нет."}
+          {searchQuery
+            ? "Ничего не найдено."
+            : "Нет товаров из МойСклад. Запустите импорт на странице интеграции."}
         </p>
       ) : (
         <>
