@@ -65,6 +65,19 @@ export function MoySkladIntegrationPanel({ status, logs }: MoySkladIntegrationPa
             Настроено:{" "}
             <span className="font-medium">{status.configured ? "да" : "нет"}</span>
           </p>
+          {!status.configured ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+              <p className="font-medium">Импорт недоступен — не заданы переменные окружения API.</p>
+              <ul className="mt-1 list-inside list-disc text-xs">
+                {!status.api_token_configured ? <li>MOYSKLAD_API_TOKEN — не задан</li> : null}
+                {!status.store_id_configured ? <li>MOYSKLAD_STORE_ID — не задан</li> : null}
+              </ul>
+              <p className="mt-2 text-xs">
+                На сервере добавьте их в <code className="font-mono">.env.production</code> и
+                перезапустите деплой (<code className="font-mono">docker compose up -d api</code>).
+              </p>
+            </div>
+          ) : null}
           <p>
             Режим каталога:{" "}
             <span className="font-medium">только чтение из МойСклад</span>

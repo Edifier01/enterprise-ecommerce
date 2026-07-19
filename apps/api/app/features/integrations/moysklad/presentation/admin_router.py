@@ -29,6 +29,8 @@ router = APIRouter(prefix="/admin/integrations/moysklad", tags=["admin"])
 
 class MoySkladIntegrationStatusResponse(BaseModel):
     configured: bool
+    api_token_configured: bool = False
+    store_id_configured: bool = False
     read_only: bool = True
     order_export_enabled: bool = False
     store_id: str | None
@@ -129,6 +131,8 @@ async def admin_moysklad_status(
 
     return MoySkladIntegrationStatusResponse(
         configured=token_set and bool(settings.moysklad_store_id),
+        api_token_configured=token_set,
+        store_id_configured=bool(settings.moysklad_store_id),
         order_export_enabled=export_enabled,
         store_id=settings.moysklad_store_id or None,
         webhooks_enabled=state.webhooks_enabled,

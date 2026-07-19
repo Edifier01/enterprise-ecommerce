@@ -6,6 +6,8 @@ const API_BASE = getApiBase();
 
 export type MoySkladIntegrationStatus = {
   configured: boolean;
+  api_token_configured: boolean;
+  store_id_configured: boolean;
   read_only: boolean;
   order_export_enabled: boolean;
   store_id: string | null;
