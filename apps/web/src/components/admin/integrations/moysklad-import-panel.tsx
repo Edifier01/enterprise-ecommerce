@@ -10,10 +10,11 @@ import {
 } from "@/app/actions/admin-moysklad";
 import { AdminCategorySelect } from "@/components/admin/catalog/admin-category-select";
 import { MoySkladBadge } from "@/components/admin/moysklad/moysklad-badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminCategory, AdminProduct } from "@/lib/admin/catalog-shared";
 import { formatPrice } from "@/lib/admin/catalog-shared";
+import { cn } from "@/lib/utils";
 
 type MoySkladImportPanelProps = {
   products: AdminProduct[];
@@ -99,17 +100,23 @@ export function MoySkladImportPanel({
       {totalPages > 1 ? (
         <div className="flex items-center gap-2">
           {page > 1 ? (
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/admin/integrations/moysklad/import?page=${page - 1}`}>← Назад</Link>
-            </Button>
+            <Link
+              href={`/admin/integrations/moysklad/import?page=${page - 1}`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              ← Назад
+            </Link>
           ) : null}
           <span className="text-sm text-muted-foreground">
             Страница {page} из {totalPages} ({total} товаров)
           </span>
           {page < totalPages ? (
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/admin/integrations/moysklad/import?page=${page + 1}`}>Вперёд →</Link>
-            </Button>
+            <Link
+              href={`/admin/integrations/moysklad/import?page=${page + 1}`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              Вперёд →
+            </Link>
           ) : null}
         </div>
       ) : null}
@@ -179,9 +186,12 @@ function ImportRow({
           >
             Назначить
           </Button>
-          <Button type="button" size="sm" variant="outline" asChild>
-            <Link href={`/admin/catalog/${product.id}`}>Редактировать</Link>
-          </Button>
+          <Link
+            href={`/admin/catalog/${product.id}`}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            Редактировать
+          </Link>
           <Button
             type="button"
             size="sm"

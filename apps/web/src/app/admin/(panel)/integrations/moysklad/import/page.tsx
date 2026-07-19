@@ -3,10 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { MoySkladImportPanel } from "@/components/admin/integrations/moysklad-import-panel";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { listAdminCategories, listAdminProducts } from "@/lib/admin/catalog";
 import { getMoySkladStatus } from "@/lib/admin/integrations/moysklad";
 import { getCurrentAdmin } from "@/lib/admin/session";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Импорт из МойСклад — Админ-панель",
@@ -48,15 +49,19 @@ export default async function MoySkladImportPage({
       </div>
 
       <div className="flex flex-wrap gap-2 border-b border-border pb-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/admin/integrations/moysklad">Статус</Link>
-        </Button>
-        <Button variant="secondary" size="sm" asChild>
-          <Link href="/admin/integrations/moysklad/import">
-            Импорт товаров
-            {status?.pending_imports ? ` (${status.pending_imports})` : ""}
-          </Link>
-        </Button>
+        <Link
+          href="/admin/integrations/moysklad"
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+        >
+          Статус
+        </Link>
+        <Link
+          href="/admin/integrations/moysklad/import"
+          className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+        >
+          Импорт товаров
+          {status?.pending_imports ? ` (${status.pending_imports})` : ""}
+        </Link>
       </div>
 
       {!productList ? (

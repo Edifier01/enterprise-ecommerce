@@ -11,9 +11,10 @@ import {
   setMoySkladWebhooksAction,
   type IntegrationActionState,
 } from "@/app/actions/admin-moysklad";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { MoySkladIntegrationStatus, SyncLogEntry } from "@/lib/admin/integrations/moysklad";
+import { cn } from "@/lib/utils";
 
 type MoySkladIntegrationPanelProps = {
   status: MoySkladIntegrationStatus;
@@ -40,15 +41,19 @@ export function MoySkladIntegrationPanel({ status, logs }: MoySkladIntegrationPa
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2 border-b border-border pb-4">
-        <Button variant="secondary" size="sm" asChild>
-          <Link href="/admin/integrations/moysklad">Статус</Link>
-        </Button>
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/admin/integrations/moysklad/import">
-            Импорт товаров
-            {status.pending_imports > 0 ? ` (${status.pending_imports})` : ""}
-          </Link>
-        </Button>
+        <Link
+          href="/admin/integrations/moysklad"
+          className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+        >
+          Статус
+        </Link>
+        <Link
+          href="/admin/integrations/moysklad/import"
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+        >
+          Импорт товаров
+          {status.pending_imports > 0 ? ` (${status.pending_imports})` : ""}
+        </Link>
       </div>
 
       <Card>
