@@ -6,12 +6,23 @@ from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _JWT_DEV_DEFAULT = "dev-secret-change-in-production"
-_REPO_ROOT_ENV = Path(__file__).resolve().parents[4] / ".env"
+
+
+def _env_file_paths() -> tuple[str, ...]:
+    """Resolve .env paths for monorepo (local) and Docker (/app) layouts."""
+    paths: list[str] = []
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / ".env"
+        if candidate.is_file():
+            paths.append(str(candidate))
+            break
+    paths.append(".env")
+    return tuple(paths)
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(str(_REPO_ROOT_ENV), ".env"),
+        env_file=_env_file_paths(),
         env_file_encoding="utf-8",
     )
 
