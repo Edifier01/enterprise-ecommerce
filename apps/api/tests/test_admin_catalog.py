@@ -499,3 +499,44 @@ async def test_admin_list_products_filter_by_category(admin_catalog_client: Asyn
     uncategorized_slugs = {item["slug"] for item in uncategorized.json()["items"]}
     assert "visible-product" not in uncategorized_slugs
     assert "draft-product" in uncategorized_slugs
+
+
+@pytest.mark.asyncio
+async def test_admin_product_image_option_color(admin_catalog_client: AsyncClient) -> None:
+    token = await _token(admin_catalog_client)
+
+    listing = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert listing.status_code == 200
+    product_id = listing.json()["items"][0]["id"]
+
+    created = await admin_catalog_client.post(
+        f"/api/v1/admin/catalog/products/{product_id}/images",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "url": "https://cdn.example.com/gallery/multicam.jpg",
+            "option_color": "Multicam",
+            "sort_order": 0,
+        },
+    )
+    assert created.status_code == 201
+    image = created.json()
+    assert image["option_color"] == "Multicam"
+
+    updated = await admin_catalog_client.patch(
+        f"/api/v1/admin/catalog/products/images/{image['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"option_color": "Coyote"},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["option_color"] == "Coyote"
+
+    detail = await admin_catalog_client.get(
+        f"/api/v1/admin/catalog/products/{product_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert detail.status_code == 200
+    images = detail.json()["images"]
+    assert any(item["id"] == image["id"] and item["option_color"] == "Coyote" for item in images)

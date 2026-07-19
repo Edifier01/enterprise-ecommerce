@@ -2,6 +2,7 @@ export type AdminInventoryItem = {
   variant_id: string;
   sku: string;
   product_name: string;
+  sync_source: string;
   quantity_on_hand: number;
   quantity_reserved: number;
   available: number;

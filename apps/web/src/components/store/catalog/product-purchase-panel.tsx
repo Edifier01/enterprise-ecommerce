@@ -1,42 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { AddToCartButton } from "@/components/store/catalog/add-to-cart-button";
 import { ProductStickyBar } from "@/components/store/catalog/product-sticky-bar";
-import type { Product, ProductVariant } from "@/lib/api";
+import {
+  FlatVariantSelector,
+  VariantSelector,
+  isSelectionComplete,
+} from "@/components/store/catalog/variant-selector";
+import type { Product } from "@/lib/api";
 import {
   formatCompareAtPrice,
   formatPrice,
   getDiscountPercent,
 } from "@/lib/store/format";
-import { cn } from "@/lib/utils";
+import {
+  pickDefaultSelection,
+  pickDefaultVariant,
+  resolveVariant,
+  usesStructuredSelector,
+  type VariantSelection,
+} from "@/lib/store/variant-options";
 
 export interface ProductPurchasePanelProps {
   product: Product;
   isWholesaler?: boolean;
-}
-
-function pickDefaultVariant(variants: ProductVariant[]): ProductVariant | null {
-  if (variants.length === 0) {
-    return null;
-  }
-  return variants.find((variant) => variant.is_default) ?? variants[0];
+  onColorChange?: (color: string | null) => void;
 }
 
 export function ProductPurchasePanel({
   product,
   isWholesaler = false,
+  onColorChange,
 }: ProductPurchasePanelProps) {
-  const variants = [...product.variants].sort(
-    (a, b) => a.sort_order - b.sort_order,
+  const variants = useMemo(
+    () => [...product.variants].sort((a, b) => a.sort_order - b.sort_order),
+    [product.variants],
   );
+  const structured = usesStructuredSelector(product.option_groups, variants.length);
 
-  const [selectedId, setSelectedId] = useState<string | null>(
+  const [selection, setSelection] = useState<VariantSelection>(() =>
+    structured ? pickDefaultSelection(variants, product.option_groups) : {},
+  );
+  const [flatSelectedId, setFlatSelectedId] = useState<string | null>(
     () => pickDefaultVariant(variants)?.id ?? null,
   );
 
-  const selected = variants.find((variant) => variant.id === selectedId) ?? null;
+  const selected = structured
+    ? resolveVariant(variants, selection)
+    : variants.find((variant) => variant.id === flatSelectedId) ?? null;
+
   const currentPrice = selected?.price_cents ?? product.price_cents;
   const wholesalePrice =
     isWholesaler && selected?.wholesale_price_cents != null
@@ -46,6 +60,14 @@ export function ProductPurchasePanel({
   const compareAt = product.compare_at_price_cents;
   const discount = compareAt ? getDiscountPercent(currentPrice, compareAt) : null;
   const onSale = discount !== null && discount > 0;
+  const selectionReady = structured
+    ? isSelectionComplete(product.option_groups, selection, variants.length)
+    : selected !== null;
+
+  function handleSelectionChange(next: VariantSelection) {
+    setSelection(next);
+    onColorChange?.(next.color ?? null);
+  }
 
   return (
     <>
@@ -87,6 +109,10 @@ export function ProductPurchasePanel({
           )}
         </div>
 
+        {selected?.sku ? (
+          <p className="text-sm text-muted-foreground">Артикул: {selected.sku}</p>
+        ) : null}
+
         {inStock ? (
           <span className="inline-flex w-fit items-center rounded-full bg-store-success px-2.5 py-1 text-sm font-medium text-store-success-foreground">
             В наличии
@@ -97,37 +123,22 @@ export function ProductPurchasePanel({
           </span>
         )}
 
-        {variants.length > 0 ? (
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-semibold text-foreground">
-              Вариант
-            </legend>
-            <div className="flex flex-wrap gap-2">
-              {variants.map((variant) => {
-                const isActive = variant.id === selectedId;
-                return (
-                  <button
-                    key={variant.id}
-                    type="button"
-                    aria-pressed={isActive}
-                    onClick={() => setSelectedId(variant.id)}
-                    className={cn(
-                      "rounded-md border px-3 py-1.5 text-sm transition-colors",
-                      isActive
-                        ? "border-primary bg-primary/10 text-foreground"
-                        : "border-input bg-background text-muted-foreground hover:border-ring",
-                      !variant.in_stock && "opacity-50",
-                    )}
-                  >
-                    {variant.name}
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
+        {structured ? (
+          <VariantSelector
+            optionGroups={product.option_groups}
+            variants={variants}
+            selection={selection}
+            onSelectionChange={handleSelectionChange}
+          />
+        ) : variants.length > 0 ? (
+          <FlatVariantSelector
+            variants={variants}
+            selectedId={flatSelectedId}
+            onSelect={setFlatSelectedId}
+          />
         ) : null}
 
-        {selected ? (
+        {selected && selectionReady ? (
           <AddToCartButton
             variantId={selected.id}
             productName={product.name}
@@ -147,7 +158,7 @@ export function ProductPurchasePanel({
 
       <ProductStickyBar
         product={product}
-        selectedVariantId={selectedId}
+        selectedVariantId={selected?.id ?? null}
         inStock={inStock}
       />
     </>

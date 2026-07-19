@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 
 import {
   updateProductAction,
@@ -14,6 +14,7 @@ import { AdminProductGallery } from "@/components/admin/catalog/admin-product-ga
 import { AdminSeoFields } from "@/components/admin/catalog/admin-seo-fields";
 import { AdminVariantPanel } from "@/components/admin/catalog/admin-variant-panel";
 import { MoySkladProductBanner } from "@/components/admin/moysklad/moysklad-product-banner";
+import { useToast } from "@/components/store/ui/toast-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminCategory, AdminProduct } from "@/lib/admin/catalog-shared";
@@ -21,6 +22,7 @@ import { formatPrice } from "@/lib/admin/catalog-shared";
 import { centsToRubles } from "@/lib/admin/money";
 import { isMoySkladSynced } from "@/lib/admin/moysklad";
 import { siteConfig } from "@/lib/store/site-config";
+import { getColorOptionsFromVariants } from "@/lib/store/variant-options";
 
 const inputClass =
   "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -58,9 +60,24 @@ export function AdminProductEditForm({ product, categories }: AdminProductEditFo
     boundAction,
     {},
   );
+  const { showToast } = useToast();
+  const lastSuccessRef = useRef(false);
+
+  useEffect(() => {
+    if (state.success && !lastSuccessRef.current) {
+      showToast("Товар сохранён");
+    }
+    lastSuccessRef.current = Boolean(state.success);
+  }, [state.success, showToast]);
 
   const msSynced = isMoySkladSynced(product.sync_source);
   const imageSrc = product.image_url ?? product.erp_image_url ?? siteConfig.images.productPlaceholder;
+  const colorOptions = getColorOptionsFromVariants(
+    product.variants.map((variant) => ({
+      ...variant,
+      attributes: variant.attributes ?? {},
+    })),
+  );
 
   return (
     <div className="space-y-6">
@@ -202,9 +219,18 @@ export function AdminProductEditForm({ product, categories }: AdminProductEditFo
               </p>
             )}
 
-            <div className="flex gap-3">
-              <Button type="submit" disabled={pending}>
+            <div className="flex flex-wrap gap-3">
+              <Button type="submit" name="intent" value="stay" disabled={pending}>
                 {pending ? "Сохранение..." : "Сохранить"}
+              </Button>
+              <Button
+                type="submit"
+                name="intent"
+                value="close"
+                variant="outline"
+                disabled={pending}
+              >
+                Сохранить и закрыть
               </Button>
               <Link
                 href="/admin/catalog"
@@ -221,6 +247,7 @@ export function AdminProductEditForm({ product, categories }: AdminProductEditFo
         productId={product.id}
         images={product.images ?? []}
         erpImageUrl={product.erp_image_url}
+        colorOptions={colorOptions}
       />
 
       <AdminVariantPanel product={product} />

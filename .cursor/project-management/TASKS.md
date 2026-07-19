@@ -841,6 +841,40 @@ admin-assigned. Existing orders are never repriced.
 - [x] Cascading subcategory picker in import queue
 - [x] Tests updated (`test_admin_catalog.py`, E2E smoke)
 
+#### Feature: Storefront Variant Selector UX (ADR-011) — COMPLETED
+
+- [x] ADR-011 accepted and indexed in `DECISIONS.md`
+- [x] Migration `015_variant_selector_ux` — `product_images.option_color`
+- [x] Backend `option_groups` + public gallery on product detail API
+- [x] PDP `VariantSelector` — color swatches, size pills, OOS strikethrough
+- [x] PDP gallery sync by `option_color`
+- [x] PLP «От X ₽» + color dots; quick cart only for single-variant
+- [x] Tests: `test_variant_options.py`, extended `test_variants.py`
+
+#### Feature: Admin Panel UX Wave 1 — COMPLETED
+
+- [x] Login `?from=` redirect after auth
+- [x] Import queue: RU statuses, AdminPagination, mobile cards
+- [x] Dashboard «Требует оформления» card
+- [x] Catalog image alt text; inventory MS copy; customers noindex
+- [x] Shared `admin-fetch.ts` + `form-styles.ts`
+- [x] Dead code cleanup (AdminProductForm, createProductAction)
+
+#### Feature: Admin Panel UX Wave 2 — COMPLETED
+
+- [x] ADR-012 admin IA + merchandising workflow
+- [x] Dashboard action center (sync errors, order exports)
+- [x] Inventory read-only UI for MS-synced SKUs
+- [x] Nav restructure + categories in sidebar
+- [x] Product save without redirect + toast pattern
+
+#### Feature: Admin Panel UX Wave 3 — COMPLETED
+
+- [x] Admin gallery `option_color` field per image (ADR-011)
+- [x] Color picker from variant attributes; upload default color
+- [x] `updateProductImageAction` server action
+- [x] Pytest: `test_admin_product_image_option_color`
+
 ---
 
 ## Technical Tasks

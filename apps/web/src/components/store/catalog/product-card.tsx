@@ -9,6 +9,7 @@ import {
   getDiscountPercent,
 } from "@/lib/store/format";
 import { productImageRenderProps } from "@/lib/store/product-image";
+import { getSwatchStyle } from "@/lib/store/color-swatch";
 import { cn } from "@/lib/utils";
 
 export type ProductCardProduct = Pick<
@@ -24,6 +25,9 @@ export interface ProductCardProps {
   isWholesaler?: boolean;
   wholesalePriceCents?: number;
   defaultVariantId?: string;
+  priceFromCents?: number;
+  showFromPrice?: boolean;
+  colorOptions?: string[];
 }
 
 export function ProductCard({
@@ -34,12 +38,17 @@ export function ProductCard({
   isWholesaler = false,
   wholesalePriceCents,
   defaultVariantId,
+  priceFromCents,
+  showFromPrice = false,
+  colorOptions = [],
 }: ProductCardProps) {
   const discount = compareAtCents
     ? getDiscountPercent(product.price_cents, compareAtCents)
     : null;
   const onSale = discount !== null && discount > 0;
   const image = productImageRenderProps(imageSrc);
+  const visibleColors = colorOptions.slice(0, 4);
+  const hiddenColorCount = Math.max(colorOptions.length - visibleColors.length, 0);
 
   return (
     <article
@@ -77,6 +86,22 @@ export function ProductCard({
           {product.name}
         </Link>
 
+        {visibleColors.length > 0 ? (
+          <div className="flex items-center gap-1.5" aria-label="Доступные цвета">
+            {visibleColors.map((color) => (
+              <span
+                key={color}
+                title={color}
+                className="size-4 rounded-full border border-input"
+                style={getSwatchStyle(color)}
+              />
+            ))}
+            {hiddenColorCount > 0 ? (
+              <span className="text-xs text-muted-foreground">+{hiddenColorCount}</span>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="mt-auto space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             {isWholesaler && wholesalePriceCents != null ? (
@@ -102,7 +127,9 @@ export function ProductCard({
               </>
             ) : (
               <span className="store-price">
-                {formatPrice(product.price_cents, product.currency)}
+                {showFromPrice && priceFromCents != null
+                  ? `От ${formatPrice(priceFromCents, product.currency)}`
+                  : formatPrice(product.price_cents, product.currency)}
               </span>
             )}
           </div>

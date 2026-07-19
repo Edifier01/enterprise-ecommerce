@@ -9,6 +9,7 @@ import { getCurrentAdmin } from "@/lib/admin/session";
 
 export const metadata: Metadata = {
   title: "Клиенты — Админ",
+  robots: { index: false, follow: false },
 };
 
 type PageProps = {

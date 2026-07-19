@@ -1,21 +1,32 @@
 import type { Product } from "@/lib/api";
 import type { ProductGridItem } from "@/components/store/catalog/product-grid";
 import { resolveProductImageUrl } from "@/lib/store/product-image";
-
-function defaultVariant(product: Product) {
-  return product.variants.find((v) => v.is_default) ?? product.variants[0];
-}
+import {
+  extractColorOptions,
+  getColorOptionsFromVariants,
+  getVariantPriceRange,
+  pickDefaultVariant,
+  usesStructuredSelector,
+} from "@/lib/store/variant-options";
 
 export function toProductGridItems(
   products: Product[],
   isWholesaler: boolean,
 ): ProductGridItem[] {
   return products.map((product) => {
-    const variant = defaultVariant(product);
+    const variant = pickDefaultVariant(product.variants);
     const wholesalePriceCents =
       isWholesaler && variant?.wholesale_price_cents != null
         ? variant.wholesale_price_cents
         : undefined;
+    const priceRange = getVariantPriceRange(product.variants);
+    const colorOptions =
+      product.option_groups.length > 0
+        ? extractColorOptions(product.option_groups)
+        : getColorOptionsFromVariants(product.variants);
+    const canQuickAdd =
+      product.variants.length === 1 &&
+      !usesStructuredSelector(product.option_groups, product.variants.length);
 
     return {
       name: product.name,
@@ -27,7 +38,11 @@ export function toProductGridItems(
       imageSrc: resolveProductImageUrl(product.image_url),
       isWholesaler: wholesalePriceCents != null,
       wholesalePriceCents,
-      defaultVariantId: variant?.id,
+      defaultVariantId: canQuickAdd ? variant?.id : undefined,
+      priceFromCents: priceRange?.min,
+      showFromPrice:
+        priceRange != null && priceRange.min !== priceRange.max,
+      colorOptions,
     };
   });
 }

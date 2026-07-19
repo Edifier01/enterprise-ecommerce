@@ -4,6 +4,7 @@ export type ProductImage = {
   id: string;
   url: string;
   alt_text: string | null;
+  option_color: string | null;
   sort_order: number;
 };
 

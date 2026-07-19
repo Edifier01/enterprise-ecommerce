@@ -1,8 +1,5 @@
-import { getAdminAccessToken } from "@/lib/admin/session";
+import { adminFetch } from "@/lib/admin/admin-fetch";
 import { ADMIN_CUSTOMERS_PAGE_SIZE } from "@/lib/admin/catalog";
-import { getApiBase } from "@/lib/api-base";
-
-const API_BASE = getApiBase();
 
 export type AdminCustomer = {
   id: string;
@@ -17,23 +14,6 @@ export type AdminCustomerList = {
   page: number;
   limit: number;
 };
-
-async function adminFetch<T>(path: string, init?: RequestInit): Promise<T | null> {
-  const token = await getAdminAccessToken();
-  if (!token) return null;
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(init?.headers ?? {}),
-    },
-    cache: "no-store",
-  });
-
-  if (!res.ok) return null;
-  return res.json() as Promise<T>;
-}
 
 export async function listAdminCustomers(page = 1): Promise<AdminCustomerList | null> {
   const params = new URLSearchParams({

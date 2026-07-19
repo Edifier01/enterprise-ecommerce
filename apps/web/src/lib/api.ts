@@ -4,6 +4,20 @@ import type { ProductListQueryParams, ProductFacetsResponse } from "@/lib/store/
 
 const API_BASE = getApiBase();
 
+export type ProductOptionGroup = {
+  key: string;
+  label: string;
+  values: string[];
+};
+
+export type ProductImage = {
+  id: string;
+  url: string;
+  alt_text?: string | null;
+  sort_order: number;
+  option_color?: string | null;
+};
+
 export type ProductVariant = {
   id: string;
   sku: string;
@@ -29,6 +43,8 @@ export type Product = {
   image_url: string | null;
   meta_title: string | null;
   meta_description: string | null;
+  option_groups: ProductOptionGroup[];
+  images: ProductImage[];
   variants: ProductVariant[];
 };
 

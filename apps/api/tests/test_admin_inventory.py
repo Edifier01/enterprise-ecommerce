@@ -5,6 +5,7 @@ from uuid import UUID
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.database import Base, get_db_session
@@ -116,6 +117,7 @@ async def test_admin_list_inventory(admin_inventory_client: AsyncClient) -> None
     assert data["total"] == 1
     item = data["items"][0]
     assert item["sku"] == "STOCK-TEST-1"
+    assert item["sync_source"] == "manual"
     assert item["quantity_on_hand"] == 20
     assert item["quantity_reserved"] == 5
     assert item["available"] == 15
@@ -182,3 +184,40 @@ async def test_viewer_cannot_adjust_inventory_returns_403(admin_inventory_client
         json={"quantity_on_hand": 50, "reason": "restock", "version": 0},
     )
     assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_inventory_includes_sync_source_for_moysklad(
+    admin_inventory_client: AsyncClient,
+) -> None:
+    token = await _token(admin_inventory_client)
+    assert _VARIANT_ID is not None
+
+    override = app.dependency_overrides.get(get_db_session)
+    assert override is not None
+
+    async for session in override():
+        product = await session.scalar(
+            select(ProductModel)
+            .join(ProductVariantModel, ProductVariantModel.product_id == ProductModel.id)
+            .where(ProductVariantModel.id == _VARIANT_ID)
+        )
+        assert product is not None
+        product.sync_source = "moysklad"
+        await session.commit()
+        break
+
+    response = await admin_inventory_client.get(
+        "/api/v1/admin/inventory",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert item["sync_source"] == "moysklad"
+
+    adjust = await admin_inventory_client.patch(
+        f"/api/v1/admin/inventory/{_VARIANT_ID}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"quantity_on_hand": 50, "reason": "restock", "version": 0},
+    )
+    assert adjust.status_code == 422

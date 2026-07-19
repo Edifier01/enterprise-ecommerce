@@ -260,7 +260,7 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
                     <div className="relative size-16 shrink-0 overflow-hidden rounded-md border bg-muted">
                       <Image
                         src={image.src}
-                        alt=""
+                        alt={product.name}
                         fill
                         className="object-cover"
                         unoptimized={image.unoptimized}
@@ -322,7 +322,7 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
                         <div className="relative size-10 overflow-hidden rounded-md border bg-muted">
                           <Image
                             src={image.src}
-                            alt=""
+                            alt={product.name}
                             fill
                             className="object-cover"
                             unoptimized={image.unoptimized}

@@ -2209,6 +2209,7 @@ components:
         - variant_id
         - sku
         - product_name
+        - sync_source
         - quantity_on_hand
         - quantity_reserved
         - available
@@ -2222,6 +2223,9 @@ components:
           type: string
         product_name:
           type: string
+        sync_source:
+          type: string
+          enum: [manual, moysklad]
         quantity_on_hand:
           type: integer
         quantity_reserved:

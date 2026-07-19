@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { ADMIN_ACCESS_TOKEN_COOKIE } from "@/lib/admin/constants";
+import { sanitizeAdminRedirect } from "@/lib/admin/redirect";
 import { buildAdminAuthCookieOptions } from "@/lib/admin/session";
 
 import { getApiBase } from "@/lib/api-base";
@@ -42,7 +43,11 @@ export async function adminLoginAction(
     data.access_token,
     buildAdminAuthCookieOptions(),
   );
-  redirect("/admin");
+
+  const redirectTo = formData.get("redirect_to");
+  redirect(
+    sanitizeAdminRedirect(typeof redirectTo === "string" ? redirectTo : undefined),
+  );
 }
 
 export async function adminLogoutAction(): Promise<void> {

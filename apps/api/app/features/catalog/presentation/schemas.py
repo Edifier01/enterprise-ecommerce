@@ -23,6 +23,22 @@ class ProductVariantSchema(BaseModel):
     dimensions_cm: dict[str, float] | None = None
 
 
+class ProductOptionGroupSchema(BaseModel):
+    key: str
+    label: str
+    values: list[str]
+
+
+class ProductImagePublicSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    url: str
+    alt_text: str | None = None
+    sort_order: int = 0
+    option_color: str | None = None
+
+
 class ProductSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -38,6 +54,8 @@ class ProductSchema(BaseModel):
     image_url: str | None = None
     meta_title: str | None = None
     meta_description: str | None = None
+    option_groups: list[ProductOptionGroupSchema] = []
+    images: list[ProductImagePublicSchema] = []
     variants: list[ProductVariantSchema] = []
 
 

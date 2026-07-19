@@ -18,6 +18,7 @@ class ProductImageSchema(BaseModel):
     id: UUID
     url: str
     alt_text: str | None = None
+    option_color: str | None = None
     sort_order: int = 0
 
 
@@ -125,12 +126,14 @@ class AdminUpdateProductRequest(BaseModel):
 class AdminCreateProductImageRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2048)
     alt_text: str | None = Field(default=None, max_length=255)
+    option_color: str | None = Field(default=None, max_length=64)
     sort_order: int = Field(default=0, ge=0)
 
 
 class AdminUpdateProductImageRequest(BaseModel):
     url: str | None = Field(default=None, min_length=1, max_length=2048)
     alt_text: str | None = Field(default=None, max_length=255)
+    option_color: str | None = Field(default=None, max_length=64)
     sort_order: int | None = Field(default=None, ge=0)
 
 

@@ -140,26 +140,6 @@ function catalogListRedirectPath(formData: FormData): string {
   return "/admin/catalog?all=1";
 }
 
-export async function createProductAction(
-  _prev: CatalogActionState | null,
-  formData: FormData,
-): Promise<CatalogActionState> {
-  let body: Record<string, unknown>;
-  try {
-    body = buildProductBody(formData, true);
-  } catch {
-    return { error: "Некорректные данные формы." };
-  }
-
-  const result = await adminMutate("/api/v1/admin/catalog/products", "POST", body);
-
-  if (!result.ok) return result.error;
-
-  revalidatePath("/admin/catalog");
-  revalidatePath("/catalog");
-  redirect(catalogListRedirectPath(formData));
-}
-
 export async function updateProductAction(
   productId: string,
   _prev: CatalogActionState | null,
@@ -186,7 +166,13 @@ export async function updateProductAction(
   revalidatePath("/admin/catalog");
   revalidatePath(`/admin/catalog/${productId}/edit`);
   revalidatePath("/catalog");
-  redirect(catalogListRedirectPath(formData));
+
+  const intent = formData.get("intent");
+  if (intent === "close") {
+    redirect(catalogListRedirectPath(formData));
+  }
+
+  return { success: true };
 }
 
 export async function createCategoryAction(
@@ -295,48 +281,6 @@ export async function deleteCategoryAction(categoryId: string): Promise<CatalogA
   revalidatePath("/admin/catalog");
   revalidatePath("/admin/integrations/moysklad/import");
   return { success: true };
-}
-
-/** @deprecated Use updateCategoryActiveAction */
-export async function updateCategoryAction(
-  categoryId: string,
-  isActive: boolean,
-): Promise<CatalogActionState> {
-  return updateCategoryActiveAction(categoryId, isActive);
-}
-
-export async function updateVariantWholesaleAction(
-  variantId: string,
-  formData: FormData,
-): Promise<CatalogActionState> {
-  const raw = formData.get("wholesale_price_cents");
-  if (typeof raw !== "string" || raw === "") {
-    return { error: "Укажите оптовую цену." };
-  }
-  const wholesalePriceCents = Number(raw);
-  if (!Number.isFinite(wholesalePriceCents) || wholesalePriceCents < 0) {
-    return { error: "Некорректная оптовая цена." };
-  }
-
-  const result = await adminMutate(`/api/v1/admin/catalog/variants/${variantId}`, "PATCH", {
-    wholesale_price_cents: wholesalePriceCents,
-  });
-
-  if (!result.ok) return result.error;
-
-  revalidatePath("/admin/catalog");
-  revalidatePath("/catalog");
-  return {};
-}
-
-export async function saveVariantWholesaleFormAction(
-  variantId: string,
-  formData: FormData,
-): Promise<void> {
-  const result = await updateVariantWholesaleAction(variantId, formData);
-  if (result.error) {
-    throw new Error(result.error);
-  }
 }
 
 function buildVariantBody(
@@ -472,11 +416,32 @@ export async function addProductImageAction(
   productId: string,
   url: string,
   sortOrder = 0,
+  optionColor?: string | null,
 ): Promise<CatalogActionState> {
-  const result = await adminMutate(`/api/v1/admin/catalog/products/${productId}/images`, "POST", {
+  const body: Record<string, unknown> = {
     url,
     sort_order: sortOrder,
-  });
+  };
+  if (optionColor) {
+    body.option_color = optionColor;
+  }
+
+  const result = await adminMutate(`/api/v1/admin/catalog/products/${productId}/images`, "POST", body);
+  if (!result.ok) return result.error;
+  revalidatePath(`/admin/catalog/${productId}/edit`);
+  return { success: true };
+}
+
+export async function updateProductImageAction(
+  imageId: string,
+  productId: string,
+  body: { option_color?: string | null; sort_order?: number; alt_text?: string | null },
+): Promise<CatalogActionState> {
+  const result = await adminMutate(
+    `/api/v1/admin/catalog/products/images/${imageId}`,
+    "PATCH",
+    body,
+  );
   if (!result.ok) return result.error;
   revalidatePath(`/admin/catalog/${productId}/edit`);
   return { success: true };

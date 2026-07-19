@@ -264,6 +264,7 @@ async def admin_create_product_image(
         product_id=product_id,
         url=request.url,
         alt_text=request.alt_text,
+        option_color=request.option_color,
         sort_order=request.sort_order,
     )
     await session.commit()
@@ -287,6 +288,7 @@ async def admin_update_product_image(
             image_id,
             url=request.url,
             alt_text=request.alt_text,
+            option_color=request.option_color,
             sort_order=request.sort_order,
         )
     except ProductImageNotFoundError:

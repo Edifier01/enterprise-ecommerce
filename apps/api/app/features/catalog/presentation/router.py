@@ -12,6 +12,9 @@ from app.features.catalog.application.use_cases.list_products import ListProduct
 from app.features.catalog.application.use_cases.search_products import SearchProductsUseCase
 from app.features.catalog.domain.product_list_filters import ProductListFilters, ProductSortOption
 from app.features.catalog.domain.ports import IProductRepository
+from app.features.catalog.infrastructure.persistence.product_image_repository import (
+    ProductImageRepository,
+)
 from app.features.catalog.infrastructure.persistence.repository import ProductRepository
 from app.features.catalog.presentation.schemas import (
     ProductFacetsResponse,
@@ -36,6 +39,12 @@ def get_product_repository(
     session: AsyncSession = Depends(get_db_session),
 ) -> IProductRepository:
     return ProductRepository(session)
+
+
+def get_product_image_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> ProductImageRepository:
+    return ProductImageRepository(session)
 
 
 def _show_wholesale(user: User | None) -> bool:
@@ -194,10 +203,16 @@ async def search_products(
 async def get_product(
     slug: str,
     repo: IProductRepository = Depends(get_product_repository),
+    image_repo: ProductImageRepository = Depends(get_product_image_repository),
     user: User | None = Depends(get_optional_current_user),
 ) -> ProductSchema:
     use_case = GetProductUseCase(repo)
     product = await use_case.execute(slug)
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
-    return product_to_schema(product, show_wholesale=_show_wholesale(user))
+    images = await image_repo.list_for_product(product.id)
+    return product_to_schema(
+        product,
+        show_wholesale=_show_wholesale(user),
+        images=images,
+    )

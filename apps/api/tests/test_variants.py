@@ -99,6 +99,17 @@ def _make_variants() -> list[ProductVariantModel]:
         ProductVariantModel(
             id=uuid.uuid4(),
             product_id=_TSHIRT_ID,
+            sku="TSHIRT-WHT-L",
+            name="Размер L",
+            attributes={"size": "L"},
+            price_cents=3199,
+            in_stock=True,
+            is_default=False,
+            sort_order=2,
+        ),
+        ProductVariantModel(
+            id=uuid.uuid4(),
+            product_id=_TSHIRT_ID,
             sku="TSHIRT-WHT-M",
             name="Размер M",
             attributes={"size": "M"},
@@ -167,8 +178,8 @@ async def test_product_detail_includes_variants_ordered(catalog_client: AsyncCli
     response = await catalog_client.get("/api/v1/products/classic-white-t-shirt")
     assert response.status_code == 200
     variants = response.json()["variants"]
-    assert len(variants) == 2
-    assert [v["sort_order"] for v in variants] == [0, 1]
+    assert len(variants) == 3
+    assert [v["sort_order"] for v in variants] == [0, 1, 2]
     assert variants[0]["sku"] == "TSHIRT-WHT-S"
     assert variants[0]["is_default"] is True
 
@@ -188,9 +199,18 @@ async def test_list_products_includes_variants(catalog_client: AsyncClient) -> N
     response = await catalog_client.get("/api/v1/products")
     assert response.status_code == 200
     tshirt = next(i for i in response.json()["items"] if i["slug"] == "classic-white-t-shirt")
-    assert len(tshirt["variants"]) == 2
+    assert len(tshirt["variants"]) == 3
     earbuds = next(i for i in response.json()["items"] if i["slug"] == "wireless-earbuds")
     assert earbuds["variants"] == []
+
+
+@pytest.mark.asyncio
+async def test_product_detail_includes_option_groups(catalog_client: AsyncClient) -> None:
+    response = await catalog_client.get("/api/v1/products/classic-white-t-shirt")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["option_groups"] == [{"key": "size", "label": "Размер", "values": ["S", "M", "L"]}]
+    assert data["images"] == []
 
 
 # --- sale (compare-at) pricing ---------------------------------------------

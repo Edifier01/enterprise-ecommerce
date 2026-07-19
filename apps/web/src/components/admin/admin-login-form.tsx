@@ -11,10 +11,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { adminInputClass } from "@/lib/admin/form-styles";
 
 const initialState: AdminAuthActionState = {};
 
-export function AdminLoginForm() {
+type AdminLoginFormProps = {
+  redirectTo?: string;
+};
+
+export function AdminLoginForm({ redirectTo = "/admin" }: AdminLoginFormProps) {
   const [state, formAction, pending] = useActionState(adminLoginAction, initialState);
 
   return (
@@ -27,6 +32,8 @@ export function AdminLoginForm() {
       </CardHeader>
       <CardContent>
         <form action={formAction} className="flex flex-col gap-4">
+          <input type="hidden" name="redirect_to" value={redirectTo} />
+
           <div className="flex flex-col gap-2">
             <label htmlFor="admin-email" className="text-sm font-medium">
               Email
@@ -37,7 +44,7 @@ export function AdminLoginForm() {
               type="email"
               autoComplete="username"
               required
-              className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className={adminInputClass}
             />
           </div>
 
@@ -52,15 +59,15 @@ export function AdminLoginForm() {
               autoComplete="current-password"
               required
               maxLength={128}
-              className="h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className={adminInputClass}
             />
           </div>
 
-          {state.error && (
+          {state.error ? (
             <p className="text-sm text-destructive" role="alert">
               {state.error}
             </p>
-          )}
+          ) : null}
 
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? "Вход..." : "Войти"}

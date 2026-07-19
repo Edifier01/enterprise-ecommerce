@@ -28,6 +28,7 @@ class AdminInventoryRow:
     variant_id: UUID
     sku: str
     product_name: str
+    sync_source: str
     quantity_on_hand: int
     quantity_reserved: int
     available: int

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { adminFetch } from "@/lib/admin/admin-fetch";
 import { getAdminAccessToken } from "@/lib/admin/session";
 import { ADMIN_INVENTORY_PAGE_SIZE } from "@/lib/admin/catalog";
 import type { AdminInventoryItem, AdminInventoryList } from "@/lib/admin/inventory-shared";
@@ -10,23 +11,6 @@ const API_BASE = getApiBase();
 
 export type { AdminInventoryItem, AdminInventoryList };
 export { INVENTORY_REASONS } from "@/lib/admin/inventory-shared";
-
-async function adminFetch<T>(path: string, init?: RequestInit): Promise<T | null> {
-  const token = await getAdminAccessToken();
-  if (!token) return null;
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(init?.headers ?? {}),
-    },
-    cache: "no-store",
-  });
-
-  if (!res.ok) return null;
-  return res.json() as Promise<T>;
-}
 
 export async function listAdminInventory(
   page = 1,

@@ -86,6 +86,7 @@ export default async function AdminInventoryPage({ searchParams }: PageProps) {
       <AdminInventoryTable
         items={inventory.items}
         lowStockThreshold={inventory.low_stock_threshold}
+        canWrite={admin.permissions.includes("inventory:write")}
       />
 
       <AdminPagination page={page} totalPages={totalPages} buildHref={buildHref} />

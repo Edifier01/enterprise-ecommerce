@@ -42,6 +42,7 @@ def _row_schema(row) -> AdminInventoryItemSchema:
         variant_id=row.variant_id,
         sku=row.sku,
         product_name=row.product_name,
+        sync_source=row.sync_source,
         quantity_on_hand=row.quantity_on_hand,
         quantity_reserved=row.quantity_reserved,
         available=row.available,

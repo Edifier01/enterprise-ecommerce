@@ -6,13 +6,13 @@
 
 ## Current Module
 
-`apps/api` + `apps/web` — Admin MS-only catalog workflow
+`apps/web` — Admin panel UX Wave 3 complete
 
 ---
 
 ## Current Feature
 
-**MoySklad-only admin** — no manual products, category delete fix, UX polish (2026-07-19)
+**Admin UX Wave 3** — gallery `option_color` tagging for PDP color sync (2026-07-19)
 
 ---
 
@@ -30,7 +30,7 @@ Implementation Agent
 
 ## Current Blockers
 
-None. Delete legacy seed categories manually if not needed.
+None. Migration 015 may still need `alembic upgrade head` on dev DB if not applied.
 
 ---
 
@@ -38,11 +38,8 @@ None. Delete legacy seed categories manually if not needed.
 
 | Area | Status |
 |------|--------|
-| Manual product create blocked | ✅ |
-| MS-only catalog list | ✅ |
-| Category delete (with children guard) | ✅ |
-| Import queue UX | ✅ |
-| Dashboard pending imports | ✅ |
+| Admin Wave 1–3 | ✅ |
+| Storefront variant UX (ADR-011) | ✅ |
 
 ---
 
@@ -50,12 +47,12 @@ None. Delete legacy seed categories manually if not needed.
 
 | Resource | Path |
 |----------|------|
-| Import queue | `/admin/integrations/moysklad/import` |
-| Categories | `/admin/catalog/categories` |
-| ADR | `docs/adr/ADR-010-moysklad-erp-integration.md` |
+| ADR-011 | `docs/adr/ADR-011-variant-selector-ux.md` |
+| Gallery admin | `components/admin/catalog/admin-product-gallery.tsx` |
+| HANDOFF | `.cursor/project-management/HANDOFF.md` |
 
 ---
 
 ## Last Updated
 
-2026-07-19 (MS-only admin workflow)
+2026-07-19 (admin UX Wave 3)

@@ -13,6 +13,9 @@ export type ProductGridItem = ProductCardProduct & {
   isWholesaler?: boolean;
   wholesalePriceCents?: number;
   defaultVariantId?: string;
+  priceFromCents?: number;
+  showFromPrice?: boolean;
+  colorOptions?: string[];
 };
 
 export interface ProductGridProps {
@@ -62,6 +65,9 @@ export function ProductGrid({
               defaultVariantId={
                 product.defaultVariantId ?? extraProps.defaultVariantId
               }
+              priceFromCents={product.priceFromCents ?? extraProps.priceFromCents}
+              showFromPrice={product.showFromPrice ?? extraProps.showFromPrice}
+              colorOptions={product.colorOptions ?? extraProps.colorOptions}
             />
           </li>
         );

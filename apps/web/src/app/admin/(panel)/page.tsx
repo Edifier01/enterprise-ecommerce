@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
+import { listAdminProducts } from "@/lib/admin/catalog";
 import { getMoySkladStatus } from "@/lib/admin/integrations/moysklad";
 import { getCurrentAdmin, getDashboardSummary } from "@/lib/admin/session";
 
@@ -16,9 +17,10 @@ export default async function AdminDashboardPage() {
     redirect("/admin/login");
   }
 
-  const [summary, moyskladStatus] = await Promise.all([
+  const [summary, moyskladStatus, needsStylingList] = await Promise.all([
     getDashboardSummary(),
     getMoySkladStatus(),
+    listAdminProducts(1, undefined, undefined, { needsStyling: true }),
   ]);
   if (!summary) {
     return (
@@ -32,6 +34,8 @@ export default async function AdminDashboardPage() {
     <AdminDashboard
       summary={summary}
       pendingImports={moyskladStatus?.pending_imports ?? 0}
+      needsStylingCount={needsStylingList?.total ?? 0}
+      moyskladStatus={moyskladStatus}
     />
   );
 }

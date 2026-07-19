@@ -583,6 +583,61 @@ categories) editable in admin while operational data syncs unidirectionally from
 
 ---
 
+## ADR-011
+
+| Field | Value |
+|-------|-------|
+| **Decision ID** | ADR-011 |
+| **Date** | 2026-07-19 |
+| **Status** | Accepted |
+| **Full ADR** | `docs/adr/ADR-011-variant-selector-ux.md` |
+
+**Context:**
+
+Storefront PDP used a flat variant name list. Professional e-commerce uses color
+swatches, size pills, dependent availability, and color-tagged gallery images.
+
+**Decision:**
+
+- Server-derived `option_groups` on public product API (`variant_options.py`)
+- Nullable `product_images.option_color` for site-owned gallery overlay
+- Frontend `VariantSelector` with structured/fallback modes; PLP color dots + «От X ₽»
+
+**Related Rules:**
+
+- ADR-002, ADR-010
+- `ecommerce/01-catalog`
+
+---
+
+## ADR-012
+
+| Field | Value |
+|-------|-------|
+| **Decision ID** | ADR-012 |
+| **Date** | 2026-07-19 |
+| **Status** | Accepted |
+| **Full ADR** | `docs/adr/ADR-012-admin-panel-ia.md` |
+
+**Context:**
+
+Admin Wave 1 improved quick wins; operators still need grouped nav, dashboard
+action alerts, read-only MS inventory UI, and save-without-redirect on product edit.
+
+**Decision:**
+
+- Grouped sidebar: Витрина / МойСклад / Операции; categories as dedicated link
+- Dashboard «Требует внимания» from existing MoySklad status counts
+- `sync_source` on admin inventory list; hide adjust for MS SKUs
+- Product save: «Сохранить» stays on page + toast; «Сохранить и закрыть» redirects
+
+**Related Rules:**
+
+- ADR-007, ADR-010
+- `apps/web/src/lib/admin/navigation.ts`
+
+---
+
 ## Decision Log Template
 
 Use when recording new decisions:

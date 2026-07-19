@@ -30,6 +30,7 @@ class ProductImageRepository:
         product_id: uuid.UUID,
         url: str,
         alt_text: str | None = None,
+        option_color: str | None = None,
         sort_order: int = 0,
     ) -> ProductImageModel:
         row = ProductImageModel(
@@ -37,6 +38,7 @@ class ProductImageRepository:
             product_id=product_id,
             url=url.strip(),
             alt_text=alt_text.strip() if alt_text else None,
+            option_color=option_color.strip() if option_color else None,
             sort_order=sort_order,
         )
         self._session.add(row)
@@ -49,6 +51,7 @@ class ProductImageRepository:
         *,
         url: str | None = None,
         alt_text: str | None = None,
+        option_color: str | None = None,
         sort_order: int | None = None,
     ) -> ProductImageModel:
         row = await self._session.get(ProductImageModel, image_id)
@@ -58,6 +61,8 @@ class ProductImageRepository:
             row.url = url.strip()
         if alt_text is not None:
             row.alt_text = alt_text.strip() or None
+        if option_color is not None:
+            row.option_color = option_color.strip() or None
         if sort_order is not None:
             row.sort_order = sort_order
         await self._session.flush()
