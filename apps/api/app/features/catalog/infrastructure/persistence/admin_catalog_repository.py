@@ -30,6 +30,7 @@ from app.features.integrations.moysklad.domain.sync_guard import (
     assert_variant_create_allowed,
     assert_variant_update_allowed,
 )
+from app.features.catalog.domain.color_gallery_coverage import needs_color_photos
 from app.features.catalog.domain.entities import Category, Product, ProductVariant
 from app.features.catalog.infrastructure.persistence.models import (
     CategoryModel,
@@ -52,11 +53,17 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         category_id: uuid.UUID | None = None,
         uncategorized: bool = False,
         needs_styling: bool = False,
+        needs_color_photos: bool = False,
         sync_source: str | None = None,
         moysklad_pending: bool = False,
     ) -> tuple[list[Product], int]:
         offset = (page - 1) * limit
         filters = []
+        if needs_color_photos:
+            color_photo_ids = await self._product_ids_needing_color_photos()
+            if not color_photo_ids:
+                return [], 0
+            filters.append(ProductModel.id.in_(color_photo_ids))
         if status is not None:
             filters.append(ProductModel.status == status)
         if sync_source is not None:
@@ -95,6 +102,54 @@ class AdminCatalogRepository(IAdminCatalogRepository):
             await self._session.scalars(stmt.offset(offset).limit(limit))
         ).all()
         return [self._product_to_domain(row) for row in rows], total
+
+    async def count_needs_color_photos(self) -> int:
+        return len(await self._product_ids_needing_color_photos())
+
+    async def _product_ids_needing_color_photos(self) -> list[uuid.UUID]:
+        product_rows = (
+            await self._session.scalars(
+                select(ProductModel.id).order_by(ProductModel.updated_at.desc())
+            )
+        ).all()
+        if not product_rows:
+            return []
+
+        product_ids = list(product_rows)
+        variants_by_product: dict[uuid.UUID, list[ProductVariant]] = {
+            product_id: [] for product_id in product_ids
+        }
+        variant_rows = (
+            await self._session.scalars(
+                select(ProductVariantModel).where(
+                    ProductVariantModel.product_id.in_(product_ids)
+                )
+            )
+        ).all()
+        for row in variant_rows:
+            variants_by_product[row.product_id].append(self._variant_to_domain(row))
+
+        image_colors_by_product: dict[uuid.UUID, list[str | None]] = {
+            product_id: [] for product_id in product_ids
+        }
+        image_rows = (
+            await self._session.scalars(
+                select(ProductImageModel).where(
+                    ProductImageModel.product_id.in_(product_ids)
+                )
+            )
+        ).all()
+        for row in image_rows:
+            image_colors_by_product[row.product_id].append(row.option_color)
+
+        return [
+            product_id
+            for product_id in product_ids
+            if needs_color_photos(
+                variants_by_product[product_id],
+                image_colors_by_product[product_id],
+            )
+        ]
 
     @staticmethod
     def _admin_search_filter(query: str):

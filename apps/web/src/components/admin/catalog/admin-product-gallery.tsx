@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 
 import {
   addProductImageAction,
@@ -97,6 +97,96 @@ function ImageColorSelect({
   );
 }
 
+function ImageAltTextField({
+  image,
+  productId,
+  disabled,
+  onUpdated,
+}: {
+  image: ProductImage;
+  productId: string;
+  disabled: boolean;
+  onUpdated: () => void;
+}) {
+  const { showToast } = useToast();
+  const [pending, startTransition] = useTransition();
+  const [value, setValue] = useState(image.alt_text ?? "");
+
+  function handleBlur() {
+    const next = value.trim() || null;
+    if (next === (image.alt_text ?? null)) return;
+    startTransition(async () => {
+      const result = await updateProductImageAction(image.id, productId, { alt_text: next });
+      if (result.error) {
+        showToast(result.error);
+        return;
+      }
+      showToast("Alt-текст сохранён");
+      onUpdated();
+    });
+  }
+
+  return (
+    <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs">
+      <span className="font-medium text-muted-foreground">Alt-текст (SEO)</span>
+      <input
+        type="text"
+        className={selectClass}
+        value={value}
+        disabled={disabled || pending}
+        onChange={(event) => setValue(event.target.value)}
+        onBlur={handleBlur}
+        placeholder="Описание фото для поисковиков"
+        aria-label={`Alt-текст для фото ${image.sort_order + 1}`}
+      />
+    </label>
+  );
+}
+
+function ColorCoveragePanel({
+  colors,
+  tagged,
+  missing,
+}: {
+  colors: string[];
+  tagged: string[];
+  missing: string[];
+}) {
+  if (colors.length < 2) return null;
+
+  return (
+    <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/20 p-3">
+      <p className="text-sm font-medium">Покрытие цветов в галерее</p>
+      <ul className="flex flex-wrap gap-2 text-xs">
+        {colors.map((color) => {
+          const covered = tagged.includes(color);
+          return (
+            <li
+              key={color}
+              className={
+                covered
+                  ? "inline-flex items-center gap-1.5 rounded-full border border-green-600/30 bg-green-50 px-2 py-1 text-green-800 dark:bg-green-950/30 dark:text-green-200"
+                  : "inline-flex items-center gap-1.5 rounded-full border border-amber-600/30 bg-amber-50 px-2 py-1 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100"
+              }
+            >
+              <ColorSwatch label={color} />
+              {color}
+              <span aria-hidden>{covered ? "✓" : "✗"}</span>
+            </li>
+          );
+        })}
+      </ul>
+      {missing.length > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Нет фото для: {missing.join(", ")}. Привяжите или добавьте placeholder из МойСклад.
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">Все цвета покрыты фото в галерее.</p>
+      )}
+    </div>
+  );
+}
+
 export function AdminProductGallery({
   productId,
   images,
@@ -108,6 +198,24 @@ export function AdminProductGallery({
   const [error, setError] = useState<string | null>(null);
   const [uploadColor, setUploadColor] = useState("");
   const [pending, startTransition] = useTransition();
+  const { showToast } = useToast();
+
+  const sortedImages = useMemo(
+    () => [...images].sort((a, b) => a.sort_order - b.sort_order),
+    [images],
+  );
+
+  const coverageFromOptions = useMemo(() => {
+    const tagged = [
+      ...new Set(
+        sortedImages
+          .map((image) => image.option_color)
+          .filter((color): color is string => Boolean(color)),
+      ),
+    ];
+    const missing = colorOptions.filter((color) => !tagged.includes(color));
+    return { colors: colorOptions, tagged, missing };
+  }, [colorOptions, sortedImages]);
 
   function refresh() {
     router.refresh();
@@ -126,7 +234,7 @@ export function AdminProductGallery({
       const result = await addProductImageAction(
         productId,
         upload.url,
-        images.length,
+        sortedImages.length,
         uploadColor || null,
       );
       if (result.error) {
@@ -150,18 +258,68 @@ export function AdminProductGallery({
     });
   }
 
-  function handleUseErpPlaceholder() {
+  function handleUseErpPlaceholder(optionColor?: string | null) {
     if (!erpImageUrl) return;
     setError(null);
     startTransition(async () => {
       const result = await addProductImageAction(
         productId,
         erpImageUrl,
-        images.length,
-        uploadColor || null,
+        sortedImages.length,
+        optionColor ?? uploadColor || null,
       );
       if (result.error) {
         setError(result.error);
+        return;
+      }
+      refresh();
+    });
+  }
+
+  function handleAddPlaceholdersForMissingColors() {
+    if (!erpImageUrl || coverageFromOptions.missing.length === 0) return;
+    setError(null);
+    startTransition(async () => {
+      let added = 0;
+      let sortOrder = sortedImages.length;
+      for (const color of coverageFromOptions.missing) {
+        const alreadyHas = sortedImages.some(
+          (image) => image.url === erpImageUrl && image.option_color === color,
+        );
+        if (alreadyHas) continue;
+        const result = await addProductImageAction(productId, erpImageUrl, sortOrder, color);
+        sortOrder += 1;
+        if (!result.error) added += 1;
+      }
+      if (added > 0) {
+        showToast(`Добавлено placeholder-фото: ${added}`);
+        refresh();
+      } else {
+        setError("Не удалось добавить placeholder-фото.");
+      }
+    });
+  }
+
+  function handleMove(image: ProductImage, direction: "up" | "down") {
+    const index = sortedImages.findIndex((item) => item.id === image.id);
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || swapIndex < 0 || swapIndex >= sortedImages.length) return;
+
+    const other = sortedImages[swapIndex];
+    setError(null);
+    startTransition(async () => {
+      const first = await updateProductImageAction(image.id, productId, {
+        sort_order: other.sort_order,
+      });
+      if (first.error) {
+        setError(first.error);
+        return;
+      }
+      const second = await updateProductImageAction(other.id, productId, {
+        sort_order: image.sort_order,
+      });
+      if (second.error) {
+        setError(second.error);
         return;
       }
       refresh();
@@ -177,6 +335,12 @@ export function AdminProductGallery({
           переключится при выборе цвета. Без привязки фото показывается для всех вариантов.
         </p>
       </div>
+
+      <ColorCoveragePanel
+        colors={coverageFromOptions.colors}
+        tagged={coverageFromOptions.tagged}
+        missing={coverageFromOptions.missing}
+      />
 
       {colorOptions.length > 0 ? (
         <div className="flex flex-wrap items-end gap-3 rounded-md border border-dashed border-border/80 bg-muted/20 p-3">
@@ -196,13 +360,34 @@ export function AdminProductGallery({
               ))}
             </select>
           </label>
-          <p className="text-xs text-muted-foreground">
-            Варианты: {colorOptions.join(", ")}
-          </p>
+          <p className="text-xs text-muted-foreground">Варианты: {colorOptions.join(", ")}</p>
         </div>
       ) : null}
 
-      {erpImageUrl && !images.some((img) => img.url === erpImageUrl) ? (
+      {erpImageUrl && coverageFromOptions.missing.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed p-3">
+          <div className="relative size-16 overflow-hidden rounded-md border bg-muted">
+            <Image src={erpImageUrl} alt="" fill className="object-cover" unoptimized />
+          </div>
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-sm font-medium">Placeholder из МойСклад</p>
+            <p className="text-xs text-muted-foreground">
+              Добавить фото MS для цветов без галереи: {coverageFromOptions.missing.join(", ")}
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={handleAddPlaceholdersForMissingColors}
+          >
+            Добавить для всех цветов
+          </Button>
+        </div>
+      ) : null}
+
+      {erpImageUrl && !sortedImages.some((img) => img.url === erpImageUrl) ? (
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed p-3">
           <div className="relative size-16 overflow-hidden rounded-md border bg-muted">
             <Image src={erpImageUrl} alt="" fill className="object-cover" unoptimized />
@@ -218,16 +403,16 @@ export function AdminProductGallery({
             size="sm"
             variant="outline"
             disabled={pending}
-            onClick={handleUseErpPlaceholder}
+            onClick={() => handleUseErpPlaceholder()}
           >
             Добавить в галерею
           </Button>
         </div>
       ) : null}
 
-      {images.length > 0 ? (
+      {sortedImages.length > 0 ? (
         <ul className="space-y-3">
-          {images.map((image) => (
+          {sortedImages.map((image, index) => (
             <li
               key={image.id}
               className="flex flex-wrap items-start gap-3 rounded-md border border-border/60 p-3"
@@ -237,14 +422,46 @@ export function AdminProductGallery({
               </div>
               <div className="min-w-0 flex-1 space-y-2">
                 <p className="truncate text-xs text-muted-foreground">{image.url}</p>
-                <p className="text-xs text-muted-foreground">Порядок: {image.sort_order}</p>
-                <ImageColorSelect
-                  image={image}
-                  productId={productId}
-                  colorOptions={colorOptions}
-                  disabled={pending}
-                  onUpdated={refresh}
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs text-muted-foreground">Порядок: {image.sort_order}</p>
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={pending || index === 0}
+                      onClick={() => handleMove(image, "up")}
+                      aria-label="Выше"
+                    >
+                      ↑
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={pending || index === sortedImages.length - 1}
+                      onClick={() => handleMove(image, "down")}
+                      aria-label="Ниже"
+                    >
+                      ↓
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <ImageColorSelect
+                    image={image}
+                    productId={productId}
+                    colorOptions={colorOptions}
+                    disabled={pending}
+                    onUpdated={refresh}
+                  />
+                  <ImageAltTextField
+                    image={image}
+                    productId={productId}
+                    disabled={pending}
+                    onUpdated={refresh}
+                  />
+                </div>
               </div>
               <Button
                 type="button"

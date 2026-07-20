@@ -92,11 +92,17 @@ async def admin_list_orders(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
     status: OrderStatus | None = Query(default=None),
+    export_pending: bool = Query(default=False),
     _admin: AdminUser = Depends(require_permission("admin:read")),
     repo: IAdminOrdersRepository = Depends(get_admin_orders_repository),
 ) -> AdminOrderListResponse:
     use_case = ListAdminOrdersUseCase(repo)
-    items, total = await use_case.execute(page=page, limit=limit, status=status)
+    items, total = await use_case.execute(
+        page=page,
+        limit=limit,
+        status=status,
+        export_pending=export_pending,
+    )
     return AdminOrderListResponse(
         items=[
             AdminOrderSummarySchema(

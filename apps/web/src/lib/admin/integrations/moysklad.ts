@@ -14,6 +14,7 @@ export type MoySkladIntegrationStatus = {
   webhooks_enabled: boolean;
   pending_order_exports: number;
   pending_imports: number;
+  needs_color_photos: number;
   last_full_sync_at: string | null;
   last_incremental_sync_at: string | null;
   last_error: string | null;

@@ -20,8 +20,17 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
   if (!admin) redirect("/admin/login");
 
   const { orderNumber } = await params;
-  const order = await getAdminOrder(orderNumber);
-  if (!order) notFound();
+  const orderResult = await getAdminOrder(orderNumber);
+  if (!orderResult.ok) {
+    if (orderResult.status === 404) notFound();
+    return (
+      <p className="text-sm text-destructive" role="alert">
+        {orderResult.error}
+      </p>
+    );
+  }
+
+  const order = orderResult.data;
 
   const canWrite = admin.permissions.includes("orders:write");
 
@@ -39,7 +48,11 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         </h1>
       </div>
 
-      <AdminOrderDetail order={order} canWrite={canWrite} />
+      <AdminOrderDetail
+        order={order}
+        canWrite={canWrite}
+        canExport={admin.permissions.includes("integrations:write")}
+      />
     </div>
   );
 }

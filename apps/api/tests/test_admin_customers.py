@@ -136,6 +136,17 @@ async def test_admin_revoke_wholesaler_status(admin_customers_client: AsyncClien
 
 
 @pytest.mark.asyncio
+async def test_viewer_can_list_customers(admin_customers_client: AsyncClient) -> None:
+    viewer_token = await _admin_token(admin_customers_client, email=_VIEWER_EMAIL)
+    response = await admin_customers_client.get(
+        "/api/v1/admin/customers",
+        headers={"Authorization": f"Bearer {viewer_token}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["total"] >= 1
+
+
+@pytest.mark.asyncio
 async def test_viewer_cannot_update_wholesaler_returns_403(
     admin_customers_client: AsyncClient,
 ) -> None:

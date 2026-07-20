@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 type MoySkladIntegrationPanelProps = {
   status: MoySkladIntegrationStatus;
   logs: SyncLogEntry[];
+  canWrite?: boolean;
 };
 
 function formatDate(value: string | null): string {
@@ -33,7 +34,11 @@ function formatDate(value: string | null): string {
   }
 }
 
-export function MoySkladIntegrationPanel({ status, logs }: MoySkladIntegrationPanelProps) {
+export function MoySkladIntegrationPanel({
+  status,
+  logs,
+  canWrite = false,
+}: MoySkladIntegrationPanelProps) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -119,6 +124,8 @@ export function MoySkladIntegrationPanel({ status, logs }: MoySkladIntegrationPa
           ) : null}
 
           <div className="flex flex-wrap gap-2 pt-2">
+            {canWrite ? (
+              <>
             <Button
               type="button"
               disabled={pending || !status.configured}
@@ -173,6 +180,12 @@ export function MoySkladIntegrationPanel({ status, logs }: MoySkladIntegrationPa
             >
               {status.webhooks_enabled ? "Выключить вебхуки" : "Включить вебхуки"}
             </Button>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Синхронизация доступна только администраторам с правом интеграций.
+              </p>
+            )}
           </div>
           {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
         </CardContent>

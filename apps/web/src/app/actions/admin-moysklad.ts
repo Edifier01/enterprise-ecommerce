@@ -119,6 +119,113 @@ export async function assignMoySkladProductCategoryAction(
   };
 }
 
+export async function bulkAssignMoySkladCategoryAction(
+  productIds: string[],
+  categoryId: string,
+): Promise<IntegrationActionState> {
+  if (!categoryId) {
+    return { error: "Выберите категорию." };
+  }
+  if (productIds.length === 0) {
+    return { error: "Выберите хотя бы один товар." };
+  }
+
+  let assigned = 0;
+  let lastError: string | undefined;
+
+  for (const productId of productIds) {
+    const result = await patchProduct(productId, { category_id: categoryId });
+    if (result.error) {
+      lastError = result.error;
+    } else {
+      assigned += 1;
+    }
+  }
+
+  revalidatePath("/admin/integrations/moysklad/import");
+  revalidatePath("/admin/catalog");
+
+  if (assigned === 0) {
+    return { error: lastError ?? "Не удалось назначить категорию." };
+  }
+
+  if (assigned < productIds.length) {
+    return {
+      success: true,
+      message: `Категория назначена для ${assigned} из ${productIds.length} товаров.`,
+    };
+  }
+
+  return {
+    success: true,
+    message: `Категория назначена для ${assigned} товар(ов). Добавьте фото и опубликуйте на странице редактирования.`,
+  };
+}
+
+export async function bulkPublishMoySkladProductsAction(
+  productIds: string[],
+): Promise<IntegrationActionState> {
+  if (productIds.length === 0) {
+    return { error: "Выберите хотя бы один товар." };
+  }
+
+  let published = 0;
+  let skipped = 0;
+  let lastError: string | undefined;
+
+  for (const productId of productIds) {
+    const token = await getAdminAccessToken();
+    if (!token) {
+      return { error: "Требуется вход в админ-панель." };
+    }
+
+    const detailRes = await fetch(`${API_BASE}/api/v1/admin/catalog/products/${productId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!detailRes.ok) {
+      lastError = "Не удалось загрузить товар.";
+      continue;
+    }
+    const product = (await detailRes.json()) as { category_id?: string | null };
+    if (!product.category_id) {
+      skipped += 1;
+      continue;
+    }
+
+    const result = await patchProduct(productId, { status: "active" });
+    if (result.error) {
+      lastError = result.error;
+    } else {
+      published += 1;
+    }
+  }
+
+  revalidatePath("/admin/integrations/moysklad/import");
+  revalidatePath("/admin/catalog");
+
+  if (published === 0) {
+    if (skipped > 0) {
+      return { error: "Сначала назначьте категорию выбранным товарам." };
+    }
+    return { error: lastError ?? "Не удалось опубликовать товары." };
+  }
+
+  const skipNote =
+    skipped > 0 ? ` Пропущено без категории: ${skipped}.` : "";
+
+  if (published < productIds.length) {
+    return {
+      success: true,
+      message: `Опубликовано ${published} из ${productIds.length}.${skipNote}`,
+    };
+  }
+
+  return {
+    success: true,
+    message: `Опубликовано ${published} товар(ов).${skipNote}`,
+  };
+}
+
 export async function hideProductAction(productId: string): Promise<IntegrationActionState> {
   const result = await patchProduct(productId, { status: "archived" });
   if (result.error) {
@@ -126,4 +233,32 @@ export async function hideProductAction(productId: string): Promise<IntegrationA
   }
 
   return { success: true, message: "Товар скрыт с витрины." };
+}
+
+export async function exportMoySkladOrderAction(
+  orderNumber: string,
+): Promise<IntegrationActionState> {
+  const result = await mutateMoySklad(
+    `/api/v1/admin/integrations/moysklad/orders/${encodeURIComponent(orderNumber)}/export`,
+    "POST",
+  );
+  if (!result.ok) {
+    if (result.status === 403) {
+      return { error: "Недостаточно прав для экспорта заказов." };
+    }
+    return { error: "Не удалось экспортировать заказ в МойСклад." };
+  }
+
+  const data = result.data as { status?: string; error?: string | null } | null;
+  if (data?.status === "failed" || data?.error) {
+    return { error: data.error ?? "Экспорт завершился с ошибкой." };
+  }
+
+  revalidatePath(`/admin/orders/${orderNumber}`);
+  revalidatePath("/admin/integrations/moysklad");
+  revalidatePath("/admin/orders");
+  return {
+    success: true,
+    message: "Заказ экспортирован в МойСклад.",
+  };
 }

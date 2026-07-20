@@ -56,15 +56,18 @@ async def admin_list_inventory(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
     low_stock: bool = Query(default=False),
+    q: str | None = Query(default=None, max_length=100),
     _admin: AdminUser = Depends(require_permission("admin:read")),
     repo: IAdminInventoryRepository = Depends(get_admin_inventory_repository),
 ) -> AdminInventoryListResponse:
     threshold = settings.admin_low_stock_threshold
+    sku_query = q.strip() if q and q.strip() else None
     items, total = await repo.list_inventory(
         page=page,
         limit=limit,
         low_stock_only=low_stock,
         low_stock_threshold=threshold,
+        sku_query=sku_query,
     )
     return AdminInventoryListResponse(
         items=[_row_schema(item) for item in items],
@@ -87,6 +90,11 @@ async def admin_adjust_inventory(
     repo: IAdminInventoryRepository = Depends(get_admin_inventory_repository),
     session: AsyncSession = Depends(get_db_session),
 ) -> AdminInventoryItemSchema:
+    if not settings.admin_inventory_manual_adjust_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="Manual inventory adjustment is disabled; update stock in MoySklad",
+        )
     try:
         row = await repo.adjust_quantity_on_hand(
             variant_id=variant_id,

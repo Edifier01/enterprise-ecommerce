@@ -11,6 +11,9 @@ from app.core.config import settings
 from app.core.database import get_db_session
 from app.features.admin.domain.entities import AdminUser
 from app.features.admin.presentation.dependencies import require_permission
+from app.features.catalog.infrastructure.persistence.admin_catalog_repository import (
+    AdminCatalogRepository,
+)
 from app.features.catalog.infrastructure.persistence.models import ProductModel
 from app.features.integrations.moysklad.application.export_order import export_order_by_id
 from app.features.integrations.moysklad.application.full_resync import run_full_resync
@@ -41,6 +44,7 @@ class MoySkladIntegrationStatusResponse(BaseModel):
     last_error: str | None
     errors_last_24h: int
     pending_imports: int = 0
+    needs_color_photos: int = 0
 
 
 class MoySkladPullResponse(BaseModel):
@@ -128,6 +132,8 @@ async def admin_moysklad_status(
         )
         or 0
     )
+    catalog_repo = AdminCatalogRepository(session)
+    needs_color_photos_count = await catalog_repo.count_needs_color_photos()
 
     return MoySkladIntegrationStatusResponse(
         configured=token_set and bool(settings.moysklad_store_id),
@@ -138,6 +144,7 @@ async def admin_moysklad_status(
         webhooks_enabled=state.webhooks_enabled,
         pending_order_exports=pending_exports,
         pending_imports=pending_imports,
+        needs_color_photos=needs_color_photos_count,
         last_full_sync_at=state.last_full_sync_at.isoformat() if state.last_full_sync_at else None,
         last_incremental_sync_at=(
             state.last_incremental_sync_at.isoformat() if state.last_incremental_sync_at else None

@@ -15,11 +15,11 @@ export default async function AdminCategoriesPage() {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
 
-  const categories = await listAdminCategories();
-  if (!categories) {
+  const categoriesResult = await listAdminCategories();
+  if (!categoriesResult.ok) {
     return (
-      <p className="text-sm text-destructive">
-        Не удалось загрузить категории.
+      <p className="text-sm text-destructive" role="alert">
+        {categoriesResult.error}
       </p>
     );
   }
@@ -36,7 +36,10 @@ export default async function AdminCategoriesPage() {
           МойСклад.
         </p>
       </div>
-      <AdminCategoryPanel categories={categories} />
+      <AdminCategoryPanel
+        categories={categoriesResult.data}
+        canWrite={admin.permissions.includes("catalog:write")}
+      />
     </div>
   );
 }

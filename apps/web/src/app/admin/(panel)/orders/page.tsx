@@ -21,10 +21,11 @@ const STATUS_FILTERS = [
   { value: "confirmed", label: "Подтверждённые" },
   { value: "shipped", label: "Отправленные" },
   { value: "canceled", label: "Отменённые" },
+  { value: "export_pending", label: "Ожидает экспорта в MS" },
 ] as const;
 
 type PageProps = {
-  searchParams: Promise<{ page?: string; status?: string }>;
+  searchParams: Promise<{ page?: string; status?: string; export_pending?: string }>;
 };
 
 function parsePage(raw: string | undefined): number {
@@ -36,31 +37,43 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
 
-  const { page: pageRaw, status } = await searchParams;
+  const { page: pageRaw, status, export_pending } = await searchParams;
   const page = parsePage(pageRaw);
+  const exportPending = export_pending === "1" || export_pending === "true";
   const activeStatus =
-    status === "confirmed" || status === "shipped" || status === "canceled"
+    !exportPending &&
+    (status === "confirmed" || status === "shipped" || status === "canceled")
       ? status
       : undefined;
-  const orders = await listAdminOrders(page, activeStatus);
+  const ordersResult = await listAdminOrders(page, activeStatus, exportPending);
 
-  if (!orders) {
+  if (!ordersResult.ok) {
     return (
-      <p className="text-sm text-destructive">
-        Не удалось загрузить заказы. Проверьте права доступа.
+      <p className="text-sm text-destructive" role="alert">
+        {ordersResult.error}
       </p>
     );
   }
 
+  const orders = ordersResult.data;
   const totalPages = getAdminTotalPages(orders.total, ADMIN_ORDERS_PAGE_SIZE);
 
   function buildHref(nextPage: number) {
     const params = new URLSearchParams();
     if (nextPage > 1) params.set("page", String(nextPage));
-    if (activeStatus) params.set("status", activeStatus);
+    if (exportPending) params.set("export_pending", "1");
+    else if (activeStatus) params.set("status", activeStatus);
     const query = params.toString();
     return query ? `/admin/orders?${query}` : "/admin/orders";
   }
+
+  function filterHref(filterValue: string): string {
+    if (filterValue === "") return "/admin/orders";
+    if (filterValue === "export_pending") return "/admin/orders?export_pending=1";
+    return `/admin/orders?status=${filterValue}`;
+  }
+
+  const activeFilter = exportPending ? "export_pending" : (activeStatus ?? "");
 
   return (
     <div className="space-y-6">
@@ -73,14 +86,11 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
           {STATUS_FILTERS.map((filter) => {
-            const params = new URLSearchParams();
-            if (filter.value) params.set("status", filter.value);
-            const href = params.size > 0 ? `/admin/orders?${params}` : "/admin/orders";
-            const isActive = (activeStatus ?? "") === filter.value;
+            const isActive = activeFilter === filter.value;
             return (
               <Link
                 key={filter.label}
-                href={href}
+                href={filterHref(filter.value)}
                 className={
                   isActive
                     ? "font-medium text-foreground"
@@ -97,6 +107,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
       <AdminOrdersTable
         orders={orders.items}
         getStatusLabel={getAdminOrderStatusLabel}
+        showExportStatus
       />
 
       <AdminPagination page={page} totalPages={totalPages} buildHref={buildHref} />

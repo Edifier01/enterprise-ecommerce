@@ -6,13 +6,13 @@
 
 ## Current Module
 
-`apps/web` — Admin panel UX Wave 3 complete
+`apps/web` — Admin panel UX Wave 7 (multi-color gallery merchandising)
 
 ---
 
 ## Current Feature
 
-**Admin UX Wave 3** — gallery `option_color` tagging for PDP color sync (2026-07-19)
+**Admin UX Wave 7** — color coverage filter, gallery UX, bulk publish (2026-07-20)
 
 ---
 
@@ -38,7 +38,8 @@ None. Migration 015 may still need `alembic upgrade head` on dev DB if not appli
 
 | Area | Status |
 |------|--------|
-| Admin Wave 1–3 | ✅ |
+| Admin Wave 1–6 | ✅ |
+| Admin Wave 7 | ✅ |
 | Storefront variant UX (ADR-011) | ✅ |
 
 ---
@@ -49,10 +50,11 @@ None. Migration 015 may still need `alembic upgrade head` on dev DB if not appli
 |----------|------|
 | ADR-011 | `docs/adr/ADR-011-variant-selector-ux.md` |
 | Gallery admin | `components/admin/catalog/admin-product-gallery.tsx` |
+| Color coverage | `lib/admin/gallery-color-coverage.ts` |
 | HANDOFF | `.cursor/project-management/HANDOFF.md` |
 
 ---
 
 ## Last Updated
 
-2026-07-19 (admin UX Wave 3)
+2026-07-20 (admin UX Wave 7)

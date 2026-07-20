@@ -1,6 +1,6 @@
 import "server-only";
 
-import { adminFetch } from "@/lib/admin/admin-fetch";
+import { adminFetchResult, type AdminFetchResult } from "@/lib/admin/admin-fetch";
 import { getAdminAccessToken } from "@/lib/admin/session";
 import { ADMIN_ORDERS_PAGE_SIZE } from "@/lib/admin/catalog";
 import type {
@@ -19,14 +19,21 @@ export { formatOrderMoney, getAdminOrderStatusLabel } from "@/lib/admin/orders-s
 export async function listAdminOrders(
   page = 1,
   status?: string,
-): Promise<AdminOrderList | null> {
+  exportPending = false,
+): Promise<AdminFetchResult<AdminOrderList>> {
   const params = new URLSearchParams({ page: String(page), limit: String(ADMIN_ORDERS_PAGE_SIZE) });
-  if (status) params.set("status", status);
-  return adminFetch<AdminOrderList>(`/api/v1/admin/orders?${params}`);
+  if (exportPending) {
+    params.set("export_pending", "true");
+  } else if (status) {
+    params.set("status", status);
+  }
+  return adminFetchResult<AdminOrderList>(`/api/v1/admin/orders?${params}`);
 }
 
-export async function getAdminOrder(orderNumber: string): Promise<AdminOrderDetail | null> {
-  return adminFetch<AdminOrderDetail>(
+export async function getAdminOrder(
+  orderNumber: string,
+): Promise<AdminFetchResult<AdminOrderDetail>> {
+  return adminFetchResult<AdminOrderDetail>(
     `/api/v1/admin/orders/${encodeURIComponent(orderNumber)}`,
   );
 }

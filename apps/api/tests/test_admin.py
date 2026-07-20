@@ -189,6 +189,31 @@ async def test_admin_dashboard_without_token_returns_401(admin_client: AsyncClie
 
 
 @pytest.mark.asyncio
+async def test_admin_login_rate_limit_returns_429(
+    admin_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.middleware import CheckoutRateLimitMiddleware
+
+    monkeypatch.setattr(CheckoutRateLimitMiddleware, "ADMIN_LOGIN_LIMIT", 2)
+    headers = {"X-Forwarded-For": "203.0.113.50"}
+
+    for _ in range(2):
+        response = await admin_client.post(
+            "/api/v1/admin/auth/login",
+            json={"email": _TEST_ADMIN_EMAIL, "password": "wrong-password"},
+            headers=headers,
+        )
+        assert response.status_code == 401
+
+    blocked = await admin_client.post(
+        "/api/v1/admin/auth/login",
+        json={"email": _TEST_ADMIN_EMAIL, "password": _TEST_ADMIN_PASSWORD},
+        headers=headers,
+    )
+    assert blocked.status_code == 429
+
+
+@pytest.mark.asyncio
 async def test_admin_login_inactive_returns_401(
     admin_client_with_db: tuple[AsyncClient, async_sessionmaker],
 ) -> None:

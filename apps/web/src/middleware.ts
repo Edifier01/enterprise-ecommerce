@@ -6,13 +6,28 @@ import {
   ADMIN_LOGIN_PATH,
   ADMIN_PROTECTED_PREFIX,
 } from "@/lib/admin/constants";
+import { verifyAdminAccessToken } from "@/lib/admin/verify-admin-token";
 import {
   ACCESS_TOKEN_COOKIE,
   AUTH_PATHS,
   PROTECTED_PATHS,
 } from "@/lib/auth/constants";
 
-export function middleware(request: NextRequest) {
+function redirectToAdminLogin(request: NextRequest, pathname: string, clearCookie: boolean) {
+  const loginUrl = request.nextUrl.clone();
+  loginUrl.pathname = ADMIN_LOGIN_PATH;
+  loginUrl.searchParams.set("from", pathname);
+  const response = NextResponse.redirect(loginUrl);
+  if (clearCookie) {
+    response.cookies.delete({
+      name: ADMIN_ACCESS_TOKEN_COOKIE,
+      path: "/admin",
+    });
+  }
+  return response;
+}
+
+export async function middleware(request: NextRequest) {
   const token = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
   const adminToken = request.cookies.get(ADMIN_ACCESS_TOKEN_COOKIE)?.value;
   const { pathname } = request.nextUrl;
@@ -22,14 +37,13 @@ export function middleware(request: NextRequest) {
   const isAdminLogin = pathname === ADMIN_LOGIN_PATH;
   const isAdminProtected = isAdminRoute && !isAdminLogin;
 
-  if (isAdminProtected && !adminToken) {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = ADMIN_LOGIN_PATH;
-    loginUrl.searchParams.set("from", pathname);
-    return NextResponse.redirect(loginUrl);
+  if (isAdminProtected) {
+    if (!adminToken || !(await verifyAdminAccessToken(adminToken))) {
+      return redirectToAdminLogin(request, pathname, Boolean(adminToken));
+    }
   }
 
-  if (isAdminLogin && adminToken) {
+  if (isAdminLogin && adminToken && (await verifyAdminAccessToken(adminToken))) {
     return NextResponse.redirect(new URL("/admin", request.url));
   }
 

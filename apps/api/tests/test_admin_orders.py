@@ -306,6 +306,36 @@ async def test_admin_status_update_forbidden_for_viewer(
 
 
 @pytest.mark.asyncio
+async def test_admin_list_orders_export_pending_filter(admin_orders_client: AsyncClient) -> None:
+    order_number = await _place_order(admin_orders_client)
+    token = await _admin_token(admin_orders_client, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+
+    pending = await admin_orders_client.get(
+        "/api/v1/admin/orders?export_pending=true",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert pending.status_code == 200
+    data = pending.json()
+    assert data["total"] == 1
+    assert data["items"][0]["order_number"] == order_number
+    assert data["items"][0]["moysklad_order_id"] is None
+
+    shipped = await admin_orders_client.patch(
+        f"/api/v1/admin/orders/{order_number}/status",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"status": "shipped"},
+    )
+    assert shipped.status_code == 200
+
+    after_ship = await admin_orders_client.get(
+        "/api/v1/admin/orders?export_pending=true",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert after_ship.status_code == 200
+    assert after_ship.json()["total"] == 0
+
+
+@pytest.mark.asyncio
 async def test_admin_invalid_status_transition(admin_orders_client: AsyncClient) -> None:
     order_number = await _place_order(admin_orders_client)
     token = await _admin_token(admin_orders_client, _ADMIN_EMAIL, _ADMIN_PASSWORD)

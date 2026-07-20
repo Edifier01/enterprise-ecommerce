@@ -58,6 +58,7 @@ class IAdminOrdersRepository(ABC):
         page: int,
         limit: int,
         status: OrderStatus | None,
+        export_pending: bool = False,
     ) -> tuple[list[AdminOrderListRow], int]:
         ...
 

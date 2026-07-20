@@ -7,6 +7,7 @@ type AdminCatalogSearchProps = {
   uncategorized?: boolean;
   showAll?: boolean;
   needsStyling?: boolean;
+  needsColorPhotos?: boolean;
 };
 
 export function AdminCatalogSearch({
@@ -16,6 +17,7 @@ export function AdminCatalogSearch({
   uncategorized,
   showAll,
   needsStyling,
+  needsColorPhotos,
 }: AdminCatalogSearchProps) {
   return (
     <form method="get" action="/admin/catalog" className="flex flex-wrap items-center gap-2">
@@ -23,6 +25,7 @@ export function AdminCatalogSearch({
       {uncategorized ? <input type="hidden" name="uncategorized" value="1" /> : null}
       {showAll ? <input type="hidden" name="all" value="1" /> : null}
       {needsStyling ? <input type="hidden" name="needs_styling" value="1" /> : null}
+      {needsColorPhotos ? <input type="hidden" name="needs_color_photos" value="1" /> : null}
       {categoryId ? <input type="hidden" name="category_id" value={categoryId} /> : null}
       <input
         type="search"

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { adminFetch } from "@/lib/admin/admin-fetch";
+import { adminFetch, adminFetchResult, type AdminFetchResult } from "@/lib/admin/admin-fetch";
 
 import {
   ADMIN_CATALOG_PAGE_SIZE,
@@ -36,10 +36,11 @@ export async function listAdminProducts(
     categoryId?: string;
     uncategorized?: boolean;
     needsStyling?: boolean;
+    needsColorPhotos?: boolean;
     moyskladPending?: boolean;
     syncSource?: string;
   },
-): Promise<AdminProductList | null> {
+): Promise<AdminFetchResult<AdminProductList>> {
   const params = new URLSearchParams({
     page: String(page),
     limit: String(ADMIN_CATALOG_PAGE_SIZE),
@@ -47,18 +48,24 @@ export async function listAdminProducts(
   if (status) params.set("status", status);
   if (q?.trim()) params.set("q", q.trim());
   if (options?.needsStyling) params.set("needs_styling", "true");
+  if (options?.needsColorPhotos) params.set("needs_color_photos", "true");
   if (options?.moyskladPending) params.set("moysklad_pending", "true");
   if (options?.uncategorized) params.set("uncategorized", "true");
   else if (options?.categoryId) params.set("category_id", options.categoryId);
   params.set("sync_source", options?.syncSource ?? "moysklad");
-  return adminFetch<AdminProductList>(`/api/v1/admin/catalog/products?${params}`);
+  return adminFetchResult<AdminProductList>(`/api/v1/admin/catalog/products?${params}`);
 }
 
 export async function getAdminProduct(id: string): Promise<AdminProduct | null> {
   return adminFetch<AdminProduct>(`/api/v1/admin/catalog/products/${id}`);
 }
 
-export async function listAdminCategories(): Promise<AdminCategory[] | null> {
-  const data = await adminFetch<{ items: AdminCategory[] }>("/api/v1/admin/catalog/categories");
-  return data?.items ?? null;
+export async function listAdminCategories(): Promise<AdminFetchResult<AdminCategory[]>> {
+  const result = await adminFetchResult<{ items: AdminCategory[] }>(
+    "/api/v1/admin/catalog/categories",
+  );
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true, data: result.data.items };
 }

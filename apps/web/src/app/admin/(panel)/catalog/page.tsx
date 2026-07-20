@@ -19,6 +19,7 @@ import {
   listAdminCategories,
   listAdminProducts,
   PRODUCT_STATUS_LABELS,
+  type AdminCategory,
 } from "@/lib/admin/catalog";
 import { isMoySkladSynced } from "@/lib/admin/moysklad";
 import { MoySkladBadge } from "@/components/admin/moysklad/moysklad-badge";
@@ -46,6 +47,7 @@ type PageProps = {
     uncategorized?: string;
     all?: string;
     needs_styling?: string;
+    needs_color_photos?: string;
   }>;
 };
 
@@ -55,7 +57,7 @@ function parsePage(raw: string | undefined): number {
 }
 
 function getCategoryLabel(
-  categories: Awaited<ReturnType<typeof listAdminCategories>>,
+  categories: AdminCategory[] | null,
   categoryId: string | undefined,
   uncategorized: boolean,
   showAll: boolean,
@@ -70,7 +72,7 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
 
-  const { page: pageRaw, status, q, category_id, uncategorized, all, needs_styling } =
+  const { page: pageRaw, status, q, category_id, uncategorized, all, needs_styling, needs_color_photos } =
     await searchParams;
   const page = parsePage(pageRaw);
   const searchQuery = q?.trim() ?? "";
@@ -79,14 +81,17 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
   const isUncategorized = uncategorized === "1" || uncategorized === "true";
   const showAll = all === "1" || all === "true";
   const needsStyling = needs_styling === "1" || needs_styling === "true";
+  const needsColorPhotos = needs_color_photos === "1" || needs_color_photos === "true";
   const showProductList =
     Boolean(searchQuery) ||
     showAll ||
     isUncategorized ||
     needsStyling ||
+    needsColorPhotos ||
     Boolean(category_id);
 
-  const categories = await listAdminCategories();
+  const categoriesResult = await listAdminCategories();
+  const categories = categoriesResult.ok ? categoriesResult.data : null;
 
   if (!showProductList) {
     return (
@@ -118,28 +123,33 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        {categories ? (
-          <AdminCatalogCategoryPicker categories={categories} />
+        {categoriesResult.ok ? (
+          <AdminCatalogCategoryPicker categories={categoriesResult.data} />
         ) : (
-          <p className="text-sm text-destructive">Не удалось загрузить категории.</p>
+          <p className="text-sm text-destructive" role="alert">
+            {categoriesResult.error}
+          </p>
         )}
       </div>
     );
   }
 
-  const products = await listAdminProducts(page, activeStatus, searchQuery || undefined, {
+  const productsResult = await listAdminProducts(page, activeStatus, searchQuery || undefined, {
     categoryId: category_id,
     uncategorized: isUncategorized,
     needsStyling,
+    needsColorPhotos,
   });
 
-  if (!products) {
+  if (!productsResult.ok) {
     return (
-      <p className="text-sm text-destructive">
-        Не удалось загрузить товары. Проверьте права доступа.
+      <p className="text-sm text-destructive" role="alert">
+        {productsResult.error}
       </p>
     );
   }
+
+  const products = productsResult.data;
 
   const totalPages = getAdminTotalPages(products.total, ADMIN_CATALOG_PAGE_SIZE);
   const categoryLabel = getCategoryLabel(categories, category_id, isUncategorized, showAll);
@@ -152,6 +162,7 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
     if (isUncategorized) params.set("uncategorized", "1");
     else if (showAll) params.set("all", "1");
     else if (needsStyling) params.set("needs_styling", "1");
+    else if (needsColorPhotos) params.set("needs_color_photos", "1");
     else if (category_id) params.set("category_id", category_id);
     const query = params.toString();
     return query ? `/admin/catalog?${query}` : "/admin/catalog";
@@ -197,6 +208,7 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
         uncategorized={isUncategorized}
         showAll={showAll}
         needsStyling={needsStyling}
+        needsColorPhotos={needsColorPhotos}
       />
 
       <div className="flex flex-wrap gap-2 text-sm">
@@ -217,6 +229,23 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
           Требует оформления
         </Link>
         <span className="text-muted-foreground">·</span>
+        <Link
+          href={(() => {
+            const params = new URLSearchParams();
+            params.set("needs_color_photos", "1");
+            params.set("all", "1");
+            if (searchQuery) params.set("q", searchQuery);
+            return `/admin/catalog?${params}`;
+          })()}
+          className={
+            needsColorPhotos
+              ? "font-medium text-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          }
+        >
+          Фото по цветам
+        </Link>
+        <span className="text-muted-foreground">·</span>
         {STATUS_FILTERS.map((filter) => {
           const params = new URLSearchParams();
           if (filter.value) params.set("status", filter.value);
@@ -224,6 +253,7 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
           if (isUncategorized) params.set("uncategorized", "1");
           else if (showAll) params.set("all", "1");
           else if (needsStyling) params.set("needs_styling", "1");
+          else if (needsColorPhotos) params.set("needs_color_photos", "1");
           else if (category_id) params.set("category_id", category_id);
           const href = params.size > 0 ? `/admin/catalog?${params}` : "/admin/catalog";
           const isActive = (activeStatus ?? "") === filter.value;

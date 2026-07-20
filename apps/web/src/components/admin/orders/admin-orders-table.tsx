@@ -13,9 +13,32 @@ import { formatOrderMoney } from "@/lib/admin/orders-shared";
 type AdminOrdersTableProps = {
   orders: AdminOrderSummary[];
   getStatusLabel: (status: string) => string;
+  showExportStatus?: boolean;
 };
 
-export function AdminOrdersTable({ orders, getStatusLabel }: AdminOrdersTableProps) {
+function ExportStatusBadge({ order }: { order: AdminOrderSummary }) {
+  if (order.status !== "confirmed") return null;
+
+  if (order.moysklad_order_id) {
+    return (
+      <Badge variant="outline" className="text-xs">
+        Экспортирован
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge variant="secondary" className="text-xs text-amber-800">
+      Ожидает экспорта
+    </Badge>
+  );
+}
+
+export function AdminOrdersTable({
+  orders,
+  getStatusLabel,
+  showExportStatus = false,
+}: AdminOrdersTableProps) {
   if (orders.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
@@ -42,9 +65,12 @@ export function AdminOrdersTable({ orders, getStatusLabel }: AdminOrdersTablePro
                 </span>
               </AdminMobileCardRow>
               <AdminMobileCardRow label="Статус">
-                <Badge variant={order.status === "canceled" ? "secondary" : "default"}>
-                  {getStatusLabel(order.status)}
-                </Badge>
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  <Badge variant={order.status === "canceled" ? "secondary" : "default"}>
+                    {getStatusLabel(order.status)}
+                  </Badge>
+                  {showExportStatus ? <ExportStatusBadge order={order} /> : null}
+                </span>
               </AdminMobileCardRow>
               <AdminMobileCardRow label="Сумма">
                 {formatOrderMoney(order.total_cents, order.currency)}
@@ -66,6 +92,7 @@ export function AdminOrdersTable({ orders, getStatusLabel }: AdminOrdersTablePro
               <th className="px-4 py-3 font-medium">Номер</th>
               <th className="px-4 py-3 font-medium">Клиент</th>
               <th className="px-4 py-3 font-medium">Статус</th>
+              {showExportStatus ? <th className="px-4 py-3 font-medium">МойСклад</th> : null}
               <th className="px-4 py-3 font-medium">Сумма</th>
               <th className="px-4 py-3 font-medium">Дата</th>
             </tr>
@@ -89,6 +116,11 @@ export function AdminOrdersTable({ orders, getStatusLabel }: AdminOrdersTablePro
                     {getStatusLabel(order.status)}
                   </Badge>
                 </td>
+                {showExportStatus ? (
+                  <td className="px-4 py-3">
+                    <ExportStatusBadge order={order} />
+                  </td>
+                ) : null}
                 <td className="px-4 py-3">
                   {formatOrderMoney(order.total_cents, order.currency)}
                 </td>

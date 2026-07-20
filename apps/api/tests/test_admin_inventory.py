@@ -8,6 +8,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.core.config import settings
 from app.core.database import Base, get_db_session
 from app.features.admin.infrastructure.persistence.models import AdminUserModel
 from app.features.auth.infrastructure.security.bcrypt_hasher import BcryptPasswordHasher
@@ -124,6 +125,24 @@ async def test_admin_list_inventory(admin_inventory_client: AsyncClient) -> None
 
 
 @pytest.mark.asyncio
+async def test_admin_list_inventory_sku_search(admin_inventory_client: AsyncClient) -> None:
+    token = await _token(admin_inventory_client)
+    response = await admin_inventory_client.get(
+        "/api/v1/admin/inventory?q=STOCK-TEST",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+
+    miss = await admin_inventory_client.get(
+        "/api/v1/admin/inventory?q=UNKNOWN-SKU",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert miss.status_code == 200
+    assert miss.json()["total"] == 0
+
+
+@pytest.mark.asyncio
 async def test_admin_list_low_stock_filter(admin_inventory_client: AsyncClient) -> None:
     token = await _token(admin_inventory_client)
     response = await admin_inventory_client.get(
@@ -135,7 +154,24 @@ async def test_admin_list_low_stock_filter(admin_inventory_client: AsyncClient) 
 
 
 @pytest.mark.asyncio
-async def test_admin_adjust_inventory_success(admin_inventory_client: AsyncClient) -> None:
+async def test_admin_adjust_inventory_disabled_by_default(
+    admin_inventory_client: AsyncClient,
+) -> None:
+    token = await _token(admin_inventory_client)
+    assert _VARIANT_ID is not None
+    response = await admin_inventory_client.patch(
+        f"/api/v1/admin/inventory/{_VARIANT_ID}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"quantity_on_hand": 30, "reason": "restock", "version": 0},
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_adjust_inventory_success_when_enabled(
+    admin_inventory_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "admin_inventory_manual_adjust_enabled", True)
     token = await _token(admin_inventory_client)
     assert _VARIANT_ID is not None
     response = await admin_inventory_client.patch(
@@ -151,7 +187,10 @@ async def test_admin_adjust_inventory_success(admin_inventory_client: AsyncClien
 
 
 @pytest.mark.asyncio
-async def test_admin_adjust_below_reserved_returns_422(admin_inventory_client: AsyncClient) -> None:
+async def test_admin_adjust_below_reserved_returns_422(
+    admin_inventory_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "admin_inventory_manual_adjust_enabled", True)
     token = await _token(admin_inventory_client)
     assert _VARIANT_ID is not None
     response = await admin_inventory_client.patch(
@@ -163,7 +202,10 @@ async def test_admin_adjust_below_reserved_returns_422(admin_inventory_client: A
 
 
 @pytest.mark.asyncio
-async def test_admin_adjust_version_conflict_returns_409(admin_inventory_client: AsyncClient) -> None:
+async def test_admin_adjust_version_conflict_returns_409(
+    admin_inventory_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "admin_inventory_manual_adjust_enabled", True)
     token = await _token(admin_inventory_client)
     assert _VARIANT_ID is not None
     response = await admin_inventory_client.patch(
@@ -220,4 +262,4 @@ async def test_admin_inventory_includes_sync_source_for_moysklad(
         headers={"Authorization": f"Bearer {token}"},
         json={"quantity_on_hand": 50, "reason": "restock", "version": 0},
     )
-    assert adjust.status_code == 422
+    assert adjust.status_code == 403

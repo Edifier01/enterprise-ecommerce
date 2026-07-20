@@ -45,6 +45,7 @@ class IAdminInventoryRepository(ABC):
         limit: int,
         low_stock_only: bool,
         low_stock_threshold: int,
+        sku_query: str | None = None,
     ) -> tuple[list[AdminInventoryRow], int]:
         ...
 

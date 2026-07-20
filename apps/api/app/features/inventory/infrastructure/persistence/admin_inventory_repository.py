@@ -46,18 +46,30 @@ class AdminInventoryRepository(IAdminInventoryRepository):
         limit: int,
         low_stock_only: bool,
         low_stock_threshold: int,
+        sku_query: str | None = None,
     ) -> tuple[list[AdminInventoryRow], int]:
         offset = (page - 1) * limit
         available = self._available_expr()
         base = self._base_stmt()
 
-        count_stmt = select(func.count()).select_from(InventoryItemModel)
-        if low_stock_only:
-            count_stmt = (
-                select(func.count())
-                .select_from(InventoryItemModel)
-                .where(available <= low_stock_threshold)
+        if sku_query:
+            pattern = f"%{sku_query.strip()}%"
+            base = base.where(
+                ProductVariantModel.sku.ilike(pattern) | ProductModel.name.ilike(pattern)
             )
+
+        count_stmt = select(func.count()).select_from(InventoryItemModel)
+        if low_stock_only or sku_query:
+            count_base = self._base_stmt()
+            if sku_query:
+                pattern = f"%{sku_query.strip()}%"
+                count_base = count_base.where(
+                    ProductVariantModel.sku.ilike(pattern) | ProductModel.name.ilike(pattern)
+                )
+            if low_stock_only:
+                count_base = count_base.where(available <= low_stock_threshold)
+            count_stmt = select(func.count()).select_from(count_base.subquery())
+        if low_stock_only:
             base = base.where(available <= low_stock_threshold)
 
         total = int((await self._session.scalar(count_stmt)) or 0)

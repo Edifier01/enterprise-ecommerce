@@ -127,9 +127,14 @@ class IAdminCatalogRepository(ABC):
         category_id: UUID | None = None,
         uncategorized: bool = False,
         needs_styling: bool = False,
+        needs_color_photos: bool = False,
         sync_source: str | None = None,
         moysklad_pending: bool = False,
     ) -> tuple[list[Product], int]:
+        ...
+
+    @abstractmethod
+    async def count_needs_color_photos(self) -> int:
         ...
 
     @abstractmethod

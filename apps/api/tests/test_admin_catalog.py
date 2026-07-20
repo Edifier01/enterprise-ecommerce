@@ -1,5 +1,7 @@
 """Admin catalog API tests."""
 
+import uuid
+
 from collections.abc import AsyncGenerator
 
 import pytest
@@ -9,7 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core.database import Base, get_db_session
 from app.features.admin.infrastructure.persistence.models import AdminUserModel
 from app.features.auth.infrastructure.security.bcrypt_hasher import BcryptPasswordHasher
-from app.features.catalog.infrastructure.persistence.models import ProductModel
+from app.features.catalog.infrastructure.persistence.models import ProductModel, ProductVariantModel
+from app.features.integrations.moysklad.infrastructure.persistence.models import ProductImageModel
 from app.main import app
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -70,6 +73,52 @@ async def admin_catalog_client() -> AsyncGenerator[AsyncClient, None]:
                     currency="USD",
                     in_stock=True,
                     status="draft",
+                )
+            )
+            multicolor_id = uuid.uuid4()
+            session.add(
+                ProductModel(
+                    id=multicolor_id,
+                    name="Multi Color Jacket",
+                    slug="multi-color-jacket",
+                    price_cents=5000,
+                    currency="RUB",
+                    in_stock=True,
+                    status="active",
+                    sync_source="moysklad",
+                )
+            )
+            await session.flush()
+            session.add_all(
+                [
+                    ProductVariantModel(
+                        product_id=multicolor_id,
+                        sku="MC-MULTICAM-M",
+                        name="Multicam M",
+                        price_cents=5000,
+                        in_stock=True,
+                        is_default=True,
+                        sort_order=0,
+                        attributes={"color": "Multicam", "size": "M"},
+                    ),
+                    ProductVariantModel(
+                        product_id=multicolor_id,
+                        sku="MC-COYOTE-M",
+                        name="Coyote M",
+                        price_cents=5000,
+                        in_stock=True,
+                        is_default=False,
+                        sort_order=1,
+                        attributes={"color": "Coyote", "size": "M"},
+                    ),
+                ]
+            )
+            session.add(
+                ProductImageModel(
+                    product_id=multicolor_id,
+                    url="https://cdn.example.com/multicam-only.jpg",
+                    sort_order=0,
+                    option_color="Multicam",
                 )
             )
             await session.commit()
@@ -540,3 +589,38 @@ async def test_admin_product_image_option_color(admin_catalog_client: AsyncClien
     assert detail.status_code == 200
     images = detail.json()["images"]
     assert any(item["id"] == image["id"] and item["option_color"] == "Coyote" for item in images)
+
+
+@pytest.mark.asyncio
+async def test_admin_list_products_needs_color_photos_filter(
+    admin_catalog_client: AsyncClient,
+) -> None:
+    token = await _token(admin_catalog_client)
+
+    filtered = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products?needs_color_photos=true",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert filtered.status_code == 200
+    payload = filtered.json()
+    assert payload["total"] >= 1
+    match = next(item for item in payload["items"] if item["slug"] == "multi-color-jacket")
+
+    covered = await admin_catalog_client.post(
+        f"/api/v1/admin/catalog/products/{match['id']}/images",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "url": "https://cdn.example.com/coyote.jpg",
+            "option_color": "Coyote",
+            "sort_order": 1,
+        },
+    )
+    assert covered.status_code == 201
+
+    filtered_after = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products?needs_color_photos=true",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert filtered_after.status_code == 200
+    slugs = [item["slug"] for item in filtered_after.json()["items"]]
+    assert "multi-color-jacket" not in slugs

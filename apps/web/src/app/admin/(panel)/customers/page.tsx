@@ -29,11 +29,18 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
 
   const { page: pageRaw } = await searchParams;
   const page = parsePage(pageRaw);
-  const data = await listAdminCustomers(page);
+  const customersResult = await listAdminCustomers(page);
 
-  const totalPages = data
-    ? getAdminTotalPages(data.total, ADMIN_CUSTOMERS_PAGE_SIZE)
-    : 1;
+  if (!customersResult.ok) {
+    return (
+      <p className="text-sm text-destructive" role="alert">
+        {customersResult.error}
+      </p>
+    );
+  }
+
+  const data = customersResult.data;
+  const totalPages = getAdminTotalPages(data.total, ADMIN_CUSTOMERS_PAGE_SIZE);
 
   function buildHref(nextPage: number) {
     return nextPage > 1 ? `/admin/customers?page=${nextPage}` : "/admin/customers";
@@ -45,19 +52,12 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
         <h1 className="text-2xl font-semibold">Клиенты</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Список зарегистрированных клиентов. Статус «Опт» назначается только при регистрации
-          через форму для оптовиков.
-          {data ? ` (${data.total} всего).` : ""}
+          через форму для оптовиков ({data.total} всего).
         </p>
       </header>
 
-      {data ? (
-        <>
-          <AdminCustomersTable customers={data.items} />
-          <AdminPagination page={page} totalPages={totalPages} buildHref={buildHref} />
-        </>
-      ) : (
-        <p className="text-sm text-destructive">Не удалось загрузить список клиентов.</p>
-      )}
+      <AdminCustomersTable customers={data.items} />
+      <AdminPagination page={page} totalPages={totalPages} buildHref={buildHref} />
     </div>
   );
 }

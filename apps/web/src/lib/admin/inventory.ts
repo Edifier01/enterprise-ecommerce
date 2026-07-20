@@ -1,13 +1,8 @@
 import "server-only";
 
-import { adminFetch } from "@/lib/admin/admin-fetch";
-import { getAdminAccessToken } from "@/lib/admin/session";
+import { adminFetchResult, type AdminFetchResult } from "@/lib/admin/admin-fetch";
 import { ADMIN_INVENTORY_PAGE_SIZE } from "@/lib/admin/catalog";
-import type { AdminInventoryItem, AdminInventoryList } from "@/lib/admin/inventory-shared";
-
-import { getApiBase } from "@/lib/api-base";
-
-const API_BASE = getApiBase();
+import type { AdminInventoryList } from "@/lib/admin/inventory-shared";
 
 export type { AdminInventoryItem, AdminInventoryList };
 export { INVENTORY_REASONS } from "@/lib/admin/inventory-shared";
@@ -15,37 +10,13 @@ export { INVENTORY_REASONS } from "@/lib/admin/inventory-shared";
 export async function listAdminInventory(
   page = 1,
   lowStock = false,
-): Promise<AdminInventoryList | null> {
+  query?: string,
+): Promise<AdminFetchResult<AdminInventoryList>> {
   const params = new URLSearchParams({
     page: String(page),
     limit: String(ADMIN_INVENTORY_PAGE_SIZE),
   });
   if (lowStock) params.set("low_stock", "true");
-  return adminFetch<AdminInventoryList>(`/api/v1/admin/inventory?${params}`);
-}
-
-export async function adjustAdminInventory(
-  variantId: string,
-  body: { quantity_on_hand: number; reason: string; version: number },
-): Promise<{ ok: true; data: AdminInventoryItem } | { ok: false; error: string }> {
-  const token = await getAdminAccessToken();
-  if (!token) {
-    return { ok: false, error: "Требуется вход в админ-панель." };
-  }
-
-  const res = await fetch(`${API_BASE}/api/v1/admin/inventory/${variantId}`, {
-    method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const detail = (await res.json().catch(() => null)) as { detail?: string } | null;
-    return { ok: false, error: detail?.detail ?? "Не удалось обновить остаток." };
-  }
-
-  return { ok: true, data: (await res.json()) as AdminInventoryItem };
+  if (query) params.set("q", query);
+  return adminFetchResult<AdminInventoryList>(`/api/v1/admin/inventory?${params}`);
 }

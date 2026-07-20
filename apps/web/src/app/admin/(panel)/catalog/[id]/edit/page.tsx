@@ -23,7 +23,7 @@ export default async function AdminEditProductPage({ params }: PageProps) {
   }
 
   const { id } = await params;
-  const [product, categories] = await Promise.all([
+  const [product, categoriesResult] = await Promise.all([
     getAdminProduct(id),
     listAdminCategories(),
   ]);
@@ -38,7 +38,15 @@ export default async function AdminEditProductPage({ params }: PageProps) {
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">Редактирование товара</h1>
       </div>
-      <AdminProductEditForm product={product} categories={categories ?? []} />
+      {categoriesResult.ok ? null : (
+        <p className="text-sm text-amber-700" role="status">
+          {categoriesResult.error}
+        </p>
+      )}
+      <AdminProductEditForm
+        product={product}
+        categories={categoriesResult.ok ? categoriesResult.data : []}
+      />
     </div>
   );
 }

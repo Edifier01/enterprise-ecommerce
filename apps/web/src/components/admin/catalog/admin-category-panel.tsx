@@ -28,6 +28,7 @@ const textareaClass =
 
 type AdminCategoryPanelProps = {
   categories: AdminCategory[];
+  canWrite?: boolean;
 };
 
 function CategoryEditRow({
@@ -115,7 +116,7 @@ function CategoryEditRow({
   );
 }
 
-export function AdminCategoryPanel({ categories }: AdminCategoryPanelProps) {
+export function AdminCategoryPanel({ categories, canWrite = false }: AdminCategoryPanelProps) {
   const router = useRouter();
   const [pendingCategoryId, setPendingCategoryId] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
@@ -141,6 +142,7 @@ export function AdminCategoryPanel({ categories }: AdminCategoryPanelProps) {
 
   return (
     <div className="space-y-6">
+      {canWrite ? (
       <Card className="max-w-xl">
         <CardHeader>
           <CardTitle>Новая категория</CardTitle>
@@ -216,6 +218,11 @@ export function AdminCategoryPanel({ categories }: AdminCategoryPanelProps) {
           </form>
         </CardContent>
       </Card>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Режим просмотра — изменение категорий доступно только администраторам с правом записи.
+        </p>
+      )}
 
       <Card>
         <CardHeader>
@@ -258,6 +265,7 @@ export function AdminCategoryPanel({ categories }: AdminCategoryPanelProps) {
                           {category.is_active ? "Активна" : "Скрыта"}
                         </td>
                         <td className="py-3">
+                          {canWrite ? (
                           <div className="flex flex-wrap gap-2">
                             <Button
                               type="button"
@@ -324,9 +332,12 @@ export function AdminCategoryPanel({ categories }: AdminCategoryPanelProps) {
                               Удалить
                             </Button>
                           </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </td>
                       </tr>
-                      {editingCategoryId === category.id ? (
+                      {canWrite && editingCategoryId === category.id ? (
                         <CategoryEditRow
                           category={category}
                           categories={categories}

@@ -109,6 +109,7 @@ async def admin_list_products(
     category_id: UUID | None = Query(default=None),
     uncategorized: bool = Query(default=False),
     needs_styling: bool = Query(default=False),
+    needs_color_photos: bool = Query(default=False),
     sync_source: str | None = Query(default=None),
     moysklad_pending: bool = Query(default=False),
     _admin: AdminUser = Depends(require_permission("admin:read")),
@@ -122,6 +123,7 @@ async def admin_list_products(
         category_id=category_id,
         uncategorized=uncategorized,
         needs_styling=needs_styling,
+        needs_color_photos=needs_color_photos,
         sync_source=sync_source,
         moysklad_pending=moysklad_pending,
     )

@@ -42,10 +42,14 @@ class AdminOrdersRepository(IAdminOrdersRepository):
         page: int,
         limit: int,
         status: OrderStatus | None,
+        export_pending: bool = False,
     ) -> tuple[list[AdminOrderListRow], int]:
         offset = (page - 1) * limit
         filters = []
-        if status is not None:
+        if export_pending:
+            filters.append(OrderModel.status == OrderStatus.CONFIRMED.value)
+            filters.append(OrderModel.moysklad_order_id.is_(None))
+        elif status is not None:
             filters.append(OrderModel.status == status.value)
 
         count_stmt = select(func.count()).select_from(OrderModel)

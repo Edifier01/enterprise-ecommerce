@@ -1,11 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   updateOrderStatusAction,
   type OrderActionState,
 } from "@/app/actions/admin-orders";
+import {
+  exportMoySkladOrderAction,
+  type IntegrationActionState,
+} from "@/app/actions/admin-moysklad";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { AdminOrderDetail } from "@/lib/admin/orders-shared";
@@ -20,6 +25,7 @@ const inputClass =
 type AdminOrderDetailProps = {
   order: AdminOrderDetail;
   canWrite: boolean;
+  canExport?: boolean;
 };
 
 function StatusActionForm({
@@ -61,7 +67,39 @@ function StatusActionForm({
   );
 }
 
-export function AdminOrderDetail({ order, canWrite }: AdminOrderDetailProps) {
+function ExportOrderForm({ orderNumber }: { orderNumber: string }) {
+  const router = useRouter();
+  const [state, setState] = useState<IntegrationActionState>({});
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <div>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={pending}
+        className="w-full"
+        onClick={() =>
+          startTransition(async () => {
+            const result = await exportMoySkladOrderAction(orderNumber);
+            setState(result);
+            if (result.success) {
+              router.refresh();
+            }
+          })
+        }
+      >
+        {pending ? "Экспорт…" : "Экспорт в МойСклад"}
+      </Button>
+      {state.error ? <p className="mt-2 text-xs text-destructive">{state.error}</p> : null}
+      {state.success ? (
+        <p className="mt-2 text-xs text-green-600">{state.message ?? "Экспортировано."}</p>
+      ) : null}
+    </div>
+  );
+}
+
+export function AdminOrderDetail({ order, canWrite, canExport = false }: AdminOrderDetailProps) {
   const showShip = canWrite && order.status === "confirmed";
   const showCancel =
     canWrite && (order.status === "confirmed" || order.status === "shipped");
@@ -153,10 +191,13 @@ export function AdminOrderDetail({ order, canWrite }: AdminOrderDetailProps) {
           </div>
         </section>
 
-        {(showShip || showCancel) && (
+        {(showShip || showCancel || (canExport && !order.moysklad_order_id && order.status === "confirmed")) && (
           <section className="rounded-lg border border-border p-4">
             <h2 className="mb-3 text-sm font-medium">Действия</h2>
             <div className="flex flex-col gap-4">
+              {canExport && !order.moysklad_order_id && order.status === "confirmed" ? (
+                <ExportOrderForm orderNumber={order.order_number} />
+              ) : null}
               {showShip && (
                 <StatusActionForm
                   orderNumber={order.order_number}

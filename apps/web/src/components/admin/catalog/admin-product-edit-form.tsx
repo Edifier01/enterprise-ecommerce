@@ -90,6 +90,23 @@ export function AdminProductEditForm({ product, categories }: AdminProductEditFo
     <div className="space-y-6">
       <MoySkladProductBanner product={product} />
 
+      {product.status === "active" && product.category_id ? (
+        <p className="text-sm">
+          <a
+            href={`/products/${product.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Посмотреть на витрине ↗
+          </a>
+        </p>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Превью на витрине доступно после назначения категории и публикации (статус «Активен»).
+        </p>
+      )}
+
       <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle>Редактирование товара</CardTitle>

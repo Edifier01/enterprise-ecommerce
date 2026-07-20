@@ -875,6 +875,46 @@ admin-assigned. Existing orders are never repriced.
 - [x] `updateProductImageAction` server action
 - [x] Pytest: `test_admin_product_image_option_color`
 
+#### Feature: Admin Panel Review & Wave 4 — COMPLETED
+
+- [x] Inventory page read-only — no manual quantity adjust UI
+- [x] `ADMIN_INVENTORY_MANUAL_ADJUST_ENABLED` env flag (default false)
+- [x] Inventory SKU/name search (`GET /admin/inventory?q=`)
+- [x] Viewer `customers:read` — clients page accessible
+- [x] Permission gating on categories + MoySklad integration panels
+- [x] Order detail «Экспорт в МойСклад» button
+- [x] E2E `admin-inventory-smoke.spec.ts`
+- [x] Pytest inventory + customers updated
+
+#### Feature: Admin Panel UX Wave 5 — COMPLETED
+
+- [x] `adminFetchResult` with RU error messages (401/403/500)
+- [x] Orders filter `export_pending` (API + UI tab + dashboard deep link)
+- [x] Orders table MoySklad export status badges
+- [x] Import queue permission gating + merchandising checklist
+- [x] E2E `admin-wave5-smoke.spec.ts`
+- [x] Pytest `test_admin_list_orders_export_pending_filter`
+
+#### Feature: Admin Panel UX Wave 6 — COMPLETED
+
+- [x] Import queue bulk category assign (checkboxes + toolbar)
+- [x] Admin login rate limit (10/min per IP)
+- [x] Next.js middleware JWT validation (`jose` + `JWT_SECRET_KEY`)
+- [x] Admin toast positioning fix (no mobile nav offset)
+- [x] E2E `admin-wave6-smoke.spec.ts`
+- [x] Pytest `test_admin_login_rate_limit_returns_429`
+
+#### Feature: Admin Panel UX Wave 7 — COMPLETED
+
+- [x] `needs_color_photos` catalog filter + MoySklad status count
+- [x] Gallery color coverage panel + MS placeholder per missing color
+- [x] Gallery reorder + alt-text editing
+- [x] Import queue color checklist + bulk publish
+- [x] Dashboard alert + catalog «Фото по цветам» tab
+- [x] Storefront preview link on product edit
+- [x] E2E `admin-wave7-smoke.spec.ts`
+- [x] Pytest `test_admin_list_products_needs_color_photos_filter`
+
 ---
 
 ## Technical Tasks

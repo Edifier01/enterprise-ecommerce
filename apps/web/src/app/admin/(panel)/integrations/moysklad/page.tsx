@@ -33,7 +33,11 @@ export default async function MoySkladIntegrationPage() {
         </p>
       </div>
 
-      <MoySkladIntegrationPanel status={status} logs={logs ?? []} />
+      <MoySkladIntegrationPanel
+        status={status}
+        logs={logs ?? []}
+        canWrite={admin.permissions.includes("integrations:write")}
+      />
     </div>
   );
 }

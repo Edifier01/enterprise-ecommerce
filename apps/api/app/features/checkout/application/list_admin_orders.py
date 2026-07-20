@@ -14,7 +14,13 @@ class ListAdminOrdersUseCase:
         page: int,
         limit: int,
         status: OrderStatus | None,
+        export_pending: bool = False,
     ) -> tuple[list[AdminOrderListRow], int]:
         page = max(page, 1)
         limit = min(max(limit, 1), 100)
-        return await self._repository.list_orders(page=page, limit=limit, status=status)
+        return await self._repository.list_orders(
+            page=page,
+            limit=limit,
+            status=status,
+            export_pending=export_pending,
+        )

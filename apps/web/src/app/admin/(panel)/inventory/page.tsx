@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
+import { AdminInventorySearch } from "@/components/admin/inventory/admin-inventory-search";
 import { AdminInventoryTable } from "@/components/admin/inventory/admin-inventory-table";
 import { ADMIN_INVENTORY_PAGE_SIZE } from "@/lib/admin/catalog";
 import { listAdminInventory } from "@/lib/admin/inventory";
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 type PageProps = {
-  searchParams: Promise<{ page?: string; low_stock?: string }>;
+  searchParams: Promise<{ page?: string; low_stock?: string; q?: string }>;
 };
 
 function parsePage(raw: string | undefined): number {
@@ -26,18 +27,21 @@ export default async function AdminInventoryPage({ searchParams }: PageProps) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
 
-  const { page: pageRaw, low_stock } = await searchParams;
+  const { page: pageRaw, low_stock, q } = await searchParams;
   const page = parsePage(pageRaw);
   const lowStockOnly = low_stock === "true";
-  const inventory = await listAdminInventory(page, lowStockOnly);
+  const query = q?.trim() ?? "";
+  const inventoryResult = await listAdminInventory(page, lowStockOnly, query || undefined);
 
-  if (!inventory) {
+  if (!inventoryResult.ok) {
     return (
-      <p className="text-sm text-destructive">
-        Не удалось загрузить остатки. Проверьте права доступа.
+      <p className="text-sm text-destructive" role="alert">
+        {inventoryResult.error}
       </p>
     );
   }
+
+  const inventory = inventoryResult.data;
 
   const totalPages = getAdminTotalPages(inventory.total, ADMIN_INVENTORY_PAGE_SIZE);
 
@@ -45,8 +49,9 @@ export default async function AdminInventoryPage({ searchParams }: PageProps) {
     const params = new URLSearchParams();
     if (nextPage > 1) params.set("page", String(nextPage));
     if (lowStockOnly) params.set("low_stock", "true");
-    const query = params.toString();
-    return query ? `/admin/inventory?${query}` : "/admin/inventory";
+    if (query) params.set("q", query);
+    const queryString = params.toString();
+    return queryString ? `/admin/inventory?${queryString}` : "/admin/inventory";
   }
 
   return (
@@ -60,7 +65,7 @@ export default async function AdminInventoryPage({ searchParams }: PageProps) {
         </div>
         <div className="flex gap-2 text-sm">
           <Link
-            href="/admin/inventory"
+            href={query ? `/admin/inventory?q=${encodeURIComponent(query)}` : "/admin/inventory"}
             className={
               lowStockOnly
                 ? "text-muted-foreground hover:text-foreground"
@@ -71,7 +76,11 @@ export default async function AdminInventoryPage({ searchParams }: PageProps) {
           </Link>
           <span className="text-muted-foreground">|</span>
           <Link
-            href="/admin/inventory?low_stock=true"
+            href={
+              query
+                ? `/admin/inventory?low_stock=true&q=${encodeURIComponent(query)}`
+                : "/admin/inventory?low_stock=true"
+            }
             className={
               lowStockOnly
                 ? "font-medium text-foreground"
@@ -83,11 +92,9 @@ export default async function AdminInventoryPage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <AdminInventoryTable
-        items={inventory.items}
-        lowStockThreshold={inventory.low_stock_threshold}
-        canWrite={admin.permissions.includes("inventory:write")}
-      />
+      <AdminInventorySearch defaultQuery={query} lowStockOnly={lowStockOnly} />
+
+      <AdminInventoryTable items={inventory.items} lowStockThreshold={inventory.low_stock_threshold} />
 
       <AdminPagination page={page} totalPages={totalPages} buildHref={buildHref} />
     </div>

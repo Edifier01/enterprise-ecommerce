@@ -1025,6 +1025,12 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: q
+          in: query
+          description: Filter by SKU or product name (case-insensitive)
+          schema:
+            type: string
+            maxLength: 100
       responses:
         "200":
           description: Inventory list with variant SKU and availability
@@ -1088,6 +1094,12 @@ paths:
           schema:
             type: string
             enum: [confirmed, shipped, canceled]
+        - name: export_pending
+          in: query
+          description: Confirmed orders not yet exported to MoySklad
+          schema:
+            type: boolean
+            default: false
       responses:
         "200":
           description: Paginated order list

@@ -53,6 +53,10 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Recently Completed
 
+- [x] **Admin Panel UX Wave 7** — multi-color gallery merchandising, bulk publish (2026-07-20)
+- [x] **Admin Panel UX Wave 6** — bulk import assign, JWT middleware, login rate limit (2026-07-20)
+- [x] **Admin Panel UX Wave 5** — export_pending orders, adminFetch errors, import checklist (2026-07-20)
+- [x] **Admin Panel Review Wave 4** — read-only inventory, viewer fixes, order export, SKU search (2026-07-20)
 - [x] **MS-only admin workflow** — block manual products, category delete fix, UX (2026-07-19)
 - [x] **MoySklad Import Queue** — per-product category, visibility gate, stock threshold, category delete (2026-07-19)
 - [x] **MoySklad Phase 6** — returns hook, full resync, OpenAPI, E2E smoke (2026-07-19)
@@ -88,7 +92,7 @@ None.
 
 ## Last Updated
 
-2026-07-19 (mobile storefront Wave 1)
+2026-07-20 (admin Wave 7)
 
 ---
 

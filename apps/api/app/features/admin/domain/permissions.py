@@ -14,7 +14,7 @@ ROLE_PERMISSIONS: Final[dict[str, frozenset[str]]] = {
             "integrations:write",
         }
     ),
-    "viewer": frozenset({"admin:read"}),
+    "viewer": frozenset({"admin:read", "customers:read"}),
 }
 
 

@@ -27,7 +27,7 @@ export default async function MoySkladImportPage({
   const { page: pageRaw } = await searchParams;
   const page = Math.max(1, Number.parseInt(pageRaw ?? "1", 10) || 1);
 
-  const [status, categories, productList] = await Promise.all([
+  const [status, categoriesResult, productListResult] = await Promise.all([
     getMoySkladStatus(),
     listAdminCategories(),
     listAdminProducts(page, undefined, undefined, { moyskladPending: true }),
@@ -64,15 +64,18 @@ export default async function MoySkladImportPage({
         </Link>
       </div>
 
-      {!productList ? (
-        <p className="text-sm text-destructive">Не удалось загрузить очередь импорта.</p>
+      {!productListResult.ok ? (
+        <p className="text-sm text-destructive" role="alert">
+          {productListResult.error}
+        </p>
       ) : (
         <MoySkladImportPanel
-          products={productList.items}
-          categories={categories ?? []}
-          total={productList.total}
+          products={productListResult.data.items}
+          categories={categoriesResult.ok ? categoriesResult.data : []}
+          total={productListResult.data.total}
           page={page}
           pageSize={PAGE_SIZE}
+          canWrite={admin.permissions.includes("catalog:write")}
         />
       )}
     </div>

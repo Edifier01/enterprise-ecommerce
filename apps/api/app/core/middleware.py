@@ -41,6 +41,7 @@ class CheckoutRateLimitMiddleware(BaseHTTPMiddleware):
     SEARCH_LIMIT = 60
     WEBHOOK_LIMIT = 100
     PAYMENT_INTENT_LIMIT = 10
+    ADMIN_LOGIN_LIMIT = 10
     MUTATING_METHODS = {"POST", "PATCH", "DELETE"}
 
     def __init__(self, app) -> None:
@@ -61,6 +62,8 @@ class CheckoutRateLimitMiddleware(BaseHTTPMiddleware):
             return self.DEFAULT_LIMIT
         if path == "/api/v1/products/search" and request.method == "GET":
             return self.SEARCH_LIMIT
+        if path == "/api/v1/admin/auth/login" and request.method == "POST":
+            return self.ADMIN_LOGIN_LIMIT
         return None
 
     @staticmethod
