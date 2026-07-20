@@ -4,7 +4,7 @@ import { adminFetchResult, type AdminFetchResult } from "@/lib/admin/admin-fetch
 import { ADMIN_INVENTORY_PAGE_SIZE } from "@/lib/admin/catalog";
 import type { AdminInventoryList } from "@/lib/admin/inventory-shared";
 
-export type { AdminInventoryItem, AdminInventoryList };
+export type { AdminInventoryItem, AdminInventoryList } from "@/lib/admin/inventory-shared";
 export { INVENTORY_REASONS } from "@/lib/admin/inventory-shared";
 
 export async function listAdminInventory(

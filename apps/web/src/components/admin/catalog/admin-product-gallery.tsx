@@ -266,7 +266,7 @@ export function AdminProductGallery({
         productId,
         erpImageUrl,
         sortedImages.length,
-        optionColor ?? uploadColor || null,
+        (optionColor ?? uploadColor) || null,
       );
       if (result.error) {
         setError(result.error);
