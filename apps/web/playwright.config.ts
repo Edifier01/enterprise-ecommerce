@@ -5,6 +5,8 @@ const webPort = Number(process.env.E2E_WEB_PORT ?? 3002);
 const apiBaseUrl = `http://localhost:${apiPort}`;
 const webBaseUrl = `http://localhost:${webPort}`;
 
+const E2E_JWT_SECRET = "dev-secret-change-in-production";
+
 export default defineConfig({
   testDir: "./e2e",
   reporter: "list",
@@ -40,7 +42,8 @@ export default defineConfig({
           process.env.DATABASE_URL ??
           "postgresql+asyncpg://postgres:postgres@localhost:5433/ecommerce",
         PAYMENT_PROVIDER: "stub",
-        ENVIRONMENT: "development",
+        ENVIRONMENT: "test",
+        JWT_SECRET_KEY: E2E_JWT_SECRET,
         CORS_ORIGINS: `["http://localhost:${webPort}"]`,
       },
     },
@@ -52,6 +55,7 @@ export default defineConfig({
       env: {
         NEXT_PUBLIC_API_URL: apiBaseUrl,
         NEXT_PUBLIC_PAYMENT_MODE: "stub",
+        JWT_SECRET_KEY: E2E_JWT_SECRET,
       },
     },
   ],
