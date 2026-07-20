@@ -10,6 +10,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from app.core.config import settings
+
 # Module-level ContextVar so any code in the request lifecycle can read the
 # current request id without threading or coupling to HTTP internals.
 request_id_var: ContextVar[str] = ContextVar("request_id", default="")
@@ -78,6 +80,9 @@ class CheckoutRateLimitMiddleware(BaseHTTPMiddleware):
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
+        if settings.environment == "test":
+            return await call_next(request)
+
         limit = self._limit_for(request)
         if limit is None:
             return await call_next(request)

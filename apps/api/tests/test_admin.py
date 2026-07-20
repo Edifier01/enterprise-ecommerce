@@ -192,8 +192,10 @@ async def test_admin_dashboard_without_token_returns_401(admin_client: AsyncClie
 async def test_admin_login_rate_limit_returns_429(
     admin_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    from app.core.config import settings
     from app.core.middleware import CheckoutRateLimitMiddleware
 
+    monkeypatch.setattr(settings, "environment", "development")
     monkeypatch.setattr(CheckoutRateLimitMiddleware, "ADMIN_LOGIN_LIMIT", 2)
     headers = {"X-Forwarded-For": "203.0.113.50"}
 

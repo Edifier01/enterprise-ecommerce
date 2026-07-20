@@ -30,7 +30,8 @@ jobs:
         env:
           DATABASE_URL: "sqlite+aiosqlite:///:memory:"
           INVENTORY_RESERVATION_SWEEP_ENABLED: "false"
-        run: pytest tests/ -v
+          ENVIRONMENT: "test"
+        run: pytest tests/ -q
 
   frontend:
     name: Frontend (Node 24)
