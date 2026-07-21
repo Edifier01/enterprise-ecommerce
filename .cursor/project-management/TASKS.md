@@ -406,131 +406,13 @@ admin-assigned. Existing orders are never repriced.
 
 ### Sprint E — Wholesale Pricing (Опт / Розница) — ARCHIVED DETAIL
 
-**Status:** COMPLETED (2026-07-10)
-
-- [ ] ADR-008 accepted and indexed in `DECISIONS.md`
-- [ ] Migration `010_wholesale_pricing`: `product_variants.wholesale_price_cents` (nullable), `users.is_wholesaler` (default false)
-- [ ] DB CHECK: `wholesale_price_cents IS NULL OR wholesale_price_cents <= price_cents`
-- [ ] Domain: document `price_cents` as retail; `PriceTier` enum (`retail` | `wholesale`)
-- [ ] `IPriceTierResolver` (or catalog port): resolve unit price from variant + buyer tier
-- [ ] Order/cart line snapshot: persist `price_tier` on new orders (additive column or JSON snapshot field)
-- [ ] `seed_dev.py`: sample wholesale prices + one wholesaler test customer
-
-#### E2 — Customer Tier API
-
-**Status:** PLANNED
-
-- [ ] `GET /api/v1/auth/me` → `is_wholesaler: boolean`
-- [ ] Admin `GET /api/v1/admin/customers` — paginated list (email, created_at, is_wholesaler)
-- [ ] Admin `PATCH /api/v1/admin/customers/{id}/wholesaler` — grant/revoke (RBAC: `customers:write`, superadmin in Sprint E)
-- [ ] Revoking tier does not touch existing `orders` / `order_lines`
-- [ ] Tests: grant/revoke, non-admin forbidden, me endpoint shape
-
-#### E3 — Catalog, Cart & Checkout Integration
-
-**Status:** PLANNED
-
-- [ ] Public/customer catalog + search: **omit** `wholesale_price_cents` for non-wholesalers
-- [ ] Wholesaler-authenticated catalog + search: expose both `price_cents` and `wholesale_price_cents`
-- [ ] `cart_service` / checkout revalidation: charge via resolver (wholesale for wholesalers when set)
-- [ ] Checkout 409 when wholesaler buys variant with null wholesale (explicit error message)
-- [ ] Tests: price leak prevention (regular JWT never receives wholesale field)
-- [ ] Tests: wholesaler cart totals use wholesale; guest/regular use retail
-- [ ] Tests: order line stores correct `unit_price_cents` + `price_tier`
-
-#### E4 — Admin & Storefront UI
-
-**Status:** PLANNED
-
-- [ ] Admin catalog forms: wholesale price per variant (validation ≤ retail)
-- [ ] Admin `/admin/customers` — list + wholesaler toggle + badge «Оптовик»
-- [ ] Sidebar «Клиенты» (or under existing admin nav)
-- [ ] Storefront PDP/catalog: regular — retail only; wholesaler — both prices labeled «Розница» / «Опт»
-- [ ] Account page: wholesaler badge when `is_wholesaler`
-- [ ] Cart/checkout summary uses tier-appropriate price (no wholesale label for regular users)
-
-#### E5 — Quality Gate
-
-**Status:** PLANNED
-
-- [ ] `openapi.yaml` synced (me, catalog conditional fields, admin customers)
-- [ ] pytest: full wholesale regression suite green
-- [ ] Playwright: `wholesale-pricing-smoke.spec.ts` — regular user cannot see wholesale; wholesaler can buy at wholesale
-- [ ] Playwright: admin grant wholesaler → storefront reflects dual pricing
-- [ ] Ruff + `tsc --noEmit` clean
-
-**Sprint E exit criteria:** All E1–E5 checkboxes complete; no wholesale price in API responses for non-wholesaler tokens; one E2E path wholesaler checkout → order at wholesale `unit_price_cents`.
+**Status:** COMPLETED (2026-07-10) — see main Sprint E section above; duplicate checklist retained for history only.
 
 ---
 
-### Sprint E — Wholesale Pricing (Опт / Розница)
+### Sprint E duplicate checklist — REMOVED (2026-07-21 review cleanup)
 
-**Status:** COMPLETED (2026-07-10) (2026-07-10)
-
-**Goal:** Two prices per SKU (retail + wholesale). Wholesalers see both and buy at
-wholesale; retail customers see and pay retail only. Wholesaler status is permanent,
-admin-assigned. Existing orders are never repriced.
-
-**ADR:** `docs/adr/ADR-008-wholesale-retail-pricing.md`
-
-#### E1 — Architecture & Schema
-
-- [ ] ADR-008 accepted and indexed in `DECISIONS.md`
-- [ ] Migration `010_add_wholesale_pricing`: `product_variants.wholesale_price_cents` + CHECK (`>= 0`, `<= price_cents`)
-- [ ] Migration: `users.is_wholesaler` boolean (default `false`, NOT NULL)
-- [ ] Domain: variant entity + invariants; `User.is_wholesaler` on customer entity
-- [ ] `PricingService` / port: `resolve_unit_price_cents(variant, buyer)` — single authority
-- [ ] Order line snapshot records `price_tier` (`retail` | `wholesale`) for audit
-- [ ] Backfill seed: `wholesale_price_cents` for all variants in `seed_dev.py` (~80% of retail)
-
-#### E2 — Public Catalog & Customer API
-
-- [ ] Public product/list/search/detail schemas: `wholesale_price_cents` **omitted** unless buyer `is_wholesaler`
-- [ ] Authenticated retail customer: same as anonymous (no wholesale leak)
-- [ ] Authenticated wholesaler: both prices in API responses
-- [ ] `GET /api/v1/auth/me` exposes `is_wholesaler` for storefront badge/UX
-- [ ] Tests: retail vs wholesaler API visibility (`tests/test_wholesale_pricing.py`)
-
-#### E3 — Cart, Checkout & Orders
-
-- [ ] `cart_service`: use `resolve_unit_price_cents` on add/update/revalidate
-- [ ] Checkout session totals and payment intent amount use resolved tier
-- [ ] Order creation snapshots resolved price + tier; **no retroactive changes**
-- [ ] Removing wholesaler status does not alter existing orders or order history UI
-- [ ] Tests: wholesaler checkout at wholesale; retail at retail; price tamper resistance
-
-#### E4 — Admin API & RBAC
-
-- [ ] Admin catalog write: `wholesale_price_cents` on variant create/update
-- [ ] `GET /api/v1/admin/customers` — paginated customer list (email, `is_wholesaler`, created_at)
-- [ ] `PATCH /api/v1/admin/customers/{id}/wholesaler` — grant/revoke (permission `customers:write`)
-- [ ] RBAC: `superadmin` has `customers:write`; `viewer` read-only
-- [ ] Tests: `tests/test_admin_customers.py`, extend `test_admin_catalog.py` for wholesale fields
-- [ ] `openapi.yaml` synced
-
-#### E5 — Storefront UX
-
-- [ ] PDP / catalog cards: retail only for default users
-- [ ] Wholesaler: dual-price display (“Розница” / “Опт”) on PDP and cards
-- [ ] Account profile: wholesaler badge when `is_wholesaler`
-- [ ] Cart & checkout summary uses correct tier (server-driven; no client price pick)
-- [ ] TypeScript types updated; no wholesale fields in retail-facing types unless narrowed
-
-#### E6 — Admin UI
-
-- [ ] Catalog admin: wholesale price field on product create/edit (per variant)
-- [ ] New `/admin/customers` — list + toggle wholesaler status
-- [ ] Admin sidebar: «Клиенты» link
-- [x] Playwright E2E: `admin-wholesale-smoke.spec.ts` (toggle wholesaler + verify dual price)
-- [x] Playwright E2E: `wholesale-checkout-smoke.spec.ts` (wholesaler pays wholesale)
-
-#### E7 — Quality Gate
-
-- [ ] Full pytest green; ruff clean; `tsc --noEmit` clean
-- [ ] Manual smoke: retail user cannot see wholesale in network responses
-- [ ] PM files updated on sprint closeout
-
-**Out of scope (Sprint E):** volume tiers, temporary wholesaler contracts, multi-currency wholesale, automatic wholesaler self-registration.
+The third duplicate Sprint E section was removed during full project review. All E1–E7 work is tracked in the primary Sprint E block above.
 
 ---
 
@@ -660,7 +542,8 @@ admin-assigned. Existing orders are never repriced.
 - [x] Tests: 15 in `test_admin_catalog.py`
 
 **Backlog (production media):**
-- [ ] S3 presigned upload + CDN (replace local `/media` storage)
+- [x] S3 presigned upload + CDN backend (`media_storage_backend=s3`, `/admin/media/presign`)
+- [ ] Production S3 bucket + CDN provisioning and env configuration
 
 ---
 
@@ -771,7 +654,7 @@ admin-assigned. Existing orders are never repriced.
 - [x] Admin API guards — block MS-owned field edits (catalog + inventory)
 - [x] Config env vars in `.env.example`
 - [x] Pytest: sync guard + status endpoint (7 tests)
-- [ ] Run migration 014 on dev DB
+- [x] Run migration 014 on dev DB
 
 #### Phase 2 — Catalog Import — IN_PROGRESS
 
@@ -782,7 +665,7 @@ admin-assigned. Existing orders are never repriced.
 - [x] CLI/script: `python -m scripts.import_moysklad_catalog`
 - [x] Admin `POST /sync/trigger` runs full import
 - [x] Stock from single warehouse via `stockByStore` report
-- [ ] Run migration + import on dev DB (requires Docker/PostgreSQL)
+- [x] Run migration + import on dev DB (requires Docker/PostgreSQL)
 
 #### Phase 3 — Stock Sync + Webhooks — COMPLETED
 
@@ -915,6 +798,138 @@ admin-assigned. Existing orders are never repriced.
 - [x] E2E `admin-wave7-smoke.spec.ts`
 - [x] Pytest `test_admin_list_products_needs_color_photos_filter`
 
+#### Admin UX — Bulk Publish Guard — COMPLETED
+
+- [x] Domain `merchandising_readiness.py` (category, photo, color gallery)
+- [x] API guard on PATCH `status=active` for MoySklad products
+- [x] Frontend shared `merchandising-readiness.ts` + bulk publish skip summary
+- [x] Pytest `test_merchandising_readiness.py` + publish guard API tests
+
+#### Admin UX — Catalog List RBAC — COMPLETED
+
+- [x] Hide «Изменить» / «Скрыть с витрины» / «Действия» column without `catalog:write`
+- [x] Hide «+ Категория» on catalog landing for viewer
+- [x] Hide button error feedback on API failure
+- [x] Seed `viewer@example.com` + E2E smoke
+
+#### Admin UX — Catalog Navigation — COMPLETED
+
+- [x] Category column in product list (desktop + mobile)
+- [x] `catalog-list-url.ts` shared list/edit/return URL helpers
+- [x] Edit page contextual back link + `return_to` on save and close
+- [x] Import queue edit links preserve import page context
+- [x] E2E filter back-link smoke
+
+#### Feature: Remove Admin MFA — COMPLETED
+
+- [x] ADR-014 — password-only admin auth
+- [x] Remove MFA API routes, use cases, TOTP services
+- [x] Migration 018 — drop MFA columns from `admin_users`
+- [x] Frontend single-step login; remove `/admin/settings/security`
+- [x] Update production env/docs (no `ADMIN_MFA_*`)
+- [x] Admin panel full review (P0/P1/P2 findings)
+
+#### Feature: Local Server Media Storage — COMPLETED
+
+- [x] ADR-013 — local filesystem media on VPS; S3 backend removed
+- [x] `MediaStorageService` local-only; presign endpoint removed
+- [x] Production validators — `MEDIA_PUBLIC_BASE_URL` (https) required
+- [x] `docker-compose.prod.yml` — `media_uploads` persistent volume
+- [x] `docs/PRODUCTION-MEDIA-MFA.md` — local media + MFA workflow
+- [x] Frontend direct upload via `POST /admin/media/upload`
+- [x] Pytest: `test_production_config.py` (5 tests), upload size test
+
+**Ops follow-up:**
+
+- [ ] Set `MEDIA_PUBLIC_BASE_URL` in `.env.production` and redeploy
+- [ ] Configure volume backup for `/app/uploads`
+
+#### Feature: Production S3 + MFA Configuration — SUPERSEDED (ADR-013/014)
+
+- [x] `.env.production.example` with S3, CDN, MFA variables
+- [x] `docker-compose.prod.yml` — S3/MFA for API, JWT+CDN for web
+- [x] Production validators — require S3 + CDN + MFA encryption key
+- [x] `docs/PRODUCTION-S3-MFA.md` — Yandex/AWS setup + MFA enrollment workflow
+- [x] `scripts/generate-production-secrets.sh`
+- [x] `deploy.sh` preflight checks for S3/MFA env
+- [x] Pytest: `test_production_config.py` (5 tests)
+
+**Ops follow-up:**
+
+- [ ] Create S3 bucket + CDN on cloud provider (superseded — local media per ADR-013)
+- [ ] Fill `.env.production` on server and deploy
+
+#### Feature: Admin P3 Hardening + Dev DB Ops — COMPLETED
+
+- [x] Migrations 014–017 applied on dev Postgres
+- [x] Image URL allowlist validation (`https`/`http`, block `javascript:`/`data:`)
+- [x] Magic-byte validation on media uploads
+- [x] MoySklad sync 502 responses sanitized (server-side logging only)
+- [x] Pytest: `test_admin_media_validation.py` (5 tests)
+
+#### Feature: Admin P2 Hardening (post-MFA review) — COMPLETED
+
+- [x] Fix flaky `test_admin_search_products_by_name`
+- [x] API regression: MFA routes return 404
+- [x] E2E viewer RBAC smoke (`admin-rbac-smoke.spec.ts`)
+- [x] Customers search placeholder UX
+- [x] Multi-replica rate limit documented (Redis deferred)
+
+#### Feature: Admin P2 Hardening — COMPLETED
+
+- [x] S3 presign `ContentLength` + `media_max_upload_bytes` validation
+- [x] `React cache()` on `getCurrentAdmin` / dashboard / MFA status (dedupe `/me`)
+- [x] MFA regenerate backup codes + disable API
+- [x] MFA UI — QR code, regenerate, disable/re-enroll
+- [x] Pytest: presign size + MFA disable/regenerate (11/11 MFA green)
+
+#### Feature: Admin P1 Hardening (post-MFA review) — COMPLETED
+
+- [x] Page-level RBAC on orders, inventory, customers, catalog write pages
+- [x] Login action distinguishes 401/403/429/5xx
+- [x] OpenAPI sync via `scripts/export_openapi.py` (53 paths, admin catalog detail routes)
+- [x] Removed stale MoySklad category-mappings from contract
+
+#### Feature: Admin P1 Hardening — COMPLETED
+
+- [x] MFA refresh UX — server-detect pending cookie on login page
+- [x] `requireAdminPermission()` helper for server actions
+- [x] Permission checks on catalog, orders, MoySklad mutations
+- [x] Permission-aware sidebar nav (`filterAdminNavSections`)
+
+#### Feature: Admin P0 Security (post-MFA) — COMPLETED
+
+- [x] Migration 019 — login lockout columns on `admin_users`
+- [x] DB account lockout after N failed attempts (429 + Retry-After)
+- [x] Optional IP allowlist (`ADMIN_LOGIN_ALLOWED_IPS`)
+- [x] Rate limit `POST /admin/media/upload`
+- [x] JWT `is_active` claim — API + Next.js middleware
+- [x] Frontend login messages for 429/403
+- [x] Pytest: lockout, IP allowlist, upload limit, legacy JWT rejection (13/13 admin auth green)
+
+#### Feature: Admin P0 Security Hardening (MFA era) — SUPERSEDED
+
+- [x] MFA state machine — enroll preserves `mfa_enabled`; pending secret requires MFA at login
+- [x] Enforce `ADMIN_MFA_REQUIRED` at login (403 when not enrolled)
+- [x] Rate limit `POST /admin/auth/mfa/verify` (10/min/IP)
+- [x] Production JWT fail-hard — no dev secret fallback in middleware
+- [x] Pytest: 4 new MFA security tests (16/16 green)
+
+#### Feature: Admin Production Hardening — COMPLETED
+
+- [x] Migration 017 — admin MFA fields (`mfa_enabled`, encrypted TOTP secret, backup codes)
+- [x] Admin TOTP MFA — login challenge, enroll/confirm API, backup codes
+- [x] Frontend — MFA step on login, `/admin/settings/security` enrollment UI
+- [x] S3 media storage backend + `POST /admin/media/presign` for direct browser upload
+- [x] Local `/media` upload preserved as default (`media_storage_backend=local`)
+- [x] Pytest: `test_admin_mfa.py` (MFA challenge, enroll/confirm, presign 409 on local)
+- [x] `.env.example` — MFA + S3/CDN settings documented
+
+**Ops follow-up (not code):**
+
+- [x] Run `alembic upgrade head` on dev DB (014–017) — requires Docker/Postgres
+- [ ] Upload real product/category photography via admin gallery
+
 ---
 
 ## Technical Tasks
@@ -929,9 +944,41 @@ admin-assigned. Existing orders are never repriced.
 
 ---
 
+## Epic: Full Project Review Follow-ups
+
+**Status:** BACKLOG (from review 2026-07-21)
+
+### P0 — Release blockers
+
+- [ ] YooKassa payment integration (replace Stripe foundation per ADR-004)
+- [ ] Run migrations 018–019 on production DB
+- [x] Update checkout E2E to fill shipping form (migration 016)
+
+### P1 — Security & architecture
+
+- [x] Fix X-Forwarded-For parsing for admin IP allowlist and rate limits
+- [x] Require `MOYSKLAD_WEBHOOK_SECRET` in production config validator
+- [x] Production validator: reject default admin credentials
+- [ ] Move `ProductImageModel` from moysklad to catalog module
+- [x] Delete orphan MFA files (`admin_mfa_crypto.py`, `test_admin_mfa.py`, untracked use cases)
+- [x] Consolidate duplicate ADR-008; deprecate orphan file
+- [x] PM cleanup: remove MFA ops follow-ups; collapse Sprint E duplicates in TASKS.md
+- [ ] Shipping in MoySklad order export payload
+- [x] CI: alembic upgrade head job + OpenAPI drift check
+
+### P2 — Polish
+
+- [ ] Shipping fields in public `OrderDetailSchema`
+- [ ] Zod validation on checkout shipping form
+- [ ] Global security headers (CSP/X-Frame-Options beyond checkout)
+- [ ] Media backup runbook for `media_uploads` volume
+- [ ] SMTP production delivery
+
+---
+
 ## Bugs
 
-None reported.
+None reported (review findings tracked in epic above).
 
 ---
 

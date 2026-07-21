@@ -6,13 +6,13 @@
 
 ## Current Module
 
-`apps/web` — Admin panel UX Wave 7 (multi-color gallery merchandising)
+Platform hardening — review follow-ups
 
 ---
 
 ## Current Feature
 
-**Admin UX Wave 7** — color coverage filter, gallery UX, bulk publish (2026-07-20)
+**Review follow-ups** — security P1, CI, E2E shipping, PM cleanup (2026-07-21)
 
 ---
 
@@ -24,13 +24,16 @@ Implementation Agent
 
 ## Current Milestone
 
-**Phase 24 — Internet Store Design** (~99%)
+**Phase 24 — Internet Store Design** (~85% functional, ~72% production-ready)
 
 ---
 
 ## Current Blockers
 
-None. Migration 015 may still need `alembic upgrade head` on dev DB if not applied.
+1. YooKassa payment integration (release gate)
+2. Migrations 018–019 on **production** DB (dev done)
+3. SMTP production delivery
+4. `MEDIA_PUBLIC_BASE_URL` + media volume backup on prod
 
 ---
 
@@ -38,23 +41,15 @@ None. Migration 015 may still need `alembic upgrade head` on dev DB if not appli
 
 | Area | Status |
 |------|--------|
-| Admin Wave 1–6 | ✅ |
-| Admin Wave 7 | ✅ |
-| Storefront variant UX (ADR-011) | ✅ |
-
----
-
-## Important References
-
-| Resource | Path |
-|----------|------|
-| ADR-011 | `docs/adr/ADR-011-variant-selector-ux.md` |
-| Gallery admin | `components/admin/catalog/admin-product-gallery.tsx` |
-| Color coverage | `lib/admin/gallery-color-coverage.ts` |
-| HANDOFF | `.cursor/project-management/HANDOFF.md` |
+| Security P1 (XFF, webhook, admin creds) | ✅ |
+| CI (alembic + OpenAPI drift) | ✅ |
+| Checkout E2E shipping | ✅ |
+| Dev migrations 018–019 | ✅ |
+| pytest | ✅ 213 |
+| YooKassa | ❌ |
 
 ---
 
 ## Last Updated
 
-2026-07-20 (admin UX Wave 7)
+2026-07-21 (review follow-ups)

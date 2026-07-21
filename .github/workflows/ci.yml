@@ -11,6 +11,22 @@ jobs:
   backend:
     name: Backend (Python 3.13)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ecommerce
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DATABASE_URL: "postgresql+asyncpg://postgres:postgres@localhost:5432/ecommerce"
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +40,16 @@ jobs:
 
       - name: Lint with ruff
         run: ruff check apps/api/app/ apps/api/tests/
+
+      - name: Verify Alembic migrations apply
+        working-directory: apps/api
+        run: alembic upgrade head
+
+      - name: Verify OpenAPI contract is synced
+        working-directory: apps/api
+        run: |
+          python scripts/export_openapi.py
+          git diff --exit-code ../openapi.yaml
 
       - name: Run tests
         working-directory: apps/api

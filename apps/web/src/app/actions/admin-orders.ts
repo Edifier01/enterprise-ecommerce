@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { updateAdminOrderStatus } from "@/lib/admin/orders";
+import { requireAdminPermission } from "@/lib/admin/require-admin-permission";
 
 export type OrderActionState = {
   error?: string;
@@ -14,6 +15,11 @@ export async function updateOrderStatusAction(
   _prev: OrderActionState,
   formData: FormData,
 ): Promise<OrderActionState> {
+  const auth = await requireAdminPermission("orders:write");
+  if (!auth.ok) {
+    return { error: auth.error };
+  }
+
   const status = formData.get("status");
   const reason = formData.get("reason");
 

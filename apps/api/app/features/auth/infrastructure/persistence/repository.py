@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.auth.domain.entities import User, WholesalerProfile
@@ -119,17 +119,32 @@ class UserRepository(IUserRepository):
         await self._session.refresh(row)
         return self._to_entity(row)
 
-    async def list_customers(self, page: int, limit: int) -> tuple[list[User], int]:
+    async def list_customers(
+        self,
+        page: int,
+        limit: int,
+        *,
+        q: str | None = None,
+    ) -> tuple[list[User], int]:
         offset = (page - 1) * limit
-        total = int(
-            (await self._session.scalar(select(func.count()).select_from(UserModel))) or 0
-        )
-        stmt = (
-            select(UserModel)
-            .order_by(UserModel.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        )
+        filters = []
+        if q is not None and q.strip():
+            term = f"%{q.strip()}%"
+            filters.append(
+                or_(
+                    UserModel.email.ilike(term),
+                    UserModel.first_name.ilike(term),
+                    UserModel.last_name.ilike(term),
+                )
+            )
+
+        count_stmt = select(func.count()).select_from(UserModel)
+        stmt = select(UserModel).order_by(UserModel.created_at.desc()).offset(offset).limit(limit)
+        if filters:
+            count_stmt = count_stmt.where(*filters)
+            stmt = stmt.where(*filters)
+
+        total = int((await self._session.scalar(count_stmt)) or 0)
         rows = (await self._session.scalars(stmt)).all()
         return [self._to_entity(row) for row in rows], total
 

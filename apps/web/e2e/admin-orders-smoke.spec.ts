@@ -12,12 +12,13 @@ test.describe("Admin orders smoke", () => {
 
     await page.goto("/admin/orders");
     await expect(page.getByRole("heading", { name: "Заказы" })).toBeVisible();
+    await expect(page.getByPlaceholder("Поиск по номеру заказа или email…")).toBeVisible();
 
     const orderLink = page.getByRole("link", { name: /^ORD-/ }).first();
     const hasOrders = await orderLink.count();
     if (hasOrders > 0) {
       await orderLink.click();
-      await expect(page.getByText("← К списку заказов")).toBeVisible();
+      await expect(page.getByText("Доставка и клиент")).toBeVisible();
     }
   });
 });

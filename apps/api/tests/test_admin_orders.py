@@ -6,6 +6,7 @@ from collections.abc import AsyncGenerator
 
 from tests.auth_helpers import mark_user_email_verified
 from tests.auth_payloads import retail_register_payload
+from tests.checkout_helpers import RETAIL_SHIPPING_JSON
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -107,6 +108,7 @@ async def _place_order(client: AsyncClient) -> str:
     )
     session_resp = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "admin-orders-checkout-key"},
     )
     assert session_resp.status_code == 201, session_resp.text
@@ -236,6 +238,28 @@ async def test_admin_list_orders(admin_orders_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_admin_list_orders_search_by_email(admin_orders_client: AsyncClient) -> None:
+    order_number = await _place_order(admin_orders_client)
+    token = await _admin_token(admin_orders_client, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+
+    response = await admin_orders_client.get(
+        "/api/v1/admin/orders?q=admin-orders-user",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["order_number"] == order_number
+
+    empty = await admin_orders_client.get(
+        "/api/v1/admin/orders?q=missing-customer@example.com",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert empty.status_code == 200
+    assert empty.json()["total"] == 0
+
+
+@pytest.mark.asyncio
 async def test_admin_get_order_detail(admin_orders_client: AsyncClient) -> None:
     order_number = await _place_order(admin_orders_client)
     token = await _admin_token(admin_orders_client, _ADMIN_EMAIL, _ADMIN_PASSWORD)
@@ -250,6 +274,10 @@ async def test_admin_get_order_detail(admin_orders_client: AsyncClient) -> None:
     assert len(data["lines"]) == 1
     assert len(data["status_history"]) >= 1
     assert data["customer_email"] == "admin-orders-user@example.com"
+    assert data["customer_name"] == "Тест Пользователь"
+    assert data["customer_phone"] == "+79001234567"
+    assert data["shipping_address"] == "г. Москва, ул. Тестовая, д. 1"
+    assert data["shipping_cents"] == 0
 
 
 @pytest.mark.asyncio

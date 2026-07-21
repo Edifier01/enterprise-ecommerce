@@ -14,6 +14,8 @@ class AdminUser:
     hashed_password: str
     role: str
     is_active: bool
+    failed_login_attempts: int
+    locked_until: datetime | None
     created_at: datetime
 
     @property

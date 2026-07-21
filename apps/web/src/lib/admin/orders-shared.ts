@@ -39,6 +39,10 @@ export type AdminOrderDetail = AdminOrderSummary & {
   shipping_cents: number;
   tax_cents: number;
   updated_at: string;
+  customer_name: string | null;
+  customer_phone: string | null;
+  shipping_address: string | null;
+  is_wholesaler: boolean;
   lines: AdminOrderLine[];
   status_history: AdminOrderStatusHistory[];
 };

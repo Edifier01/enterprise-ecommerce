@@ -1,5 +1,6 @@
 """Admin MoySklad integration routes — inbound sync only, never writes to MoySklad."""
 
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -28,6 +29,7 @@ from app.features.integrations.moysklad.infrastructure.persistence.sync_reposito
 )
 
 router = APIRouter(prefix="/admin/integrations/moysklad", tags=["admin"])
+logger = logging.getLogger(__name__)
 
 
 class MoySkladIntegrationStatusResponse(BaseModel):
@@ -177,7 +179,8 @@ async def admin_moysklad_pull_catalog(
         await session.commit()
     except Exception as exc:
         await session.rollback()
-        raise HTTPException(status_code=502, detail=f"Import from MoySklad failed: {exc}") from exc
+        logger.exception("MoySklad catalog import failed")
+        raise HTTPException(status_code=502, detail="Import from MoySklad failed") from exc
 
     return MoySkladPullResponse(
         status="partial" if result.errors else "success",
@@ -206,7 +209,8 @@ async def admin_moysklad_pull_stock(
         await session.commit()
     except Exception as exc:
         await session.rollback()
-        raise HTTPException(status_code=502, detail=f"Stock pull from MoySklad failed: {exc}") from exc
+        logger.exception("MoySklad stock pull failed")
+        raise HTTPException(status_code=502, detail="Stock pull from MoySklad failed") from exc
 
     return MoySkladStockPullResponse(
         status="partial" if result.errors else "success",
@@ -231,7 +235,8 @@ async def admin_moysklad_full_resync(
         await session.commit()
     except Exception as exc:
         await session.rollback()
-        raise HTTPException(status_code=502, detail=f"Full resync failed: {exc}") from exc
+        logger.exception("MoySklad full resync failed")
+        raise HTTPException(status_code=502, detail="Full resync failed") from exc
 
     return MoySkladFullResyncResponse(
         status="partial" if result.errors else "success",

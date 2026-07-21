@@ -19,6 +19,7 @@ from app.features.checkout.domain.entities import (
     CheckoutSessionStatus,
     Order,
     OrderLine,
+    OrderShippingDetails,
     OrderStatus,
     PaymentRecord,
     PaymentRecordStatus,
@@ -85,10 +86,13 @@ def _session_from_model(model: CheckoutSessionModel) -> CheckoutSession:
         currency=model.currency,
         subtotal_cents=model.subtotal_cents,
         total_cents=model.total_cents,
-        idempotency_key=model.idempotency_key,
-        stripe_payment_intent_id=model.stripe_payment_intent_id,
         created_at=model.created_at,
         updated_at=model.updated_at,
+        idempotency_key=model.idempotency_key,
+        stripe_payment_intent_id=model.stripe_payment_intent_id,
+        shipping_recipient_name=model.shipping_recipient_name,
+        shipping_phone=model.shipping_phone,
+        shipping_address=model.shipping_address,
     )
 
 
@@ -126,9 +130,12 @@ def _order_from_model(model: OrderModel) -> Order:
         tax_cents=model.tax_cents,
         total_cents=model.total_cents,
         payment_record_id=model.payment_record_id,
-        moysklad_order_id=model.moysklad_order_id,
         created_at=model.created_at,
         updated_at=model.updated_at,
+        shipping_recipient_name=model.shipping_recipient_name,
+        shipping_phone=model.shipping_phone,
+        shipping_address=model.shipping_address,
+        moysklad_order_id=model.moysklad_order_id,
     )
 
 
@@ -295,6 +302,7 @@ class CheckoutRepository(ICheckoutRepository):
         subtotal_cents: int,
         total_cents: int,
         idempotency_key: str | None,
+        shipping: OrderShippingDetails | None = None,
     ) -> CheckoutSession:
         model = CheckoutSessionModel(
             cart_id=cart_id,
@@ -304,6 +312,9 @@ class CheckoutRepository(ICheckoutRepository):
             subtotal_cents=subtotal_cents,
             total_cents=total_cents,
             idempotency_key=idempotency_key,
+            shipping_recipient_name=shipping.recipient_name if shipping else None,
+            shipping_phone=shipping.phone if shipping else None,
+            shipping_address=shipping.address if shipping else None,
         )
         self._session.add(model)
         await self._session.flush()
@@ -507,6 +518,7 @@ class CheckoutRepository(ICheckoutRepository):
         total_cents: int,
         payment_record_id: uuid.UUID,
         lines: list[tuple[uuid.UUID, int, int, int, ProductSnapshot]],
+        shipping: OrderShippingDetails | None = None,
     ) -> Order:
         order = OrderModel(
             order_number=order_number,
@@ -518,6 +530,9 @@ class CheckoutRepository(ICheckoutRepository):
             subtotal_cents=subtotal_cents,
             total_cents=total_cents,
             payment_record_id=payment_record_id,
+            shipping_recipient_name=shipping.recipient_name if shipping else None,
+            shipping_phone=shipping.phone if shipping else None,
+            shipping_address=shipping.address if shipping else None,
         )
         self._session.add(order)
         await self._session.flush()

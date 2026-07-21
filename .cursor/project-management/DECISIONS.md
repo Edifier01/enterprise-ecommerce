@@ -638,6 +638,73 @@ action alerts, read-only MS inventory UI, and save-without-redirect on product e
 
 ---
 
+## ADR-013
+
+| Field | Value |
+|-------|-------|
+| **Decision ID** | ADR-013 |
+| **Date** | 2026-07-21 |
+| **Status** | Accepted |
+| **Full ADR** | `docs/adr/ADR-013-local-server-media-storage.md` |
+
+**Context:**
+
+Production media used S3 + CDN with presigned uploads. Deployment is a single VPS;
+object storage adds cost and complexity without current scale need.
+
+**Decision:**
+
+Local filesystem on API server with Docker volume; public URLs via
+`MEDIA_PUBLIC_BASE_URL` and Caddy `/media/*` proxy. S3 backend removed.
+
+**Alternatives Considered:**
+
+| Alternative | Reason Rejected |
+|-------------|-----------------|
+| Keep S3 in production | Explicit user requirement for on-server storage |
+| PostgreSQL blob storage | Poor fit for image delivery |
+
+**Consequences:**
+
+- Positive: simpler ops, no S3 credentials
+- Negative: disk backup and capacity are operator responsibilities
+
+**Related Rules:**
+
+- `docker/00-docker.mdc`
+- ADR-009
+
+---
+
+## ADR-014
+
+| Field | Value |
+|-------|-------|
+| **Decision ID** | ADR-014 |
+| **Date** | 2026-07-21 |
+| **Status** | Accepted |
+| **Full ADR** | `docs/adr/ADR-014-remove-admin-mfa.md` |
+
+**Context:**
+
+Admin TOTP MFA added operational friction. Small-team VPS deployment does not require MFA.
+
+**Decision:**
+
+Remove admin MFA entirely. Login returns JWT after email+password. Migration 018 drops MFA columns.
+
+**Consequences:**
+
+- Positive: simpler ops and login
+- Negative: password-only admin auth — enforce strong secrets and HTTPS
+
+**Related Rules:**
+
+- ADR-007 (MFA deferred — path removed)
+- `security/01-auth`
+
+---
+
 ## Decision Log Template
 
 Use when recording new decisions:

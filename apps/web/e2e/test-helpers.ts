@@ -7,11 +7,27 @@ export const E2E_API_BASE =
 
 export const DEV_ADMIN_EMAIL = "admin@example.com";
 export const DEV_ADMIN_PASSWORD = "admin12345";
+export const DEV_VIEWER_ADMIN_EMAIL = "viewer@example.com";
+export const DEV_VIEWER_ADMIN_PASSWORD = "admin12345";
+
+export async function fillCheckoutShipping(page: Page) {
+  await page.getByLabel("Получатель").fill("Иван Тестов");
+  await page.getByLabel("Телефон").fill("+79001234567");
+  await page.getByLabel("Адрес доставки").fill("Москва, ул. Тестовая, 1");
+}
 
 export async function loginAsAdmin(page: Page) {
   await page.goto("/admin/login");
   await page.getByLabel("Email").fill(DEV_ADMIN_EMAIL);
   await page.getByLabel("Пароль").fill(DEV_ADMIN_PASSWORD);
+  await page.getByRole("button", { name: "Войти" }).click();
+  await expect(page).toHaveURL(/\/admin\/?$/, { timeout: 15_000 });
+}
+
+export async function loginAsViewerAdmin(page: Page) {
+  await page.goto("/admin/login");
+  await page.getByLabel("Email").fill(DEV_VIEWER_ADMIN_EMAIL);
+  await page.getByLabel("Пароль").fill(DEV_VIEWER_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Войти" }).click();
   await expect(page).toHaveURL(/\/admin\/?$/, { timeout: 15_000 });
 }

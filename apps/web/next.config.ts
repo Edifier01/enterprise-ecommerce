@@ -9,7 +9,7 @@ function buildRemoteImagePatterns() {
     pathname: string;
   }> = [];
 
-  for (const envName of ["NEXT_PUBLIC_CDN_URL", "NEXT_PUBLIC_MEDIA_BASE_URL"] as const) {
+  for (const envName of ["NEXT_PUBLIC_MEDIA_BASE_URL"] as const) {
     const raw = process.env[envName]?.trim();
     if (!raw) continue;
     try {

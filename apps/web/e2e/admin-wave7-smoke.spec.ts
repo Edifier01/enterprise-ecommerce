@@ -43,4 +43,15 @@ test.describe("Admin UX Wave 7 smoke", () => {
       await expect(bulkPublish).toBeVisible();
     }
   });
+
+  test("import queue merchandising checklist shows photo requirement", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/admin/integrations/moysklad/import");
+
+    const photoChecklist = page.getByLabel("Чеклист оформления").getByText("Фото");
+    const hasChecklist = await photoChecklist.count();
+    if (hasChecklist > 0) {
+      await expect(photoChecklist.first()).toBeVisible();
+    }
+  });
 });

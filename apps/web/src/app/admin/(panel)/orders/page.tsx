@@ -3,12 +3,22 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
+import { AdminOrdersSearch } from "@/components/admin/orders/admin-orders-search";
 import { AdminOrdersTable } from "@/components/admin/orders/admin-orders-table";
 import { ADMIN_ORDERS_PAGE_SIZE } from "@/lib/admin/catalog";
 import {
   getAdminOrderStatusLabel,
   listAdminOrders,
 } from "@/lib/admin/orders";
+import {
+  buildAdminOrderDetailHref,
+  buildAdminOrdersListHref,
+  type AdminOrdersListParams,
+} from "@/lib/admin/orders-list-url";
+import {
+  ADMIN_PAGE_FORBIDDEN_MESSAGE,
+  adminHasPermission,
+} from "@/lib/admin/require-admin-permission";
 import { getCurrentAdmin } from "@/lib/admin/session";
 
 export const metadata: Metadata = {
@@ -25,7 +35,7 @@ const STATUS_FILTERS = [
 ] as const;
 
 type PageProps = {
-  searchParams: Promise<{ page?: string; status?: string; export_pending?: string }>;
+  searchParams: Promise<{ page?: string; status?: string; export_pending?: string; q?: string }>;
 };
 
 function parsePage(raw: string | undefined): number {
@@ -36,16 +46,29 @@ function parsePage(raw: string | undefined): number {
 export default async function AdminOrdersPage({ searchParams }: PageProps) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
+  if (!adminHasPermission(admin, "admin:read")) {
+    return (
+      <p className="text-sm text-destructive" role="alert">
+        {ADMIN_PAGE_FORBIDDEN_MESSAGE}
+      </p>
+    );
+  }
 
-  const { page: pageRaw, status, export_pending } = await searchParams;
+  const { page: pageRaw, status, export_pending, q } = await searchParams;
   const page = parsePage(pageRaw);
+  const searchQuery = q?.trim() ?? "";
   const exportPending = export_pending === "1" || export_pending === "true";
   const activeStatus =
     !exportPending &&
     (status === "confirmed" || status === "shipped" || status === "canceled")
       ? status
       : undefined;
-  const ordersResult = await listAdminOrders(page, activeStatus, exportPending);
+  const ordersResult = await listAdminOrders(
+    page,
+    activeStatus,
+    exportPending,
+    searchQuery || undefined,
+  );
 
   if (!ordersResult.ok) {
     return (
@@ -57,20 +80,28 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
 
   const orders = ordersResult.data;
   const totalPages = getAdminTotalPages(orders.total, ADMIN_ORDERS_PAGE_SIZE);
+  const listParams: AdminOrdersListParams = {
+    page,
+    status: activeStatus,
+    exportPending,
+    q: searchQuery || undefined,
+  };
 
   function buildHref(nextPage: number) {
-    const params = new URLSearchParams();
-    if (nextPage > 1) params.set("page", String(nextPage));
-    if (exportPending) params.set("export_pending", "1");
-    else if (activeStatus) params.set("status", activeStatus);
-    const query = params.toString();
-    return query ? `/admin/orders?${query}` : "/admin/orders";
+    return buildAdminOrdersListHref({ ...listParams, page: nextPage });
   }
 
   function filterHref(filterValue: string): string {
-    if (filterValue === "") return "/admin/orders";
-    if (filterValue === "export_pending") return "/admin/orders?export_pending=1";
-    return `/admin/orders?status=${filterValue}`;
+    if (filterValue === "") {
+      return buildAdminOrdersListHref({ q: searchQuery || undefined });
+    }
+    if (filterValue === "export_pending") {
+      return buildAdminOrdersListHref({ exportPending: true, q: searchQuery || undefined });
+    }
+    return buildAdminOrdersListHref({
+      status: filterValue,
+      q: searchQuery || undefined,
+    });
   }
 
   const activeFilter = exportPending ? "export_pending" : (activeStatus ?? "");
@@ -81,7 +112,9 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Заказы</h1>
           <p className="text-sm text-muted-foreground">
-            Управление заказами ({orders.total} всего).
+            {searchQuery
+              ? `Результаты поиска (${orders.total})`
+              : `Управление заказами (${orders.total} всего).`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
@@ -104,10 +137,17 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
         </div>
       </div>
 
+      <AdminOrdersSearch
+        defaultQuery={searchQuery}
+        status={activeStatus}
+        exportPending={exportPending}
+      />
+
       <AdminOrdersTable
         orders={orders.items}
         getStatusLabel={getAdminOrderStatusLabel}
         showExportStatus
+        buildOrderHref={(orderNumber) => buildAdminOrderDetailHref(orderNumber, listParams)}
       />
 
       <AdminPagination page={page} totalPages={totalPages} buildHref={buildHref} />

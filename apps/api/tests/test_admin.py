@@ -216,6 +216,22 @@ async def test_admin_login_rate_limit_returns_429(
 
 
 @pytest.mark.asyncio
+async def test_admin_mfa_routes_removed(admin_client: AsyncClient) -> None:
+    token = await _admin_token(admin_client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    for method, path in (
+        ("post", "/api/v1/admin/auth/mfa/enroll"),
+        ("post", "/api/v1/admin/auth/mfa/confirm"),
+        ("post", "/api/v1/admin/auth/mfa/verify"),
+        ("post", "/api/v1/admin/auth/mfa/disable"),
+        ("post", "/api/v1/admin/auth/mfa/backup-codes/regenerate"),
+    ):
+        response = await getattr(admin_client, method)(path, headers=headers, json={})
+        assert response.status_code == 404, path
+
+
+@pytest.mark.asyncio
 async def test_admin_login_inactive_returns_401(
     admin_client_with_db: tuple[AsyncClient, async_sessionmaker],
 ) -> None:
@@ -233,3 +249,131 @@ async def test_admin_login_inactive_returns_401(
         json={"email": _TEST_ADMIN_EMAIL, "password": _TEST_ADMIN_PASSWORD},
     )
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_admin_login_lockout_after_max_attempts(
+    admin_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "admin_login_max_attempts", 3)
+    monkeypatch.setattr(settings, "admin_login_lockout_minutes", 15)
+
+    for _ in range(2):
+        response = await admin_client.post(
+            "/api/v1/admin/auth/login",
+            json={"email": _TEST_ADMIN_EMAIL, "password": "wrong-password"},
+        )
+        assert response.status_code == 401
+
+    locked = await admin_client.post(
+        "/api/v1/admin/auth/login",
+        json={"email": _TEST_ADMIN_EMAIL, "password": "wrong-password"},
+    )
+    assert locked.status_code == 429
+    assert locked.headers.get("Retry-After") is not None
+
+    still_locked = await admin_client.post(
+        "/api/v1/admin/auth/login",
+        json={"email": _TEST_ADMIN_EMAIL, "password": _TEST_ADMIN_PASSWORD},
+    )
+    assert still_locked.status_code == 429
+
+
+@pytest.mark.asyncio
+async def test_admin_login_ip_allowlist_blocks_unknown_ip(
+    admin_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "admin_login_allowed_ips", ["203.0.113.1"])
+    monkeypatch.setattr(settings, "trusted_proxy_hops", 1)
+
+    response = await admin_client.post(
+        "/api/v1/admin/auth/login",
+        json={"email": _TEST_ADMIN_EMAIL, "password": _TEST_ADMIN_PASSWORD},
+        headers={"X-Forwarded-For": "203.0.113.99"},
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_login_ip_allowlist_ignores_spoofed_xff_without_trusted_proxy(
+    admin_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "admin_login_allowed_ips", ["203.0.113.1"])
+    monkeypatch.setattr(settings, "trusted_proxy_hops", 0)
+
+    response = await admin_client.post(
+        "/api/v1/admin/auth/login",
+        json={"email": _TEST_ADMIN_EMAIL, "password": _TEST_ADMIN_PASSWORD},
+        headers={"X-Forwarded-For": "203.0.113.1"},
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_me_rejects_token_without_is_active_claim(
+    admin_client: AsyncClient,
+) -> None:
+    from datetime import datetime, timedelta, timezone
+
+    from jose import jwt
+
+    from app.core.config import settings
+
+    login = await admin_client.post(
+        "/api/v1/admin/auth/login",
+        json={"email": _TEST_ADMIN_EMAIL, "password": _TEST_ADMIN_PASSWORD},
+    )
+    valid_token = login.json()["access_token"]
+    payload = jwt.decode(
+        valid_token,
+        settings.jwt_secret_key.get_secret_value(),
+        algorithms=[settings.jwt_algorithm],
+    )
+    payload.pop("is_active", None)
+    legacy_token = jwt.encode(
+        payload,
+        settings.jwt_secret_key.get_secret_value(),
+        algorithm=settings.jwt_algorithm,
+    )
+
+    response = await admin_client.get(
+        "/api/v1/admin/auth/me",
+        headers={"Authorization": f"Bearer {legacy_token}"},
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_admin_media_upload_rate_limit_returns_429(
+    admin_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "environment", "development")
+    monkeypatch.setattr(settings, "admin_media_upload_limit_per_minute", 2)
+
+    token = await _admin_token(admin_client)
+    headers = {"Authorization": f"Bearer {token}", "X-Forwarded-For": "203.0.113.77"}
+    png_header = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+    files = {"file": ("test.png", png_header, "image/png")}
+
+    for _ in range(2):
+        response = await admin_client.post(
+            "/api/v1/admin/media/upload",
+            headers=headers,
+            files=files,
+        )
+        assert response.status_code == 200
+
+    blocked = await admin_client.post(
+        "/api/v1/admin/media/upload",
+        headers=headers,
+        files=files,
+    )
+    assert blocked.status_code == 429

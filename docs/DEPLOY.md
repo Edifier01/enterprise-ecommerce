@@ -11,6 +11,7 @@
 Caddy (:80 / :443, авто-HTTPS)
    ├── /api/*  →  FastAPI (api:8000)
    ├── /health* → FastAPI
+   ├── /media/* → FastAPI (локальные фото каталога)
    └── /*      →  Next.js (web:3000)
 PostgreSQL (только внутри Docker-сети)
 ```
@@ -70,12 +71,16 @@ nano .env.production
 | `ACME_EMAIL` | `you@email.com` | Email для Let's Encrypt |
 | `POSTGRES_PASSWORD` | случайная строка | Пароль БД |
 | `JWT_SECRET_KEY` | `openssl rand -hex 32` | Секрет JWT |
+| `MEDIA_PUBLIC_BASE_URL` | `https://shop.mydomain.ru/media` | Публичный URL фото каталога |
 
-Сгенерировать JWT-секрет:
+Сгенерировать секрет JWT:
 
 ```bash
-openssl rand -hex 32
+chmod +x scripts/generate-production-secrets.sh
+./scripts/generate-production-secrets.sh
 ```
+
+**Медиа — подробная инструкция:** [PRODUCTION-MEDIA.md](./PRODUCTION-MEDIA.md)
 
 ---
 

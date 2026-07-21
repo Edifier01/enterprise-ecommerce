@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { loginAsAdmin } from "./test-helpers";
+import { loginAsAdmin, loginAsViewerAdmin } from "./test-helpers";
 
 /**
  * Admin catalog smoke — MoySklad-only product workflow.
@@ -14,11 +14,72 @@ test.describe("Admin catalog smoke", () => {
     await expect(page.getByRole("heading", { name: "Интеграция МойСклад" })).toBeVisible();
   });
 
-  test("catalog landing shows import queue entry point", async ({ page }) => {
+  test("catalog sidebar opens product list directly", async ({ page }) => {
     await loginAsAdmin(page);
 
     await page.goto("/admin/catalog");
+    await expect(page).toHaveURL(/\/admin\/catalog\?all=1/);
+    await expect(page.getByRole("heading", { name: "Все товары" })).toBeVisible();
+  });
+
+  test("category picker remains available from product list", async ({ page }) => {
+    await loginAsAdmin(page);
+
+    await page.goto("/admin/catalog?all=1");
+    await page.getByRole("link", { name: "← К категориям" }).click();
+    await expect(page).toHaveURL(/view=categories/);
+    await expect(page.getByRole("link", { name: "Все товары" })).toBeVisible();
+  });
+
+  test("category picker shows import queue entry point", async ({ page }) => {
+    await loginAsAdmin(page);
+
+    await page.goto("/admin/catalog?view=categories");
     await expect(page.getByRole("link", { name: "Очередь импорта" }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Новый товар" })).toHaveCount(0);
+  });
+
+  test("all products tile opens catalog list not import queue", async ({ page }) => {
+    await loginAsAdmin(page);
+
+    await page.goto("/admin/catalog?view=categories");
+    await page.getByRole("link", { name: "Все товары" }).click();
+
+    await expect(page).toHaveURL(/\/admin\/catalog\?all=1/);
+    await expect(page.getByRole("heading", { name: "Все товары" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Импорт из МойСклад" })).toHaveCount(0);
+  });
+
+  test("viewer catalog list hides write actions", async ({ page }) => {
+    await loginAsViewerAdmin(page);
+
+    await page.goto("/admin/catalog?all=1");
+    await expect(page.getByRole("heading", { name: "Все товары" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Изменить" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Скрыть с витрины" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "+ Категория" })).toHaveCount(0);
+  });
+
+  test("catalog list shows category column and edit back link preserves filter", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/admin/catalog?all=1&needs_styling=1");
+
+    await expect(page.getByRole("columnheader", { name: "Категория" })).toBeVisible();
+
+    const editLink = page.getByRole("link", { name: "Изменить" }).first();
+    const hasProduct = await editLink.count();
+    if (hasProduct === 0) {
+      test.skip();
+      return;
+    }
+
+    await editLink.click();
+    await expect(page).toHaveURL(/\/admin\/catalog\/.+\/edit\?from=/);
+
+    const backLink = page.getByRole("link", { name: "← Требует оформления" });
+    await expect(backLink).toBeVisible();
+    await backLink.click();
+    await expect(page).toHaveURL(/needs_styling=1/);
+    await expect(page.getByRole("link", { name: "Требует оформления" })).toHaveClass(/font-medium/);
   });
 });

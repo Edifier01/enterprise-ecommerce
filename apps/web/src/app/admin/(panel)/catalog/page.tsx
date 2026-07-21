@@ -24,6 +24,13 @@ import {
 import { isMoySkladSynced } from "@/lib/admin/moysklad";
 import { MoySkladBadge } from "@/components/admin/moysklad/moysklad-badge";
 import { getCurrentAdmin } from "@/lib/admin/session";
+import {
+  buildAdminCatalogEditHref,
+  buildAdminCatalogListHref,
+  buildCategoryNameMap,
+  getProductCategoryName,
+  type AdminCatalogListParams,
+} from "@/lib/admin/catalog-list-url";
 import { productImageRenderProps } from "@/lib/store/product-image";
 
 export const metadata: Metadata = {
@@ -48,6 +55,7 @@ type PageProps = {
     all?: string;
     needs_styling?: string;
     needs_color_photos?: string;
+    view?: string;
   }>;
 };
 
@@ -71,9 +79,25 @@ function getCategoryLabel(
 export default async function AdminCatalogPage({ searchParams }: PageProps) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
+  const canWrite = admin.permissions.includes("catalog:write");
 
-  const { page: pageRaw, status, q, category_id, uncategorized, all, needs_styling, needs_color_photos } =
-    await searchParams;
+  const params = await searchParams;
+  const hasListFilter = Boolean(
+    params.q?.trim() ||
+      params.all ||
+      params.uncategorized ||
+      params.needs_styling ||
+      params.needs_color_photos ||
+      params.category_id ||
+      params.status ||
+      params.page,
+  );
+  if (!hasListFilter && params.view !== "categories") {
+    redirect("/admin/catalog?all=1");
+  }
+
+  const { page: pageRaw, status, q, category_id, uncategorized, all, needs_styling, needs_color_photos, view } =
+    params;
   const page = parsePage(pageRaw);
   const searchQuery = q?.trim() ?? "";
   const activeStatus =
@@ -82,16 +106,22 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
   const showAll = all === "1" || all === "true";
   const needsStyling = needs_styling === "1" || needs_styling === "true";
   const needsColorPhotos = needs_color_photos === "1" || needs_color_photos === "true";
+  const viewCategories = view === "categories";
   const showProductList =
-    Boolean(searchQuery) ||
-    showAll ||
-    isUncategorized ||
-    needsStyling ||
-    needsColorPhotos ||
-    Boolean(category_id);
+    !viewCategories &&
+    (Boolean(searchQuery) ||
+      showAll ||
+      isUncategorized ||
+      needsStyling ||
+      needsColorPhotos ||
+      Boolean(category_id));
 
-  const categoriesResult = await listAdminCategories();
+  const [categoriesResult, allProductsResult] = await Promise.all([
+    listAdminCategories(),
+    listAdminProducts(1),
+  ]);
   const categories = categoriesResult.ok ? categoriesResult.data : null;
+  const totalProductCount = allProductsResult.ok ? allProductsResult.data.total : 0;
 
   if (!showProductList) {
     return (
@@ -124,7 +154,11 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
         </div>
 
         {categoriesResult.ok ? (
-          <AdminCatalogCategoryPicker categories={categoriesResult.data} />
+          <AdminCatalogCategoryPicker
+            categories={categoriesResult.data}
+            totalProductCount={totalProductCount}
+            canWrite={canWrite}
+          />
         ) : (
           <p className="text-sm text-destructive" role="alert">
             {categoriesResult.error}
@@ -153,19 +187,20 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
 
   const totalPages = getAdminTotalPages(products.total, ADMIN_CATALOG_PAGE_SIZE);
   const categoryLabel = getCategoryLabel(categories, category_id, isUncategorized, showAll);
+  const listParams: AdminCatalogListParams = {
+    page,
+    status: activeStatus,
+    q: searchQuery || undefined,
+    categoryId: category_id,
+    uncategorized: isUncategorized,
+    showAll,
+    needsStyling,
+    needsColorPhotos,
+  };
+  const categoryNames = buildCategoryNameMap(categories);
 
   function buildHref(nextPage: number) {
-    const params = new URLSearchParams();
-    if (nextPage > 1) params.set("page", String(nextPage));
-    if (activeStatus) params.set("status", activeStatus);
-    if (searchQuery) params.set("q", searchQuery);
-    if (isUncategorized) params.set("uncategorized", "1");
-    else if (showAll) params.set("all", "1");
-    else if (needsStyling) params.set("needs_styling", "1");
-    else if (needsColorPhotos) params.set("needs_color_photos", "1");
-    else if (category_id) params.set("category_id", category_id);
-    const query = params.toString();
-    return query ? `/admin/catalog?${query}` : "/admin/catalog";
+    return buildAdminCatalogListHref({ ...listParams, page: nextPage });
   }
 
   return (
@@ -173,7 +208,7 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link
-            href="/admin/catalog"
+            href="/admin/catalog?view=categories"
             className="text-sm text-muted-foreground hover:text-foreground"
           >
             ← К категориям
@@ -213,13 +248,11 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
 
       <div className="flex flex-wrap gap-2 text-sm">
         <Link
-          href={(() => {
-            const params = new URLSearchParams();
-            params.set("needs_styling", "1");
-            params.set("all", "1");
-            if (searchQuery) params.set("q", searchQuery);
-            return `/admin/catalog?${params}`;
-          })()}
+          href={buildAdminCatalogListHref({
+            showAll: true,
+            needsStyling: true,
+            q: searchQuery || undefined,
+          })}
           className={
             needsStyling
               ? "font-medium text-foreground"
@@ -230,13 +263,11 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
         </Link>
         <span className="text-muted-foreground">·</span>
         <Link
-          href={(() => {
-            const params = new URLSearchParams();
-            params.set("needs_color_photos", "1");
-            params.set("all", "1");
-            if (searchQuery) params.set("q", searchQuery);
-            return `/admin/catalog?${params}`;
-          })()}
+          href={buildAdminCatalogListHref({
+            showAll: true,
+            needsColorPhotos: true,
+            q: searchQuery || undefined,
+          })}
           className={
             needsColorPhotos
               ? "font-medium text-foreground"
@@ -247,15 +278,11 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
         </Link>
         <span className="text-muted-foreground">·</span>
         {STATUS_FILTERS.map((filter) => {
-          const params = new URLSearchParams();
-          if (filter.value) params.set("status", filter.value);
-          if (searchQuery) params.set("q", searchQuery);
-          if (isUncategorized) params.set("uncategorized", "1");
-          else if (showAll) params.set("all", "1");
-          else if (needsStyling) params.set("needs_styling", "1");
-          else if (needsColorPhotos) params.set("needs_color_photos", "1");
-          else if (category_id) params.set("category_id", category_id);
-          const href = params.size > 0 ? `/admin/catalog?${params}` : "/admin/catalog";
+          const href = buildAdminCatalogListHref({
+            ...listParams,
+            page: undefined,
+            status: filter.value || undefined,
+          });
           const isActive = (activeStatus ?? "") === filter.value;
           return (
             <Link
@@ -311,19 +338,26 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
                       <AdminMobileCardRow label="Статус">
                         {PRODUCT_STATUS_LABELS[product.status] ?? product.status}
                       </AdminMobileCardRow>
+                      <AdminMobileCardRow label="Категория">
+                        {getProductCategoryName(product.category_id, categoryNames)}
+                      </AdminMobileCardRow>
                       <AdminMobileCardRow label="Цена">
                         {formatPrice(product.price_cents, product.currency)}
                       </AdminMobileCardRow>
-                      <Link
-                        href={`/admin/catalog/${product.id}/edit`}
-                        className="inline-flex text-sm font-medium text-primary hover:underline"
-                      >
-                        Изменить
-                      </Link>
-                      <AdminProductHideButton
-                        productId={product.id}
-                        hidden={product.status === "archived"}
-                      />
+                      {canWrite ? (
+                        <>
+                          <Link
+                            href={buildAdminCatalogEditHref(product.id, listParams)}
+                            className="inline-flex text-sm font-medium text-primary hover:underline"
+                          >
+                            Изменить
+                          </Link>
+                          <AdminProductHideButton
+                            productId={product.id}
+                            hidden={product.status === "archived"}
+                          />
+                        </>
+                      ) : null}
                     </div>
                   </div>
                 </AdminMobileCard>
@@ -339,8 +373,9 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
                   <th className="px-4 py-3">Название</th>
                   <th className="px-4 py-3">Slug</th>
                   <th className="px-4 py-3">Статус</th>
+                  <th className="px-4 py-3">Категория</th>
                   <th className="px-4 py-3">Цена</th>
-                  <th className="px-4 py-3">Действия</th>
+                  {canWrite ? <th className="px-4 py-3">Действия</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -371,23 +406,28 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
                       <td className="px-4 py-3">
                         {PRODUCT_STATUS_LABELS[product.status] ?? product.status}
                       </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {getProductCategoryName(product.category_id, categoryNames)}
+                      </td>
                       <td className="px-4 py-3">
                         {formatPrice(product.price_cents, product.currency)}
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <Link
-                            href={`/admin/catalog/${product.id}/edit`}
-                            className="text-primary hover:underline"
-                          >
-                            Изменить
-                          </Link>
-                          <AdminProductHideButton
-                            productId={product.id}
-                            hidden={product.status === "archived"}
-                          />
-                        </div>
-                      </td>
+                      {canWrite ? (
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <Link
+                              href={buildAdminCatalogEditHref(product.id, listParams)}
+                              className="text-primary hover:underline"
+                            >
+                              Изменить
+                            </Link>
+                            <AdminProductHideButton
+                              productId={product.id}
+                              hidden={product.status === "archived"}
+                            />
+                          </div>
+                        </td>
+                      ) : null}
                     </tr>
                   );
                 })}

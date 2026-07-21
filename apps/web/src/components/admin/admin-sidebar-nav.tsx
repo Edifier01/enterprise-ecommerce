@@ -3,21 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { ADMIN_NAV_SECTIONS, isAdminNavActive } from "@/lib/admin/navigation";
+import { filterAdminNavSections, isAdminNavActive } from "@/lib/admin/navigation";
 import { cn } from "@/lib/utils";
 
 export function AdminSidebarNav({
+  permissions,
   onNavigate,
   className,
 }: {
+  permissions: readonly string[];
   onNavigate?: () => void;
   className?: string;
 }) {
   const pathname = usePathname();
+  const sections = filterAdminNavSections(permissions);
 
   return (
     <nav className={cn("flex flex-1 flex-col gap-4 p-3", className)}>
-      {ADMIN_NAV_SECTIONS.map((section) => (
+      {sections.map((section) => (
         <div key={section.title ?? "root"} className="space-y-1">
           {section.title ? (
             <p className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">

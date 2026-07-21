@@ -3,2657 +3,4389 @@ info:
   title: Enterprise E-Commerce API
   version: 0.1.0
   description: REST API for catalog, checkout, orders, and payments.
-
-servers:
-  - url: http://localhost:8000
-    description: Local development
-
 paths:
   /health:
     get:
-      summary: Health check
-      operationId: healthCheck
+      summary: Health
+      operationId: health_health_get
       responses:
-        "200":
-          description: Service healthy
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
+                additionalProperties:
+                  type: string
                 type: object
-                properties:
-                  status:
-                    type: string
-                    example: ok
-
+                title: Response Health Health Get
   /health/ready:
     get:
-      summary: Readiness probe
-      operationId: healthReady
+      summary: Health Ready
+      description: Readiness probe — verifies the database is reachable.
+      operationId: health_ready_health_ready_get
       responses:
-        "200":
-          description: Service ready (database reachable)
+        '200':
+          description: Successful Response
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: ready
-        "503":
-          description: Service unavailable
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: unavailable
-
-  /api/v1/products:
-    get:
-      summary: List products
-      operationId: listProducts
-      tags: [catalog]
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-        - name: category
-          in: query
-          description: Filter by primary category slug
-          schema:
-            type: string
-        - name: in_stock
-          in: query
-          description: When true, only in-stock products
-          schema:
-            type: boolean
-        - name: on_sale
-          in: query
-          description: When true, only discounted products
-          schema:
-            type: boolean
-        - name: size
-          in: query
-          description: Filter by variant size (repeatable)
-          schema:
-            type: array
-            items:
-              type: string
-          style: form
-          explode: true
-        - name: color
-          in: query
-          description: Filter by variant color or camouflage
-          schema:
-            type: array
-            items:
-              type: string
-          style: form
-          explode: true
-        - name: price_min
-          in: query
-          description: Minimum price in cents
-          schema:
-            type: integer
-            minimum: 0
-        - name: price_max
-          in: query
-          description: Maximum price in cents
-          schema:
-            type: integer
-            minimum: 0
-        - name: sort
-          in: query
-          description: Sort order (popular = best sellers by quantity in last 90 days)
-          schema:
-            type: string
-            enum: [default, popular, price_asc, price_desc, name_asc, name_desc]
-            default: default
-      responses:
-        "200":
-          description: Paginated product list
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProductListResponse"
-
+              schema: {}
   /api/v1/products/facets:
     get:
-      summary: Get catalog filter facets
+      tags:
+      - catalog
+      summary: Get Product Facets
       operationId: getProductFacets
-      tags: [catalog]
       parameters:
-        - name: category
-          in: query
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
           description: Scope facets to category slug
-          schema:
-            type: string
-        - name: q
-          in: query
-          description: Scope facets to search query
-          schema:
-            type: string
+          title: Category
+        description: Scope facets to category slug
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
             minLength: 1
             maxLength: 100
-        - name: in_stock
-          in: query
-          schema:
-            type: boolean
-        - name: on_sale
-          in: query
-          schema:
-            type: boolean
-        - name: size
-          in: query
-          schema:
-            type: array
-            items:
-              type: string
-          style: form
-          explode: true
-        - name: color
-          in: query
-          schema:
-            type: array
-            items:
-              type: string
-          style: form
-          explode: true
-        - name: price_min
-          in: query
-          schema:
-            type: integer
+          - type: 'null'
+          description: Scope facets to search query
+          title: Q
+        description: Scope facets to search query
+      - name: in_stock
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: When true, only in-stock products
+          title: In Stock
+        description: When true, only in-stock products
+      - name: on_sale
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: When true, only discounted products
+          title: On Sale
+        description: When true, only discounted products
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+          description: Filter by variant size (repeatable)
+          default: []
+          title: Size
+        description: Filter by variant size (repeatable)
+      - name: color
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+          description: Filter by variant color/camouflage
+          default: []
+          title: Color
+        description: Filter by variant color/camouflage
+      - name: price_min
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
             minimum: 0
-        - name: price_max
-          in: query
-          schema:
-            type: integer
+          - type: 'null'
+          description: Minimum price in cents
+          title: Price Min
+        description: Minimum price in cents
+      - name: price_max
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
             minimum: 0
+          - type: 'null'
+          description: Maximum price in cents
+          title: Price Max
+        description: Maximum price in cents
       responses:
-        "200":
-          description: Available filter facets for the catalog scope
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProductFacetsResponse"
-
+                $ref: '#/components/schemas/ProductFacetsResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/products:
+    get:
+      tags:
+      - catalog
+      summary: List Products
+      operationId: listProducts
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Limit
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by primary category slug
+          title: Category
+        description: Filter by primary category slug
+      - name: in_stock
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: When true, only in-stock products
+          title: In Stock
+        description: When true, only in-stock products
+      - name: on_sale
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: When true, only discounted products
+          title: On Sale
+        description: When true, only discounted products
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+          description: Filter by variant size (repeatable)
+          default: []
+          title: Size
+        description: Filter by variant size (repeatable)
+      - name: color
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+          description: Filter by variant color/camouflage
+          default: []
+          title: Color
+        description: Filter by variant color/camouflage
+      - name: price_min
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+          description: Minimum price in cents
+          title: Price Min
+        description: Minimum price in cents
+      - name: price_max
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+          description: Maximum price in cents
+          title: Price Max
+        description: Maximum price in cents
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          description: Sort order (popular = best sellers by quantity in last 90 days)
+          default: default
+          title: Sort
+        description: Sort order (popular = best sellers by quantity in last 90 days)
+      - name: access_token
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Access Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/products/search:
     get:
-      summary: Search products by name or SKU
+      tags:
+      - catalog
+      summary: Search Products
       operationId: searchProducts
-      tags: [catalog]
+      security:
+      - bearerAuth: []
       parameters:
-        - name: q
-          in: query
-          required: true
-          description: Search query (product name or variant SKU)
-          schema:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Search by product name or SKU
+          title: Q
+        description: Search by product name or SKU
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 24
+          title: Limit
+      - name: in_stock
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: When true, only in-stock products
+          title: In Stock
+        description: When true, only in-stock products
+      - name: on_sale
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: When true, only discounted products
+          title: On Sale
+        description: When true, only discounted products
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
             type: string
-            minLength: 1
-            maxLength: 100
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 24
-        - name: in_stock
-          in: query
-          schema:
-            type: boolean
-        - name: on_sale
-          in: query
-          schema:
-            type: boolean
-        - name: size
-          in: query
-          schema:
-            type: array
-            items:
-              type: string
-          style: form
-          explode: true
-        - name: color
-          in: query
-          schema:
-            type: array
-            items:
-              type: string
-          style: form
-          explode: true
-        - name: price_min
-          in: query
+          description: Filter by variant size (repeatable)
+          default: []
+          title: Size
+        description: Filter by variant size (repeatable)
+      - name: color
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+          description: Filter by variant color/camouflage
+          default: []
+          title: Color
+        description: Filter by variant color/camouflage
+      - name: price_min
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
           description: Minimum price in cents
-          schema:
-            type: integer
+          title: Price Min
+        description: Minimum price in cents
+      - name: price_max
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
             minimum: 0
-        - name: price_max
-          in: query
+          - type: 'null'
           description: Maximum price in cents
-          schema:
-            type: integer
-            minimum: 0
-        - name: sort
-          in: query
-          schema:
-            type: string
-            enum: [default, popular, price_asc, price_desc, name_asc, name_desc]
-            default: default
+          title: Price Max
+        description: Maximum price in cents
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          description: Sort order (default = relevance)
+          default: default
+          title: Sort
+        description: Sort order (default = relevance)
+      - name: access_token
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Access Token
       responses:
-        "200":
-          description: Paginated search results ordered by relevance
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProductListResponse"
-        "422":
-          description: Validation error (empty or too long query)
+                $ref: '#/components/schemas/ProductListResponse'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/products/{slug}:
     get:
-      summary: Get product by slug
+      tags:
+      - catalog
+      summary: Get Product
       operationId: getProduct
-      tags: [catalog]
+      security:
+      - bearerAuth: []
       parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Slug
+      - name: access_token
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Access Token
       responses:
-        "200":
-          description: Product detail
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Product"
-        "404":
-          description: Product not found
+                $ref: '#/components/schemas/ProductSchema'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/categories:
     get:
-      summary: List active categories
+      tags:
+      - catalog
+      summary: List Categories
       operationId: listCategories
-      tags: [catalog]
       responses:
-        "200":
-          description: List of active categories ordered by sort_order
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CategoryListResponse"
-
+                $ref: '#/components/schemas/CategoryListResponse'
   /api/v1/auth/register:
     post:
-      summary: Register a new user
+      tags:
+      - auth
+      summary: Register
       operationId: registerUser
-      tags: [auth]
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RegisterRequest"
+              $ref: '#/components/schemas/RegisterRequest'
+        required: true
       responses:
-        "201":
-          description: User registered successfully
+        '201':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RegisterResponse"
-        "409":
-          description: Email already registered
+                $ref: '#/components/schemas/RegisterResponse'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/auth/register/wholesaler:
     post:
-      summary: Register a wholesaler account with business profile
+      tags:
+      - auth
+      summary: Register Wholesaler
       operationId: registerWholesaler
-      tags: [auth]
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WholesalerRegisterRequest"
+              $ref: '#/components/schemas/WholesalerRegisterRequest'
+        required: true
       responses:
-        "201":
-          description: Wholesaler registered successfully
+        '201':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RegisterResponse"
-        "409":
-          description: Email or INN already registered
+                $ref: '#/components/schemas/RegisterResponse'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/auth/login:
     post:
-      summary: Login and receive access token
+      tags:
+      - auth
+      summary: Login
       operationId: loginUser
-      tags: [auth]
+      parameters:
+      - name: X-Cart-Session-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Cart-Session-Id
+      - name: cart_session_id
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cart Session Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LoginRequest"
+              $ref: '#/components/schemas/LoginRequest'
       responses:
-        "200":
-          description: Authentication successful
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TokenResponse"
-        "401":
-          description: Invalid credentials
+                $ref: '#/components/schemas/TokenResponse'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Email not verified
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/auth/verify-email:
     post:
-      summary: Verify email with one-time token
+      tags:
+      - auth
+      summary: Verify Email
       operationId: verifyEmail
-      tags: [auth]
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/VerifyEmailRequest"
+              $ref: '#/components/schemas/VerifyEmailRequest'
+        required: true
       responses:
-        "200":
-          description: Email verified
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
-        "400":
-          description: Invalid or expired token
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/auth/resend-verification:
     post:
-      summary: Resend email verification link
+      tags:
+      - auth
+      summary: Resend Verification
       operationId: resendVerification
-      tags: [auth]
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ResendVerificationRequest"
+              $ref: '#/components/schemas/ResendVerificationRequest'
+        required: true
       responses:
-        "200":
-          description: Generic success (anti-enumeration)
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
-
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/auth/forgot-password:
     post:
-      summary: Request password reset email
+      tags:
+      - auth
+      summary: Forgot Password
       operationId: forgotPassword
-      tags: [auth]
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ForgotPasswordRequest"
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+        required: true
       responses:
-        "200":
-          description: Generic success (anti-enumeration)
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
-
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/auth/reset-password:
     post:
-      summary: Reset password with one-time token
+      tags:
+      - auth
+      summary: Reset Password
       operationId: resetPassword
-      tags: [auth]
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ResetPasswordRequest"
+              $ref: '#/components/schemas/ResetPasswordRequest'
+        required: true
       responses:
-        "200":
-          description: Password reset successfully
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
-        "400":
-          description: Invalid or expired token
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/auth/me:
     get:
-      summary: Get current authenticated user
+      tags:
+      - auth
+      summary: Me
       operationId: getCurrentUser
-      tags: [auth]
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
       security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Current user profile
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MeResponse"
-        "401":
-          description: Not authenticated or invalid token
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /api/v1/cart:
-    get:
-      summary: Get current cart
-      operationId: getCart
-      tags: [checkout]
-      responses:
-        "200":
-          description: Current active cart (guest or authenticated)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CartResponse"
-
-  /api/v1/cart/lines:
-    post:
-      summary: Add or update cart line
-      operationId: addCartLine
-      tags: [checkout]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AddCartLineRequest"
-      responses:
-        "200":
-          description: Updated cart
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CartResponse"
-        "400":
-          description: Variant not purchasable
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /api/v1/cart/lines/{line_id}:
-    patch:
-      summary: Update cart line quantity
-      operationId: updateCartLine
-      tags: [checkout]
-      parameters:
-        - name: line_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateCartLineRequest"
-      responses:
-        "200":
-          description: Updated cart
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CartResponse"
-        "404":
-          description: Cart line not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    delete:
-      summary: Remove cart line
-      operationId: deleteCartLine
-      tags: [checkout]
-      parameters:
-        - name: line_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Updated cart
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CartResponse"
-        "404":
-          description: Cart line not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /api/v1/checkout/sessions:
-    post:
-      summary: Create checkout session from active cart
-      operationId: createCheckoutSession
-      tags: [checkout]
-      parameters:
-        - name: Idempotency-Key
-          in: header
-          schema:
-            type: string
-      responses:
-        "201":
-          description: Checkout session created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CheckoutSessionResponse"
-        "400":
-          description: Empty or invalid cart
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /api/v1/checkout/sessions/{session_id}:
-    get:
-      summary: Get checkout session status
-      operationId: getCheckoutSession
-      tags: [checkout]
-      parameters:
-        - name: session_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Checkout session details
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CheckoutSessionResponse"
-        "404":
-          description: Session not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /api/v1/checkout/sessions/{session_id}/payment-intent:
-    post:
-      summary: Create Stripe PaymentIntent for checkout session
-      operationId: createPaymentIntent
-      tags: [payments]
-      parameters:
-        - name: session_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: Idempotency-Key
-          in: header
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: PaymentIntent created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PaymentIntentResponse"
-        "400":
-          description: Invalid session state
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Session not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "503":
-          description: Payment processing unavailable
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /api/v1/webhooks/stripe:
-    post:
-      summary: Stripe webhook endpoint
-      operationId: stripeWebhook
-      tags: [payments]
-      parameters:
-        - name: Stripe-Signature
-          in: header
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        "200":
-          description: Webhook processed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WebhookResponse"
-        "400":
-          description: Webhook verification failed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /api/v1/orders:
-    get:
-      summary: List authenticated customer orders
-      operationId: listOrders
-      tags: [orders]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-      responses:
-        "200":
-          description: Paginated order list
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/OrderListResponse"
-        "401":
-          description: Not authenticated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /api/v1/orders/{order_number}:
-    get:
-      summary: Get order detail by order number
-      operationId: getOrder
-      tags: [orders]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: order_number
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Order detail with line items
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/OrderDetail"
-        "401":
-          description: Not authenticated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Order not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
+      - bearerAuth: []
   /api/v1/admin/auth/login:
     post:
-      summary: Admin login
+      tags:
+      - admin
+      summary: Admin Login
       operationId: adminLogin
-      tags: [admin]
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AdminLoginRequest"
+              $ref: '#/components/schemas/AdminLoginRequest'
+        required: true
       responses:
-        "200":
-          description: Admin access token
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminTokenResponse"
-        "401":
-          description: Invalid credentials
+                $ref: '#/components/schemas/AdminTokenResponse'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/admin/auth/me:
     get:
-      summary: Get current admin user
+      tags:
+      - admin
+      summary: Admin Me
       operationId: getCurrentAdmin
-      tags: [admin]
-      security:
-        - bearerAuth: []
       responses:
-        "200":
-          description: Current admin profile and permissions
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminMeResponse"
-        "401":
-          description: Not authenticated or invalid admin token
+                $ref: '#/components/schemas/AdminMeResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/dashboard/summary:
+    get:
+      tags:
+      - admin
+      summary: Dashboard Summary
+      operationId: getAdminDashboardSummary
+      responses:
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
+                $ref: '#/components/schemas/DashboardSummaryResponse'
+      security:
+      - bearerAuth: []
   /api/v1/admin/media/upload:
     post:
-      summary: Upload product image (local storage)
+      tags:
+      - admin
+      summary: Admin Upload Media
       operationId: adminUploadMedia
-      tags: [admin]
-      security:
-        - bearerAuth: []
       requestBody:
-        required: true
         content:
           multipart/form-data:
             schema:
-              type: object
-              required: [file]
-              properties:
-                file:
+              $ref: '#/components/schemas/Body_adminUploadMedia'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
                   type: string
-                  format: binary
-      responses:
-        "200":
-          description: Public URL of uploaded image
-          content:
-            application/json:
-              schema:
                 type: object
-                required: [url]
-                properties:
-                  url:
-                    type: string
-                    format: uri
-        "401":
-          description: Not authenticated
+                title: Response Adminuploadmedia
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Insufficient permissions
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "422":
-          description: Invalid file type or size
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /api/v1/admin/dashboard/summary:
-    get:
-      summary: Admin dashboard summary metrics
-      operationId: getAdminDashboardSummary
-      tags: [admin]
+                $ref: '#/components/schemas/HTTPValidationError'
       security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Read-only operational metrics
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/DashboardSummaryResponse"
-        "401":
-          description: Not authenticated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Missing admin:read permission
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /api/v1/admin/catalog/products:
-    get:
-      summary: Admin list products (all statuses)
-      operationId: adminListProducts
-      tags: [admin]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [draft, active, archived]
-        - name: q
-          in: query
-          schema:
-            type: string
-            maxLength: 200
-          description: Search by product name, slug, or variant SKU (all statuses)
-        - name: category_id
-          in: query
-          schema:
-            type: string
-            format: uuid
-          description: Filter products by primary category
-        - name: uncategorized
-          in: query
-          schema:
-            type: boolean
-            default: false
-          description: When true, list only products without a category
-      responses:
-        "200":
-          description: Paginated admin product list
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminProductListResponse"
-    post:
-      summary: Admin create product
-      operationId: adminCreateProduct
-      tags: [admin]
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AdminCreateProductRequest"
-      responses:
-        "201":
-          description: Product created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminProductSchema"
-
-  /api/v1/admin/catalog/categories:
-    get:
-      summary: Admin list categories (all)
-      operationId: adminListCategories
-      tags: [admin]
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Category list
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminCategoryListResponse"
-    post:
-      summary: Admin create category
-      operationId: adminCreateCategory
-      tags: [admin]
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AdminCreateCategoryRequest"
-      responses:
-        "201":
-          description: Category created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Category"
-
-  /api/v1/admin/inventory:
-    get:
-      summary: Admin list inventory items
-      operationId: adminListInventory
-      tags: [admin]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-        - name: low_stock
-          in: query
-          schema:
-            type: boolean
-            default: false
-        - name: q
-          in: query
-          description: Filter by SKU or product name (case-insensitive)
-          schema:
-            type: string
-            maxLength: 100
-      responses:
-        "200":
-          description: Inventory list with variant SKU and availability
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminInventoryListResponse"
-
-  /api/v1/admin/inventory/{variant_id}:
-    patch:
-      summary: Admin adjust inventory on-hand quantity
-      operationId: adminAdjustInventory
-      tags: [admin]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: variant_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AdminAdjustInventoryRequest"
-      responses:
-        "200":
-          description: Updated inventory item
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminInventoryItemSchema"
-        "409":
-          description: Version conflict
-        "422":
-          description: on_hand below reserved quantity
-
-  /api/v1/admin/orders:
-    get:
-      summary: Admin list orders
-      operationId: adminListOrders
-      tags: [admin]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [confirmed, shipped, canceled]
-        - name: export_pending
-          in: query
-          description: Confirmed orders not yet exported to MoySklad
-          schema:
-            type: boolean
-            default: false
-      responses:
-        "200":
-          description: Paginated order list
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminOrderListResponse"
-
-  /api/v1/admin/orders/{order_number}:
-    get:
-      summary: Admin get order detail
-      operationId: adminGetOrder
-      tags: [admin]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: order_number
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Order detail with lines and status history
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminOrderDetailSchema"
-        "404":
-          description: Order not found
-
-  /api/v1/admin/orders/{order_number}/status:
-    patch:
-      summary: Admin update order status (ship or cancel)
-      operationId: adminUpdateOrderStatus
-      tags: [admin]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: order_number
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AdminUpdateOrderStatusRequest"
-      responses:
-        "200":
-          description: Updated order detail
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminOrderDetailSchema"
-        "404":
-          description: Order not found
-        "422":
-          description: Invalid status transition
-
+      - bearerAuth: []
   /api/v1/admin/customers:
     get:
-      summary: Admin list customers
+      tags:
+      - admin
+      summary: Admin List Customers
       operationId: adminListCustomers
-      tags: [admin]
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Limit
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 100
+          - type: 'null'
+          title: Q
       responses:
-        "200":
-          description: Paginated customer list
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminCustomerListResponse"
-
+                $ref: '#/components/schemas/AdminCustomerListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/admin/customers/{customer_id}/wholesaler:
     patch:
-      summary: Admin grant or revoke wholesaler status
+      tags:
+      - admin
+      summary: Admin Update Customer Wholesaler
       operationId: adminUpdateCustomerWholesaler
-      tags: [admin]
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: customer_id
-          in: path
-          required: true
-          schema:
-            type: string
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Customer Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateWholesalerRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCustomerSchema'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/catalog/products:
+    get:
+      tags:
+      - admin
+      summary: Admin List Products
+      operationId: adminListProducts
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Limit
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 200
+          - type: 'null'
+          title: Q
+      - name: category_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
             format: uuid
+          - type: 'null'
+          title: Category Id
+      - name: uncategorized
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Uncategorized
+      - name: needs_styling
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Needs Styling
+      - name: needs_color_photos
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Needs Color Photos
+      - name: sync_source
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sync Source
+      - name: moysklad_pending
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Moysklad Pending
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProductListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - admin
+      summary: Admin Create Product
+      operationId: adminCreateProduct
+      security:
+      - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AdminUpdateWholesalerRequest"
+              $ref: '#/components/schemas/AdminCreateProductRequest'
       responses:
-        "200":
-          description: Updated customer
+        '201':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminCustomerSchema"
-        "404":
-          description: Customer not found
-
-  /api/v1/integrations/moysklad/webhook:
-    post:
-      summary: MoySklad inbound webhook
-      operationId: moySkladWebhook
-      tags: [integrations]
+                $ref: '#/components/schemas/AdminProductSchema'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/catalog/products/{product_id}:
+    get:
+      tags:
+      - admin
+      summary: Admin Get Product
+      operationId: adminGetProduct
+      security:
+      - bearerAuth: []
       parameters:
-        - name: secret
-          in: query
-          schema:
-            type: string
-          description: Optional webhook secret (also accepted via X-MoySklad-Webhook-Secret header)
-      requestBody:
+      - name: product_id
+        in: path
         required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
+        schema:
+          type: string
+          format: uuid
+          title: Product Id
       responses:
-        "200":
-          description: Webhook acknowledged
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MoySkladWebhookAckResponse"
-        "400":
-          description: Invalid payload
-        "401":
-          description: Invalid webhook secret
-
-  /api/v1/admin/integrations/moysklad/status:
-    get:
-      summary: MoySklad integration status
-      operationId: adminMoySkladStatus
-      tags: [admin]
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Integration status
+                $ref: '#/components/schemas/AdminProductSchema'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MoySkladIntegrationStatusResponse"
-        "401":
-          description: Unauthorized
-
-  /api/v1/admin/integrations/moysklad/sync/pull:
-    post:
-      summary: Pull catalog and stock from MoySklad
-      operationId: adminMoySkladPullCatalog
-      tags: [admin]
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Import result
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MoySkladPullResponse"
-        "503":
-          description: MoySklad not configured
-
-  /api/v1/admin/integrations/moysklad/sync/stock:
-    post:
-      summary: Pull stock from MoySklad
-      operationId: adminMoySkladPullStock
-      tags: [admin]
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Stock pull result
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MoySkladStockPullResponse"
-        "503":
-          description: MoySklad not configured
-
-  /api/v1/admin/integrations/moysklad/sync/resync:
-    post:
-      summary: Full resync (catalog, stock, pending order exports)
-      operationId: adminMoySkladFullResync
-      tags: [admin]
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Full resync result
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MoySkladFullResyncResponse"
-        "503":
-          description: MoySklad not configured
-
-  /api/v1/admin/integrations/moysklad/sync/trigger:
-    post:
-      summary: "Deprecated: use sync/pull"
-      operationId: adminMoySkladTriggerSync
-      deprecated: true
-      tags: [admin]
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Import result
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MoySkladPullResponse"
-
-  /api/v1/admin/integrations/moysklad/webhooks/enabled:
+                $ref: '#/components/schemas/HTTPValidationError'
     patch:
-      summary: Enable or disable MoySklad webhook processing
-      operationId: adminMoySkladWebhooksEnabled
-      tags: [admin]
+      tags:
+      - admin
+      summary: Admin Update Product
+      operationId: adminUpdateProduct
       security:
-        - bearerAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Product Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/MoySkladWebhooksEnabledRequest"
+              $ref: '#/components/schemas/AdminUpdateProductRequest'
       responses:
-        "200":
-          description: Updated setting
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  webhooks_enabled:
-                    type: boolean
-
-  /api/v1/admin/integrations/moysklad/category-mappings:
+                $ref: '#/components/schemas/AdminProductSchema'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/catalog/products/{product_id}/images:
     get:
-      summary: List MoySklad category mappings
-      operationId: adminMoySkladListCategoryMappings
-      tags: [admin]
+      tags:
+      - admin
+      summary: Admin List Product Images
+      operationId: adminListProductImages
       security:
-        - bearerAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Product Id
       responses:
-        "200":
-          description: Category mappings
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/MoySkladCategoryMappingSchema"
+                  $ref: '#/components/schemas/ProductImageSchema'
+                title: Response Adminlistproductimages
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
     post:
-      summary: Create MoySklad category mapping
-      operationId: adminMoySkladCreateCategoryMapping
-      tags: [admin]
+      tags:
+      - admin
+      summary: Admin Create Product Image
+      operationId: adminCreateProductImage
       security:
-        - bearerAuth: []
+      - bearerAuth: []
+      parameters:
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Product Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/MoySkladCreateCategoryMappingRequest"
+              $ref: '#/components/schemas/AdminCreateProductImageRequest'
       responses:
-        "201":
-          description: Created mapping
+        '201':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MoySkladCategoryMappingSchema"
-        "409":
-          description: Duplicate mapping
-
-  /api/v1/admin/integrations/moysklad/category-mappings/{mapping_id}:
-    delete:
-      summary: Delete MoySklad category mapping
-      operationId: adminMoySkladDeleteCategoryMapping
-      tags: [admin]
+                $ref: '#/components/schemas/ProductImageSchema'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/catalog/products/images/{image_id}:
+    patch:
+      tags:
+      - admin
+      summary: Admin Update Product Image
+      operationId: adminUpdateProductImage
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: mapping_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - name: image_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Image Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateProductImageRequest'
       responses:
-        "204":
-          description: Deleted
-        "404":
-          description: Mapping not found
-
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductImageSchema'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - admin
+      summary: Admin Delete Product Image
+      operationId: adminDeleteProductImage
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: image_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Image Id
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/catalog/products/{product_id}/variants:
+    post:
+      tags:
+      - admin
+      summary: Admin Create Variant
+      operationId: adminCreateVariant
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Product Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCreateVariantRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductVariantSchema'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/catalog/variants/{variant_id}:
+    patch:
+      tags:
+      - admin
+      summary: Admin Update Variant
+      operationId: adminUpdateVariant
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: variant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Variant Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateVariantRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductVariantSchema'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/catalog/categories:
+    get:
+      tags:
+      - admin
+      summary: Admin List Categories
+      operationId: adminListCategories
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCategoryListResponse'
+      security:
+      - bearerAuth: []
+    post:
+      tags:
+      - admin
+      summary: Admin Create Category
+      operationId: adminCreateCategory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCreateCategoryRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategorySchema'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/catalog/categories/{category_id}:
+    patch:
+      tags:
+      - admin
+      summary: Admin Update Category
+      operationId: adminUpdateCategory
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: category_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Category Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateCategoryRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategorySchema'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - admin
+      summary: Admin Delete Category
+      operationId: adminDeleteCategory
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: category_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Category Id
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/inventory:
+    get:
+      tags:
+      - admin
+      summary: Admin List Inventory
+      operationId: adminListInventory
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Limit
+      - name: low_stock
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Low Stock
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 100
+          - type: 'null'
+          title: Q
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminInventoryListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/inventory/{variant_id}:
+    patch:
+      tags:
+      - admin
+      summary: Admin Adjust Inventory
+      operationId: adminAdjustInventory
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: variant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Variant Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminAdjustInventoryRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminInventoryItemSchema'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/orders:
+    get:
+      tags:
+      - admin
+      summary: Admin List Orders
+      operationId: adminListOrders
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Limit
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/OrderStatus'
+          - type: 'null'
+          title: Status
+      - name: export_pending
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Export Pending
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 200
+          - type: 'null'
+          title: Q
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrderListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/orders/{order_number}:
+    get:
+      tags:
+      - admin
+      summary: Admin Get Order
+      operationId: adminGetOrder
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: order_number
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Order Number
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrderDetailSchema'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/orders/{order_number}/status:
+    patch:
+      tags:
+      - admin
+      summary: Admin Update Order Status
+      operationId: adminUpdateOrderStatus
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: order_number
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Order Number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateOrderStatusRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrderDetailSchema'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/integrations/moysklad/status:
+    get:
+      tags:
+      - admin
+      summary: Admin Moysklad Status
+      operationId: adminMoySkladStatus
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoySkladIntegrationStatusResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/integrations/moysklad/sync/pull:
+    post:
+      tags:
+      - admin
+      summary: Admin Moysklad Pull Catalog
+      description: Pull full catalog + stock FROM MoySklad into the site. Does not modify MoySklad.
+      operationId: adminMoySkladPullCatalog
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoySkladPullResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/integrations/moysklad/sync/stock:
+    post:
+      tags:
+      - admin
+      summary: Admin Moysklad Pull Stock
+      description: Pull stock quantities FROM MoySklad. Does not modify MoySklad.
+      operationId: adminMoySkladPullStock
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoySkladStockPullResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/integrations/moysklad/sync/resync:
+    post:
+      tags:
+      - admin
+      summary: Admin Moysklad Full Resync
+      description: 'Full resync: catalog + stock from MS, then retry pending order exports.'
+      operationId: adminMoySkladFullResync
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoySkladFullResyncResponse'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/integrations/moysklad/webhooks/enabled:
+    patch:
+      tags:
+      - admin
+      summary: Admin Moysklad Set Webhooks Enabled
+      description: Enable/disable processing of inbound MoySklad webhooks on this site only.
+      operationId: adminMoySkladWebhooksEnabled
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhooksEnabledRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: boolean
+                type: object
+                title: Response Adminmoyskladwebhooksenabled
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/integrations/moysklad/sync/trigger:
+    post:
+      tags:
+      - admin
+      summary: Admin Moysklad Trigger Sync Deprecated
+      operationId: adminMoySkladTriggerSync
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoySkladPullResponse'
+      deprecated: true
+      security:
+      - bearerAuth: []
   /api/v1/admin/integrations/moysklad/logs:
     get:
-      summary: MoySklad sync logs
+      tags:
+      - admin
+      summary: Admin Moysklad Sync Logs
       operationId: adminMoySkladSyncLogs
-      tags: [admin]
-      security:
-        - bearerAuth: []
       responses:
-        "200":
-          description: Recent sync logs
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MoySkladSyncLogListResponse"
-
+                $ref: '#/components/schemas/SyncLogListResponse'
+      security:
+      - bearerAuth: []
   /api/v1/admin/integrations/moysklad/orders/{order_number}/export:
     post:
-      summary: Export order to MoySklad
+      tags:
+      - admin
+      summary: Admin Moysklad Export Order
+      description: Export a confirmed site order to MoySklad (outbound). Does not block site order.
       operationId: adminMoySkladExportOrder
-      tags: [admin]
       security:
-        - bearerAuth: []
+      - bearerAuth: []
       parameters:
-        - name: order_number
-          in: path
-          required: true
-          schema:
-            type: string
+      - name: order_number
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Order Number
       responses:
-        "200":
-          description: Export result
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MoySkladOrderExportResponse"
-        "404":
-          description: Order not found
-
+                $ref: '#/components/schemas/OrderExportResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/cart:
+    get:
+      tags:
+      - checkout
+      summary: Get Cart
+      operationId: getCart
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: X-Cart-Session-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Cart-Session-Id
+      - name: cart_session_id
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cart Session Id
+      - name: access_token
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Access Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/cart/lines:
+    post:
+      tags:
+      - checkout
+      summary: Add Cart Line
+      operationId: addCartLine
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: X-Cart-Session-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Cart-Session-Id
+      - name: cart_session_id
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cart Session Id
+      - name: access_token
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Access Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCartLineRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/cart/lines/{line_id}:
+    patch:
+      tags:
+      - checkout
+      summary: Update Cart Line
+      operationId: updateCartLine
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: line_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Line Id
+      - name: X-Cart-Session-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Cart-Session-Id
+      - name: cart_session_id
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cart Session Id
+      - name: access_token
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Access Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCartLineRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - checkout
+      summary: Delete Cart Line
+      operationId: deleteCartLine
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: line_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Line Id
+      - name: X-Cart-Session-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Cart-Session-Id
+      - name: cart_session_id
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cart Session Id
+      - name: access_token
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Access Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/checkout/sessions:
+    post:
+      tags:
+      - checkout
+      summary: Create Checkout Session
+      operationId: createCheckoutSession
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Idempotency-Key
+      - name: X-Cart-Session-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Cart-Session-Id
+      - name: cart_session_id
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cart Session Id
+      - name: access_token
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Access Token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckoutSessionRequest'
+              default: {}
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSessionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/checkout/sessions/{session_id}/payment-intent:
+    post:
+      tags:
+      - checkout
+      summary: Create Payment Intent
+      operationId: createPaymentIntent
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Session Id
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          title: Idempotency-Key
+      - name: X-Cart-Session-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Cart-Session-Id
+      - name: cart_session_id
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cart Session Id
+      - name: access_token
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Access Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentIntentResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/checkout/sessions/{session_id}:
+    get:
+      tags:
+      - checkout
+      summary: Get Checkout Session
+      operationId: getCheckoutSession
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Session Id
+      - name: X-Cart-Session-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Cart-Session-Id
+      - name: cart_session_id
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cart Session Id
+      - name: access_token
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Access Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSessionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/webhooks/stripe:
+    post:
+      tags:
+      - checkout
+      summary: Stripe Webhook
+      operationId: stripeWebhook
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+  /api/v1/orders:
+    get:
+      tags:
+      - orders
+      summary: List Orders
+      operationId: listOrders
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 20
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/orders/{order_number}:
+    get:
+      tags:
+      - orders
+      summary: Get Order
+      operationId: getOrder
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: order_number
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Order Number
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetailSchema'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/dev/payments/{payment_intent_id}/simulate-success:
+    post:
+      tags:
+      - dev
+      summary: Simulate Stub Payment Success
+      operationId: simulateStubPaymentSuccess
+      parameters:
+      - name: payment_intent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Payment Intent Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/integrations/moysklad/webhook:
+    post:
+      tags:
+      - integrations
+      summary: Moysklad Webhook
+      description: Receive MoySklad change notifications. Site pulls updates — never writes to MS.
+      operationId: moySkladWebhook
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookAckResponse'
 components:
+  schemas:
+    AddCartLineRequest:
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+          title: Variant Id
+        quantity:
+          type: integer
+          exclusiveMinimum: 0.0
+          title: Quantity
+      type: object
+      required:
+      - variant_id
+      - quantity
+      title: AddCartLineRequest
+    AdminAdjustInventoryRequest:
+      properties:
+        quantity_on_hand:
+          type: integer
+          minimum: 0.0
+          title: Quantity On Hand
+        reason:
+          type: string
+          title: Reason
+        version:
+          type: integer
+          minimum: 0.0
+          title: Version
+      type: object
+      required:
+      - quantity_on_hand
+      - reason
+      - version
+      title: AdminAdjustInventoryRequest
+    AdminCategoryListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/CategorySchema'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+      type: object
+      required:
+      - items
+      - total
+      title: AdminCategoryListResponse
+    AdminCreateCategoryRequest:
+      properties:
+        slug:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Slug
+        name:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Name
+        description:
+          anyOf:
+          - type: string
+            maxLength: 5000
+          - type: 'null'
+          title: Description
+        parent_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Parent Id
+        is_active:
+          type: boolean
+          title: Is Active
+          default: true
+        sort_order:
+          type: integer
+          minimum: 0.0
+          title: Sort Order
+          default: 0
+      type: object
+      required:
+      - slug
+      - name
+      title: AdminCreateCategoryRequest
+    AdminCreateProductImageRequest:
+      properties:
+        url:
+          type: string
+          maxLength: 2048
+          minLength: 1
+          title: Url
+        alt_text:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          title: Alt Text
+        option_color:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          title: Option Color
+        sort_order:
+          type: integer
+          minimum: 0.0
+          title: Sort Order
+          default: 0
+      type: object
+      required:
+      - url
+      title: AdminCreateProductImageRequest
+    AdminCreateProductRequest:
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Name
+        slug:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Slug
+        sku:
+          type: string
+          maxLength: 64
+          minLength: 3
+          title: Sku
+        price_cents:
+          type: integer
+          minimum: 0.0
+          title: Price Cents
+        currency:
+          type: string
+          maxLength: 3
+          minLength: 3
+          title: Currency
+          default: RUB
+        status:
+          type: string
+          title: Status
+          default: draft
+        compare_at_price_cents:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Compare At Price Cents
+        category_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Category Id
+        wholesale_price_cents:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Wholesale Price Cents
+        description:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Description
+        image_url:
+          anyOf:
+          - type: string
+            maxLength: 2048
+          - type: 'null'
+          title: Image Url
+      type: object
+      required:
+      - name
+      - slug
+      - sku
+      - price_cents
+      title: AdminCreateProductRequest
+    AdminCreateVariantRequest:
+      properties:
+        sku:
+          type: string
+          maxLength: 64
+          minLength: 3
+          title: Sku
+        name:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Name
+        price_cents:
+          type: integer
+          minimum: 0.0
+          title: Price Cents
+        wholesale_price_cents:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Wholesale Price Cents
+        is_default:
+          type: boolean
+          title: Is Default
+          default: false
+        sort_order:
+          type: integer
+          minimum: 0.0
+          title: Sort Order
+          default: 0
+        attributes:
+          additionalProperties:
+            type: string
+          type: object
+          title: Attributes
+      type: object
+      required:
+      - sku
+      - name
+      - price_cents
+      title: AdminCreateVariantRequest
+    AdminCustomerListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/AdminCustomerSchema'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        page:
+          type: integer
+          title: Page
+        limit:
+          type: integer
+          title: Limit
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - limit
+      title: AdminCustomerListResponse
+    AdminCustomerSchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        email:
+          type: string
+          title: Email
+        is_wholesaler:
+          type: boolean
+          title: Is Wholesaler
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - email
+      - is_wholesaler
+      - created_at
+      title: AdminCustomerSchema
+    AdminInventoryItemSchema:
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+          title: Variant Id
+        product_id:
+          type: string
+          format: uuid
+          title: Product Id
+        sku:
+          type: string
+          title: Sku
+        product_name:
+          type: string
+          title: Product Name
+        sync_source:
+          type: string
+          title: Sync Source
+        quantity_on_hand:
+          type: integer
+          title: Quantity On Hand
+        quantity_reserved:
+          type: integer
+          title: Quantity Reserved
+        available:
+          type: integer
+          title: Available
+        version:
+          type: integer
+          title: Version
+        is_low_stock:
+          type: boolean
+          title: Is Low Stock
+      type: object
+      required:
+      - variant_id
+      - product_id
+      - sku
+      - product_name
+      - sync_source
+      - quantity_on_hand
+      - quantity_reserved
+      - available
+      - version
+      - is_low_stock
+      title: AdminInventoryItemSchema
+    AdminInventoryListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/AdminInventoryItemSchema'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        page:
+          type: integer
+          title: Page
+        limit:
+          type: integer
+          title: Limit
+        low_stock_threshold:
+          type: integer
+          title: Low Stock Threshold
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - limit
+      - low_stock_threshold
+      title: AdminInventoryListResponse
+    AdminLoginRequest:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          maxLength: 128
+          minLength: 8
+          title: Password
+      type: object
+      required:
+      - email
+      - password
+      title: AdminLoginRequest
+    AdminMeResponse:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        email:
+          type: string
+          title: Email
+        role:
+          type: string
+          title: Role
+        permissions:
+          items:
+            type: string
+          type: array
+          title: Permissions
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - email
+      - role
+      - permissions
+      - created_at
+      title: AdminMeResponse
+    AdminOrderDetailSchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        order_number:
+          type: string
+          title: Order Number
+        status:
+          type: string
+          title: Status
+        currency:
+          type: string
+          title: Currency
+        subtotal_cents:
+          type: integer
+          title: Subtotal Cents
+        discount_cents:
+          type: integer
+          title: Discount Cents
+        shipping_cents:
+          type: integer
+          title: Shipping Cents
+        tax_cents:
+          type: integer
+          title: Tax Cents
+        total_cents:
+          type: integer
+          title: Total Cents
+        customer_email:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Customer Email
+        customer_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Customer Name
+        customer_phone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Customer Phone
+        shipping_address:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Shipping Address
+        is_wholesaler:
+          type: boolean
+          title: Is Wholesaler
+          default: false
+        moysklad_order_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Moysklad Order Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        lines:
+          items:
+            $ref: '#/components/schemas/OrderLineSchema'
+          type: array
+          title: Lines
+        status_history:
+          items:
+            $ref: '#/components/schemas/AdminOrderStatusHistorySchema'
+          type: array
+          title: Status History
+      type: object
+      required:
+      - id
+      - order_number
+      - status
+      - currency
+      - subtotal_cents
+      - discount_cents
+      - shipping_cents
+      - tax_cents
+      - total_cents
+      - customer_email
+      - created_at
+      - updated_at
+      - lines
+      - status_history
+      title: AdminOrderDetailSchema
+    AdminOrderListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/AdminOrderSummarySchema'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        page:
+          type: integer
+          title: Page
+        limit:
+          type: integer
+          title: Limit
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - limit
+      title: AdminOrderListResponse
+    AdminOrderStatusHistorySchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        from_status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: From Status
+        to_status:
+          type: string
+          title: To Status
+        changed_by:
+          type: string
+          title: Changed By
+        reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reason
+        changed_at:
+          type: string
+          format: date-time
+          title: Changed At
+      type: object
+      required:
+      - id
+      - from_status
+      - to_status
+      - changed_by
+      - reason
+      - changed_at
+      title: AdminOrderStatusHistorySchema
+    AdminOrderStatusMutation:
+      type: string
+      enum:
+      - shipped
+      - canceled
+      title: AdminOrderStatusMutation
+    AdminOrderSummarySchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        order_number:
+          type: string
+          title: Order Number
+        status:
+          type: string
+          title: Status
+        currency:
+          type: string
+          title: Currency
+        total_cents:
+          type: integer
+          title: Total Cents
+        customer_email:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Customer Email
+        moysklad_order_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Moysklad Order Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - order_number
+      - status
+      - currency
+      - total_cents
+      - customer_email
+      - created_at
+      title: AdminOrderSummarySchema
+    AdminProductListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/AdminProductSchema'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        page:
+          type: integer
+          title: Page
+        limit:
+          type: integer
+          title: Limit
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - limit
+      title: AdminProductListResponse
+    AdminProductSchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        name:
+          type: string
+          title: Name
+        slug:
+          type: string
+          title: Slug
+        price_cents:
+          type: integer
+          title: Price Cents
+        compare_at_price_cents:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Compare At Price Cents
+        currency:
+          type: string
+          title: Currency
+        in_stock:
+          type: boolean
+          title: In Stock
+        status:
+          type: string
+          title: Status
+        category_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Category Id
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        image_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Image Url
+        sync_source:
+          type: string
+          title: Sync Source
+          default: manual
+        erp_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Erp Name
+        moysklad_product_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Moysklad Product Id
+        last_synced_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Synced At
+        meta_title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Meta Title
+        meta_description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Meta Description
+        erp_image_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Erp Image Url
+        images:
+          items:
+            $ref: '#/components/schemas/ProductImageSchema'
+          type: array
+          title: Images
+          default: []
+        variants:
+          items:
+            $ref: '#/components/schemas/ProductVariantSchema'
+          type: array
+          title: Variants
+          default: []
+      type: object
+      required:
+      - id
+      - name
+      - slug
+      - price_cents
+      - currency
+      - in_stock
+      - status
+      title: AdminProductSchema
+    AdminTokenResponse:
+      properties:
+        access_token:
+          type: string
+          title: Access Token
+        token_type:
+          type: string
+          title: Token Type
+          default: bearer
+      type: object
+      required:
+      - access_token
+      title: AdminTokenResponse
+    AdminUpdateCategoryRequest:
+      properties:
+        slug:
+          anyOf:
+          - type: string
+            maxLength: 255
+            minLength: 1
+          - type: 'null'
+          title: Slug
+        name:
+          anyOf:
+          - type: string
+            maxLength: 255
+            minLength: 1
+          - type: 'null'
+          title: Name
+        description:
+          anyOf:
+          - type: string
+            maxLength: 5000
+          - type: 'null'
+          title: Description
+        parent_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Parent Id
+        clear_parent:
+          type: boolean
+          title: Clear Parent
+          default: false
+        is_active:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Is Active
+        sort_order:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Sort Order
+      type: object
+      title: AdminUpdateCategoryRequest
+    AdminUpdateOrderStatusRequest:
+      properties:
+        status:
+          $ref: '#/components/schemas/AdminOrderStatusMutation'
+        reason:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          title: Reason
+      type: object
+      required:
+      - status
+      title: AdminUpdateOrderStatusRequest
+    AdminUpdateProductImageRequest:
+      properties:
+        url:
+          anyOf:
+          - type: string
+            maxLength: 2048
+            minLength: 1
+          - type: 'null'
+          title: Url
+        alt_text:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          title: Alt Text
+        option_color:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          title: Option Color
+        sort_order:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Sort Order
+      type: object
+      title: AdminUpdateProductImageRequest
+    AdminUpdateProductRequest:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 255
+            minLength: 1
+          - type: 'null'
+          title: Name
+        slug:
+          anyOf:
+          - type: string
+            maxLength: 255
+            minLength: 1
+          - type: 'null'
+          title: Slug
+        price_cents:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Price Cents
+        currency:
+          anyOf:
+          - type: string
+            maxLength: 3
+            minLength: 3
+          - type: 'null'
+          title: Currency
+        status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+        compare_at_price_cents:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Compare At Price Cents
+        category_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Category Id
+        clear_category:
+          type: boolean
+          title: Clear Category
+          default: false
+        description:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Description
+        image_url:
+          anyOf:
+          - type: string
+            maxLength: 2048
+          - type: 'null'
+          title: Image Url
+        meta_title:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          title: Meta Title
+        meta_description:
+          anyOf:
+          - type: string
+            maxLength: 5000
+          - type: 'null'
+          title: Meta Description
+      type: object
+      title: AdminUpdateProductRequest
+    AdminUpdateVariantRequest:
+      properties:
+        sku:
+          anyOf:
+          - type: string
+            maxLength: 64
+            minLength: 3
+          - type: 'null'
+          title: Sku
+        name:
+          anyOf:
+          - type: string
+            maxLength: 255
+            minLength: 1
+          - type: 'null'
+          title: Name
+        price_cents:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Price Cents
+        wholesale_price_cents:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Wholesale Price Cents
+        is_default:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Is Default
+        sort_order:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Sort Order
+        attributes:
+          anyOf:
+          - additionalProperties:
+              type: string
+            type: object
+          - type: 'null'
+          title: Attributes
+      type: object
+      title: AdminUpdateVariantRequest
+    AdminUpdateWholesalerRequest:
+      properties:
+        is_wholesaler:
+          type: boolean
+          title: Is Wholesaler
+      type: object
+      required:
+      - is_wholesaler
+      title: AdminUpdateWholesalerRequest
+    Body_adminUploadMedia:
+      properties:
+        file:
+          type: string
+          contentMediaType: application/octet-stream
+          title: File
+      type: object
+      required:
+      - file
+      title: Body_adminUploadMedia
+    CartLineSchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        variant_id:
+          type: string
+          format: uuid
+          title: Variant Id
+        quantity:
+          type: integer
+          title: Quantity
+        unit_price_cents:
+          type: integer
+          title: Unit Price Cents
+        line_total_cents:
+          type: integer
+          title: Line Total Cents
+        currency:
+          type: string
+          title: Currency
+        product_snapshot:
+          additionalProperties: true
+          type: object
+          title: Product Snapshot
+      type: object
+      required:
+      - id
+      - variant_id
+      - quantity
+      - unit_price_cents
+      - line_total_cents
+      - currency
+      - product_snapshot
+      title: CartLineSchema
+    CartResponse:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        status:
+          type: string
+          title: Status
+        currency:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Currency
+        subtotal_cents:
+          type: integer
+          title: Subtotal Cents
+        total_cents:
+          type: integer
+          title: Total Cents
+        lines:
+          items:
+            $ref: '#/components/schemas/CartLineSchema'
+          type: array
+          title: Lines
+        created_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Created At
+        updated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Updated At
+      type: object
+      required:
+      - id
+      - status
+      - currency
+      - subtotal_cents
+      - total_cents
+      - lines
+      title: CartResponse
+    CategoryListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/CategorySchema'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+      type: object
+      required:
+      - items
+      - total
+      title: CategoryListResponse
+    CategorySchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        slug:
+          type: string
+          title: Slug
+        name:
+          type: string
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        parent_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Parent Id
+        is_active:
+          type: boolean
+          title: Is Active
+        sort_order:
+          type: integer
+          title: Sort Order
+        product_count:
+          type: integer
+          title: Product Count
+          default: 0
+      type: object
+      required:
+      - id
+      - slug
+      - name
+      - description
+      - parent_id
+      - is_active
+      - sort_order
+      title: CategorySchema
+    CheckoutSessionResponse:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        cart_id:
+          type: string
+          format: uuid
+          title: Cart Id
+        status:
+          type: string
+          title: Status
+        currency:
+          type: string
+          title: Currency
+        subtotal_cents:
+          type: integer
+          title: Subtotal Cents
+        total_cents:
+          type: integer
+          title: Total Cents
+        order_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Order Number
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - cart_id
+      - status
+      - currency
+      - subtotal_cents
+      - total_cents
+      - created_at
+      - updated_at
+      title: CheckoutSessionResponse
+    CheckoutShippingRequest:
+      properties:
+        recipient_name:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Recipient Name
+        phone:
+          type: string
+          maxLength: 32
+          minLength: 5
+          title: Phone
+        address:
+          type: string
+          maxLength: 2000
+          minLength: 5
+          title: Address
+      type: object
+      required:
+      - recipient_name
+      - phone
+      - address
+      title: CheckoutShippingRequest
+    CreateCheckoutSessionRequest:
+      properties:
+        shipping:
+          anyOf:
+          - $ref: '#/components/schemas/CheckoutShippingRequest'
+          - type: 'null'
+      type: object
+      title: CreateCheckoutSessionRequest
+    DashboardSummaryResponse:
+      properties:
+        orders_today:
+          type: integer
+          title: Orders Today
+        orders_last_7_days:
+          type: integer
+          title: Orders Last 7 Days
+        revenue_last_7_days_cents:
+          type: integer
+          title: Revenue Last 7 Days Cents
+        low_stock_count:
+          type: integer
+          title: Low Stock Count
+        orders_by_status:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Orders By Status
+      type: object
+      required:
+      - orders_today
+      - orders_last_7_days
+      - revenue_last_7_days_cents
+      - low_stock_count
+      - orders_by_status
+      title: DashboardSummaryResponse
+    ForgotPasswordRequest:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+      type: object
+      required:
+      - email
+      title: ForgotPasswordRequest
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    LoginRequest:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          maxLength: 128
+          title: Password
+      type: object
+      required:
+      - email
+      - password
+      title: LoginRequest
+    MeResponse:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        email:
+          type: string
+          title: Email
+        first_name:
+          type: string
+          title: First Name
+        last_name:
+          type: string
+          title: Last Name
+        is_wholesaler:
+          type: boolean
+          title: Is Wholesaler
+        email_verified:
+          type: boolean
+          title: Email Verified
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - email
+      - first_name
+      - last_name
+      - is_wholesaler
+      - email_verified
+      - created_at
+      title: MeResponse
+    MessageResponse:
+      properties:
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - message
+      title: MessageResponse
+    MoySkladFullResyncResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+        direction:
+          type: string
+          title: Direction
+          description: Catalog/stock inbound; order export outbound
+          default: inbound
+        products_created:
+          type: integer
+          title: Products Created
+          default: 0
+        products_updated:
+          type: integer
+          title: Products Updated
+          default: 0
+        variants_created:
+          type: integer
+          title: Variants Created
+          default: 0
+        variants_updated:
+          type: integer
+          title: Variants Updated
+          default: 0
+        stock_rows_applied:
+          type: integer
+          title: Stock Rows Applied
+          default: 0
+        order_exports_succeeded:
+          type: integer
+          title: Order Exports Succeeded
+          default: 0
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+      type: object
+      required:
+      - status
+      title: MoySkladFullResyncResponse
+    MoySkladIntegrationStatusResponse:
+      properties:
+        configured:
+          type: boolean
+          title: Configured
+        api_token_configured:
+          type: boolean
+          title: Api Token Configured
+          default: false
+        store_id_configured:
+          type: boolean
+          title: Store Id Configured
+          default: false
+        read_only:
+          type: boolean
+          title: Read Only
+          default: true
+        order_export_enabled:
+          type: boolean
+          title: Order Export Enabled
+          default: false
+        store_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Store Id
+        webhooks_enabled:
+          type: boolean
+          title: Webhooks Enabled
+        pending_order_exports:
+          type: integer
+          title: Pending Order Exports
+          default: 0
+        last_full_sync_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Full Sync At
+        last_incremental_sync_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Incremental Sync At
+        last_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Error
+        errors_last_24h:
+          type: integer
+          title: Errors Last 24H
+        pending_imports:
+          type: integer
+          title: Pending Imports
+          default: 0
+        needs_color_photos:
+          type: integer
+          title: Needs Color Photos
+          default: 0
+      type: object
+      required:
+      - configured
+      - store_id
+      - webhooks_enabled
+      - last_full_sync_at
+      - last_incremental_sync_at
+      - last_error
+      - errors_last_24h
+      title: MoySkladIntegrationStatusResponse
+    MoySkladPullResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+        direction:
+          type: string
+          title: Direction
+          description: Always inbound — data flows MS → site
+          default: inbound
+        products_created:
+          type: integer
+          title: Products Created
+          default: 0
+        products_updated:
+          type: integer
+          title: Products Updated
+          default: 0
+        variants_created:
+          type: integer
+          title: Variants Created
+          default: 0
+        variants_updated:
+          type: integer
+          title: Variants Updated
+          default: 0
+        stock_rows_applied:
+          type: integer
+          title: Stock Rows Applied
+          default: 0
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+      type: object
+      required:
+      - status
+      title: MoySkladPullResponse
+    MoySkladStockPullResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+        direction:
+          type: string
+          title: Direction
+          default: inbound
+        stock_rows_applied:
+          type: integer
+          title: Stock Rows Applied
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+      type: object
+      required:
+      - status
+      - stock_rows_applied
+      title: MoySkladStockPullResponse
+    OrderDetailSchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        order_number:
+          type: string
+          title: Order Number
+        status:
+          type: string
+          title: Status
+        currency:
+          type: string
+          title: Currency
+        subtotal_cents:
+          type: integer
+          title: Subtotal Cents
+        discount_cents:
+          type: integer
+          title: Discount Cents
+        shipping_cents:
+          type: integer
+          title: Shipping Cents
+        tax_cents:
+          type: integer
+          title: Tax Cents
+        total_cents:
+          type: integer
+          title: Total Cents
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        lines:
+          items:
+            $ref: '#/components/schemas/OrderLineSchema'
+          type: array
+          title: Lines
+      type: object
+      required:
+      - id
+      - order_number
+      - status
+      - currency
+      - subtotal_cents
+      - discount_cents
+      - shipping_cents
+      - tax_cents
+      - total_cents
+      - created_at
+      - updated_at
+      - lines
+      title: OrderDetailSchema
+    OrderExportResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+        moysklad_order_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Moysklad Order Id
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+      type: object
+      required:
+      - status
+      title: OrderExportResponse
+    OrderLineSchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        variant_id:
+          type: string
+          format: uuid
+          title: Variant Id
+        quantity:
+          type: integer
+          title: Quantity
+        unit_price_cents:
+          type: integer
+          title: Unit Price Cents
+        line_total_cents:
+          type: integer
+          title: Line Total Cents
+        product_snapshot:
+          additionalProperties: true
+          type: object
+          title: Product Snapshot
+      type: object
+      required:
+      - id
+      - variant_id
+      - quantity
+      - unit_price_cents
+      - line_total_cents
+      - product_snapshot
+      title: OrderLineSchema
+    OrderListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/OrderSummarySchema'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        page:
+          type: integer
+          title: Page
+        limit:
+          type: integer
+          title: Limit
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - limit
+      title: OrderListResponse
+    OrderStatus:
+      type: string
+      enum:
+      - confirmed
+      - shipped
+      - canceled
+      title: OrderStatus
+    OrderSummarySchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        order_number:
+          type: string
+          title: Order Number
+        status:
+          type: string
+          title: Status
+        currency:
+          type: string
+          title: Currency
+        total_cents:
+          type: integer
+          title: Total Cents
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - order_number
+      - status
+      - currency
+      - total_cents
+      - created_at
+      title: OrderSummarySchema
+    PaymentIntentResponse:
+      properties:
+        client_secret:
+          type: string
+          title: Client Secret
+        payment_intent_id:
+          type: string
+          title: Payment Intent Id
+      type: object
+      required:
+      - client_secret
+      - payment_intent_id
+      title: PaymentIntentResponse
+    ProductFacetsResponse:
+      properties:
+        sizes:
+          items:
+            type: string
+          type: array
+          title: Sizes
+        colors:
+          items:
+            type: string
+          type: array
+          title: Colors
+        price_min_cents:
+          type: integer
+          title: Price Min Cents
+        price_max_cents:
+          type: integer
+          title: Price Max Cents
+        size_counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Size Counts
+          default: {}
+        color_counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Color Counts
+          default: {}
+      type: object
+      required:
+      - sizes
+      - colors
+      - price_min_cents
+      - price_max_cents
+      title: ProductFacetsResponse
+    ProductImagePublicSchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        url:
+          type: string
+          title: Url
+        alt_text:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Alt Text
+        sort_order:
+          type: integer
+          title: Sort Order
+          default: 0
+        option_color:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Option Color
+      type: object
+      required:
+      - id
+      - url
+      title: ProductImagePublicSchema
+    ProductImageSchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        url:
+          type: string
+          title: Url
+        alt_text:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Alt Text
+        option_color:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Option Color
+        sort_order:
+          type: integer
+          title: Sort Order
+          default: 0
+      type: object
+      required:
+      - id
+      - url
+      title: ProductImageSchema
+    ProductListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ProductSchema'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        page:
+          type: integer
+          title: Page
+        limit:
+          type: integer
+          title: Limit
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - limit
+      title: ProductListResponse
+    ProductOptionGroupSchema:
+      properties:
+        key:
+          type: string
+          title: Key
+        label:
+          type: string
+          title: Label
+        values:
+          items:
+            type: string
+          type: array
+          title: Values
+      type: object
+      required:
+      - key
+      - label
+      - values
+      title: ProductOptionGroupSchema
+    ProductSchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        name:
+          type: string
+          title: Name
+        slug:
+          type: string
+          title: Slug
+        price_cents:
+          type: integer
+          title: Price Cents
+        compare_at_price_cents:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Compare At Price Cents
+        currency:
+          type: string
+          title: Currency
+        in_stock:
+          type: boolean
+          title: In Stock
+        category_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Category Id
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        image_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Image Url
+        meta_title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Meta Title
+        meta_description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Meta Description
+        option_groups:
+          items:
+            $ref: '#/components/schemas/ProductOptionGroupSchema'
+          type: array
+          title: Option Groups
+          default: []
+        images:
+          items:
+            $ref: '#/components/schemas/ProductImagePublicSchema'
+          type: array
+          title: Images
+          default: []
+        variants:
+          items:
+            $ref: '#/components/schemas/ProductVariantSchema'
+          type: array
+          title: Variants
+          default: []
+      type: object
+      required:
+      - id
+      - name
+      - slug
+      - price_cents
+      - currency
+      - in_stock
+      title: ProductSchema
+    ProductVariantSchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        sku:
+          type: string
+          title: Sku
+        name:
+          type: string
+          title: Name
+        price_cents:
+          type: integer
+          title: Price Cents
+        wholesale_price_cents:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Wholesale Price Cents
+        in_stock:
+          type: boolean
+          title: In Stock
+        is_default:
+          type: boolean
+          title: Is Default
+        sort_order:
+          type: integer
+          title: Sort Order
+        attributes:
+          additionalProperties:
+            type: string
+          type: object
+          title: Attributes
+        moysklad_variant_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Moysklad Variant Id
+        barcode:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Barcode
+        weight_grams:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Weight Grams
+        dimensions_cm:
+          anyOf:
+          - additionalProperties:
+              type: number
+            type: object
+          - type: 'null'
+          title: Dimensions Cm
+      type: object
+      required:
+      - id
+      - sku
+      - name
+      - price_cents
+      - in_stock
+      - is_default
+      - sort_order
+      - attributes
+      title: ProductVariantSchema
+    RegisterRequest:
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: First Name
+        last_name:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Last Name
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          maxLength: 128
+          minLength: 8
+          title: Password
+      type: object
+      required:
+      - first_name
+      - last_name
+      - email
+      - password
+      title: RegisterRequest
+    RegisterResponse:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        email:
+          type: string
+          title: Email
+        first_name:
+          type: string
+          title: First Name
+        last_name:
+          type: string
+          title: Last Name
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        email_verification_required:
+          type: boolean
+          title: Email Verification Required
+          default: true
+      type: object
+      required:
+      - id
+      - email
+      - first_name
+      - last_name
+      - created_at
+      title: RegisterResponse
+    ResendVerificationRequest:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+      type: object
+      required:
+      - email
+      title: ResendVerificationRequest
+    ResetPasswordRequest:
+      properties:
+        token:
+          type: string
+          maxLength: 256
+          minLength: 16
+          title: Token
+        password:
+          type: string
+          maxLength: 128
+          minLength: 8
+          title: Password
+      type: object
+      required:
+      - token
+      - password
+      title: ResetPasswordRequest
+    SyncLogListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/SyncLogSchema'
+          type: array
+          title: Items
+      type: object
+      required:
+      - items
+      title: SyncLogListResponse
+    SyncLogSchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        direction:
+          type: string
+          title: Direction
+        entity_type:
+          type: string
+          title: Entity Type
+        entity_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Entity Id
+        status:
+          type: string
+          title: Status
+        error_message:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error Message
+        created_at:
+          type: string
+          title: Created At
+      type: object
+      required:
+      - id
+      - direction
+      - entity_type
+      - entity_id
+      - status
+      - error_message
+      - created_at
+      title: SyncLogSchema
+    TokenResponse:
+      properties:
+        access_token:
+          type: string
+          title: Access Token
+        token_type:
+          type: string
+          title: Token Type
+          default: bearer
+      type: object
+      required:
+      - access_token
+      title: TokenResponse
+    UpdateCartLineRequest:
+      properties:
+        quantity:
+          type: integer
+          minimum: 0.0
+          title: Quantity
+      type: object
+      required:
+      - quantity
+      title: UpdateCartLineRequest
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    VerifyEmailRequest:
+      properties:
+        token:
+          type: string
+          maxLength: 256
+          minLength: 16
+          title: Token
+      type: object
+      required:
+      - token
+      title: VerifyEmailRequest
+    WebhookAckResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+        processed:
+          type: integer
+          title: Processed
+        skipped:
+          type: integer
+          title: Skipped
+      type: object
+      required:
+      - status
+      - processed
+      - skipped
+      title: WebhookAckResponse
+    WebhookResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+      type: object
+      required:
+      - status
+      title: WebhookResponse
+    WebhooksEnabledRequest:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+      type: object
+      required:
+      - enabled
+      title: WebhooksEnabledRequest
+    WholesalerRegisterRequest:
+      properties:
+        full_name:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Full Name
+        edo_provider:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Edo Provider
+        edo_id:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Edo Id
+        phone:
+          type: string
+          maxLength: 32
+          minLength: 1
+          title: Phone
+        inn:
+          type: string
+          maxLength: 12
+          minLength: 12
+          title: Inn
+        ogrnip:
+          type: string
+          maxLength: 15
+          minLength: 15
+          title: Ogrnip
+        legal_address:
+          type: string
+          maxLength: 500
+          minLength: 1
+          title: Legal Address
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          maxLength: 128
+          minLength: 8
+          title: Password
+      type: object
+      required:
+      - full_name
+      - edo_provider
+      - edo_id
+      - phone
+      - inn
+      - ogrnip
+      - legal_address
+      - email
+      - password
+      title: WholesalerRegisterRequest
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-  schemas:
-    ProductVariant:
-      type: object
-      required: [id, sku, name, price_cents, in_stock, is_default, sort_order, attributes]
-      properties:
-        id:
-          type: string
-          format: uuid
-        sku:
-          type: string
-        name:
-          type: string
-        price_cents:
-          type: integer
-        wholesale_price_cents:
-          type: integer
-          description: Omitted for non-wholesaler API consumers
-        in_stock:
-          type: boolean
-        is_default:
-          type: boolean
-        sort_order:
-          type: integer
-        attributes:
-          type: object
-          additionalProperties:
-            type: string
-
-    Product:
-      type: object
-      required: [id, name, slug, price_cents, currency, in_stock]
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        slug:
-          type: string
-        price_cents:
-          type: integer
-        compare_at_price_cents:
-          type: integer
-          nullable: true
-        currency:
-          type: string
-          example: RUB
-        in_stock:
-          type: boolean
-        category_id:
-          type: string
-          format: uuid
-          nullable: true
-        description:
-          type: string
-          nullable: true
-        image_url:
-          type: string
-          nullable: true
-        variants:
-          type: array
-          items:
-            $ref: "#/components/schemas/ProductVariant"
-
-    Category:
-      type: object
-      required: [id, slug, name, is_active, sort_order]
-      properties:
-        id:
-          type: string
-          format: uuid
-        slug:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-          nullable: true
-        parent_id:
-          type: string
-          format: uuid
-          nullable: true
-        is_active:
-          type: boolean
-        sort_order:
-          type: integer
-        product_count:
-          type: integer
-          default: 0
-
-    CategoryListResponse:
-      type: object
-      required: [items, total]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/Category"
-        total:
-          type: integer
-
-    ProductListResponse:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/Product"
-        total:
-          type: integer
-        page:
-          type: integer
-        limit:
-          type: integer
-
-    ProductFacetsResponse:
-      type: object
-      required: [sizes, colors, price_min_cents, price_max_cents]
-      properties:
-        sizes:
-          type: array
-          items:
-            type: string
-        colors:
-          type: array
-          items:
-            type: string
-        price_min_cents:
-          type: integer
-        price_max_cents:
-          type: integer
-        size_counts:
-          type: object
-          additionalProperties:
-            type: integer
-        color_counts:
-          type: object
-          additionalProperties:
-            type: integer
-
-    RegisterRequest:
-      type: object
-      required: [first_name, last_name, email, password]
-      properties:
-        first_name:
-          type: string
-          minLength: 1
-          maxLength: 100
-        last_name:
-          type: string
-          minLength: 1
-          maxLength: 100
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-          minLength: 8
-
-    WholesalerRegisterRequest:
-      type: object
-      required:
-        - full_name
-        - edo_provider
-        - edo_id
-        - phone
-        - inn
-        - ogrnip
-        - legal_address
-        - email
-        - password
-      properties:
-        full_name:
-          type: string
-          minLength: 1
-          maxLength: 255
-        edo_provider:
-          type: string
-          minLength: 1
-          maxLength: 255
-        edo_id:
-          type: string
-          minLength: 1
-          maxLength: 255
-        phone:
-          type: string
-          minLength: 1
-          maxLength: 32
-        inn:
-          type: string
-          pattern: "^\\d{12}$"
-        ogrnip:
-          type: string
-          pattern: "^\\d{15}$"
-        legal_address:
-          type: string
-          minLength: 1
-          maxLength: 500
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-          minLength: 8
-
-    RegisterResponse:
-      type: object
-      required: [id, email, first_name, last_name, created_at, email_verification_required]
-      properties:
-        id:
-          type: string
-          format: uuid
-        email:
-          type: string
-        first_name:
-          type: string
-        last_name:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-        email_verification_required:
-          type: boolean
-
-    MessageResponse:
-      type: object
-      required: [message]
-      properties:
-        message:
-          type: string
-
-    VerifyEmailRequest:
-      type: object
-      required: [token]
-      properties:
-        token:
-          type: string
-          minLength: 16
-          maxLength: 256
-
-    ResendVerificationRequest:
-      type: object
-      required: [email]
-      properties:
-        email:
-          type: string
-          format: email
-
-    ForgotPasswordRequest:
-      type: object
-      required: [email]
-      properties:
-        email:
-          type: string
-          format: email
-
-    ResetPasswordRequest:
-      type: object
-      required: [token, password]
-      properties:
-        token:
-          type: string
-          minLength: 16
-          maxLength: 256
-        password:
-          type: string
-          minLength: 8
-
-    LoginRequest:
-      type: object
-      required: [email, password]
-      properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-
-    TokenResponse:
-      type: object
-      required: [access_token, token_type]
-      properties:
-        access_token:
-          type: string
-        token_type:
-          type: string
-          example: bearer
-
-    MeResponse:
-      type: object
-      required: [id, email, first_name, last_name, is_wholesaler, email_verified, created_at]
-      properties:
-        id:
-          type: string
-          format: uuid
-        email:
-          type: string
-        first_name:
-          type: string
-        last_name:
-          type: string
-        is_wholesaler:
-          type: boolean
-        email_verified:
-          type: boolean
-        created_at:
-          type: string
-          format: date-time
-
-    ErrorResponse:
-      type: object
-      properties:
-        detail:
-          type: string
-
-    CartLine:
-      type: object
-      required: [id, variant_id, quantity, unit_price_cents, line_total_cents, currency, product_snapshot]
-      properties:
-        id:
-          type: string
-          format: uuid
-        variant_id:
-          type: string
-          format: uuid
-        quantity:
-          type: integer
-        unit_price_cents:
-          type: integer
-        line_total_cents:
-          type: integer
-        currency:
-          type: string
-        product_snapshot:
-          type: object
-          description: Immutable product/variant snapshot at line creation time
-          properties:
-            variant_id:
-              type: string
-              format: uuid
-            sku:
-              type: string
-            name:
-              type: string
-            product_id:
-              type: string
-              format: uuid
-            product_name:
-              type: string
-            product_slug:
-              type: string
-            price_cents:
-              type: integer
-              description: Retail reference price at snapshot time
-            currency:
-              type: string
-            price_tier:
-              type: string
-              enum: [retail, wholesale]
-              description: Commercial tier applied to unit_price_cents (ADR-008)
-
-    CartResponse:
-      type: object
-      required: [id, status, subtotal_cents, total_cents, lines]
-      properties:
-        id:
-          type: string
-          format: uuid
-        status:
-          type: string
-        currency:
-          type: string
-          nullable: true
-        subtotal_cents:
-          type: integer
-        total_cents:
-          type: integer
-        lines:
-          type: array
-          items:
-            $ref: "#/components/schemas/CartLine"
-        created_at:
-          type: string
-          format: date-time
-          nullable: true
-        updated_at:
-          type: string
-          format: date-time
-          nullable: true
-
-    AddCartLineRequest:
-      type: object
-      required: [variant_id, quantity]
-      properties:
-        variant_id:
-          type: string
-          format: uuid
-        quantity:
-          type: integer
-          minimum: 1
-
-    UpdateCartLineRequest:
-      type: object
-      required: [quantity]
-      properties:
-        quantity:
-          type: integer
-          minimum: 0
-
-    CheckoutSessionResponse:
-      type: object
-      required: [id, cart_id, status, currency, subtotal_cents, total_cents, created_at, updated_at]
-      properties:
-        id:
-          type: string
-          format: uuid
-        cart_id:
-          type: string
-          format: uuid
-        status:
-          type: string
-        currency:
-          type: string
-        subtotal_cents:
-          type: integer
-        total_cents:
-          type: integer
-        order_number:
-          type: string
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    PaymentIntentResponse:
-      type: object
-      required: [client_secret, payment_intent_id]
-      properties:
-        client_secret:
-          type: string
-        payment_intent_id:
-          type: string
-
-    WebhookResponse:
-      type: object
-      required: [status]
-      properties:
-        status:
-          type: string
-
-    OrderSummary:
-      type: object
-      required: [id, order_number, status, currency, total_cents, created_at]
-      properties:
-        id:
-          type: string
-          format: uuid
-        order_number:
-          type: string
-        status:
-          type: string
-        currency:
-          type: string
-        total_cents:
-          type: integer
-        created_at:
-          type: string
-          format: date-time
-
-    OrderLine:
-      type: object
-      required: [id, variant_id, quantity, unit_price_cents, line_total_cents, product_snapshot]
-      properties:
-        id:
-          type: string
-          format: uuid
-        variant_id:
-          type: string
-          format: uuid
-        quantity:
-          type: integer
-        unit_price_cents:
-          type: integer
-        line_total_cents:
-          type: integer
-        product_snapshot:
-          type: object
-          description: Immutable product/variant snapshot at line creation time
-          properties:
-            variant_id:
-              type: string
-              format: uuid
-            sku:
-              type: string
-            name:
-              type: string
-            product_id:
-              type: string
-              format: uuid
-            product_name:
-              type: string
-            product_slug:
-              type: string
-            price_cents:
-              type: integer
-              description: Retail reference price at snapshot time
-            currency:
-              type: string
-            price_tier:
-              type: string
-              enum: [retail, wholesale]
-              description: Commercial tier applied to unit_price_cents (ADR-008)
-
-    OrderDetail:
-      type: object
-      required:
-        - id
-        - order_number
-        - status
-        - currency
-        - subtotal_cents
-        - discount_cents
-        - shipping_cents
-        - tax_cents
-        - total_cents
-        - created_at
-        - updated_at
-        - lines
-      properties:
-        id:
-          type: string
-          format: uuid
-        order_number:
-          type: string
-        status:
-          type: string
-        currency:
-          type: string
-        subtotal_cents:
-          type: integer
-        discount_cents:
-          type: integer
-        shipping_cents:
-          type: integer
-        tax_cents:
-          type: integer
-        total_cents:
-          type: integer
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        lines:
-          type: array
-          items:
-            $ref: "#/components/schemas/OrderLine"
-
-    OrderListResponse:
-      type: object
-      required: [items, total, page, limit]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/OrderSummary"
-        total:
-          type: integer
-        page:
-          type: integer
-        limit:
-          type: integer
-
-    AdminLoginRequest:
-      type: object
-      required: [email, password]
-      properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-          minLength: 8
-          maxLength: 128
-
-    AdminTokenResponse:
-      type: object
-      required: [access_token, token_type]
-      properties:
-        access_token:
-          type: string
-        token_type:
-          type: string
-          example: bearer
-
-    AdminMeResponse:
-      type: object
-      required: [id, email, role, permissions, created_at]
-      properties:
-        id:
-          type: string
-          format: uuid
-        email:
-          type: string
-          format: email
-        role:
-          type: string
-        permissions:
-          type: array
-          items:
-            type: string
-        created_at:
-          type: string
-          format: date-time
-
-    DashboardSummaryResponse:
-      type: object
-      required:
-        - orders_today
-        - orders_last_7_days
-        - revenue_last_7_days_cents
-        - low_stock_count
-        - orders_by_status
-      properties:
-        orders_today:
-          type: integer
-        orders_last_7_days:
-          type: integer
-        revenue_last_7_days_cents:
-          type: integer
-        low_stock_count:
-          type: integer
-        orders_by_status:
-          type: object
-          additionalProperties:
-            type: integer
-
-    AdminProductSchema:
-      type: object
-      required: [id, name, slug, price_cents, currency, in_stock, status]
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        slug:
-          type: string
-        price_cents:
-          type: integer
-        compare_at_price_cents:
-          type: integer
-          nullable: true
-        currency:
-          type: string
-        in_stock:
-          type: boolean
-        status:
-          type: string
-          enum: [draft, active, archived]
-        category_id:
-          type: string
-          format: uuid
-          nullable: true
-        description:
-          type: string
-          nullable: true
-        image_url:
-          type: string
-          nullable: true
-        variants:
-          type: array
-          items:
-            $ref: "#/components/schemas/ProductVariant"
-
-    AdminProductListResponse:
-      type: object
-      required: [items, total, page, limit]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/AdminProductSchema"
-        total:
-          type: integer
-        page:
-          type: integer
-        limit:
-          type: integer
-
-    AdminCreateProductRequest:
-      type: object
-      required: [name, slug, sku, price_cents]
-      properties:
-        name:
-          type: string
-        slug:
-          type: string
-        sku:
-          type: string
-        price_cents:
-          type: integer
-        currency:
-          type: string
-          default: USD
-        status:
-          type: string
-          enum: [draft, active, archived]
-          default: draft
-        compare_at_price_cents:
-          type: integer
-          nullable: true
-        category_id:
-          type: string
-          format: uuid
-          nullable: true
-
-    AdminCategoryListResponse:
-      type: object
-      required: [items, total]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/Category"
-        total:
-          type: integer
-
-    AdminCreateCategoryRequest:
-      type: object
-      required: [slug, name]
-      properties:
-        slug:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-          nullable: true
-        parent_id:
-          type: string
-          format: uuid
-          nullable: true
-        is_active:
-          type: boolean
-          default: true
-        sort_order:
-          type: integer
-          default: 0
-
-    AdminInventoryItemSchema:
-      type: object
-      required:
-        - variant_id
-        - sku
-        - product_name
-        - sync_source
-        - quantity_on_hand
-        - quantity_reserved
-        - available
-        - version
-        - is_low_stock
-      properties:
-        variant_id:
-          type: string
-          format: uuid
-        sku:
-          type: string
-        product_name:
-          type: string
-        sync_source:
-          type: string
-          enum: [manual, moysklad]
-        quantity_on_hand:
-          type: integer
-        quantity_reserved:
-          type: integer
-        available:
-          type: integer
-        version:
-          type: integer
-        is_low_stock:
-          type: boolean
-
-    AdminInventoryListResponse:
-      type: object
-      required: [items, total, page, limit, low_stock_threshold]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/AdminInventoryItemSchema"
-        total:
-          type: integer
-        page:
-          type: integer
-        limit:
-          type: integer
-        low_stock_threshold:
-          type: integer
-
-    AdminAdjustInventoryRequest:
-      type: object
-      required: [quantity_on_hand, reason, version]
-      properties:
-        quantity_on_hand:
-          type: integer
-          minimum: 0
-        reason:
-          type: string
-          enum: [restock, damage, correction, return]
-        version:
-          type: integer
-          minimum: 0
-
-    AdminOrderSummarySchema:
-      type: object
-      required:
-        - id
-        - order_number
-        - status
-        - currency
-        - total_cents
-        - created_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        order_number:
-          type: string
-        status:
-          type: string
-          enum: [confirmed, shipped, canceled]
-        currency:
-          type: string
-        total_cents:
-          type: integer
-        customer_email:
-          type: string
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-
-    AdminOrderStatusHistorySchema:
-      type: object
-      required: [id, to_status, changed_by, changed_at]
-      properties:
-        id:
-          type: string
-          format: uuid
-        from_status:
-          type: string
-          nullable: true
-        to_status:
-          type: string
-        changed_by:
-          type: string
-        reason:
-          type: string
-          nullable: true
-        changed_at:
-          type: string
-          format: date-time
-
-    AdminOrderDetailSchema:
-      type: object
-      required:
-        - id
-        - order_number
-        - status
-        - currency
-        - subtotal_cents
-        - discount_cents
-        - shipping_cents
-        - tax_cents
-        - total_cents
-        - created_at
-        - updated_at
-        - lines
-        - status_history
-      properties:
-        id:
-          type: string
-          format: uuid
-        order_number:
-          type: string
-        status:
-          type: string
-          enum: [confirmed, shipped, canceled]
-        currency:
-          type: string
-        subtotal_cents:
-          type: integer
-        discount_cents:
-          type: integer
-        shipping_cents:
-          type: integer
-        tax_cents:
-          type: integer
-        total_cents:
-          type: integer
-        customer_email:
-          type: string
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        lines:
-          type: array
-          items:
-            $ref: "#/components/schemas/OrderLine"
-        status_history:
-          type: array
-          items:
-            $ref: "#/components/schemas/AdminOrderStatusHistorySchema"
-
-    AdminOrderListResponse:
-      type: object
-      required: [items, total, page, limit]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/AdminOrderSummarySchema"
-        total:
-          type: integer
-        page:
-          type: integer
-        limit:
-          type: integer
-
-    AdminUpdateOrderStatusRequest:
-      type: object
-      required: [status]
-      properties:
-        status:
-          type: string
-          enum: [shipped, canceled]
-        reason:
-          type: string
-          maxLength: 500
-
-    AdminCustomerSchema:
-      type: object
-      required: [id, email, is_wholesaler, created_at]
-      properties:
-        id:
-          type: string
-          format: uuid
-        email:
-          type: string
-        is_wholesaler:
-          type: boolean
-        created_at:
-          type: string
-          format: date-time
-
-    AdminCustomerListResponse:
-      type: object
-      required: [items, total, page, limit]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/AdminCustomerSchema"
-        total:
-          type: integer
-        page:
-          type: integer
-        limit:
-          type: integer
-
-    AdminUpdateWholesalerRequest:
-      type: object
-      required: [is_wholesaler]
-      properties:
-        is_wholesaler:
-          type: boolean
-
-    MoySkladWebhookAckResponse:
-      type: object
-      required: [status, processed, skipped]
-      properties:
-        status:
-          type: string
-          enum: [ok, partial]
-        processed:
-          type: integer
-        skipped:
-          type: integer
-
-    MoySkladIntegrationStatusResponse:
-      type: object
-      required:
-        - configured
-        - read_only
-        - order_export_enabled
-        - webhooks_enabled
-        - pending_order_exports
-        - errors_last_24h
-      properties:
-        configured:
-          type: boolean
-        read_only:
-          type: boolean
-          default: true
-        order_export_enabled:
-          type: boolean
-        store_id:
-          type: string
-          nullable: true
-        webhooks_enabled:
-          type: boolean
-        pending_order_exports:
-          type: integer
-        last_full_sync_at:
-          type: string
-          format: date-time
-          nullable: true
-        last_incremental_sync_at:
-          type: string
-          format: date-time
-          nullable: true
-        last_error:
-          type: string
-          nullable: true
-        errors_last_24h:
-          type: integer
-
-    MoySkladPullResponse:
-      type: object
-      required: [status, direction]
-      properties:
-        status:
-          type: string
-        direction:
-          type: string
-          default: inbound
-        products_created:
-          type: integer
-        products_updated:
-          type: integer
-        variants_created:
-          type: integer
-        variants_updated:
-          type: integer
-        stock_rows_applied:
-          type: integer
-        errors:
-          type: array
-          items:
-            type: string
-
-    MoySkladStockPullResponse:
-      type: object
-      required: [status, direction, stock_rows_applied]
-      properties:
-        status:
-          type: string
-        direction:
-          type: string
-        stock_rows_applied:
-          type: integer
-        errors:
-          type: array
-          items:
-            type: string
-
-    MoySkladFullResyncResponse:
-      type: object
-      required: [status, direction]
-      properties:
-        status:
-          type: string
-        direction:
-          type: string
-        products_created:
-          type: integer
-        products_updated:
-          type: integer
-        variants_created:
-          type: integer
-        variants_updated:
-          type: integer
-        stock_rows_applied:
-          type: integer
-        order_exports_succeeded:
-          type: integer
-        errors:
-          type: array
-          items:
-            type: string
-
-    MoySkladWebhooksEnabledRequest:
-      type: object
-      required: [enabled]
-      properties:
-        enabled:
-          type: boolean
-
-    MoySkladCategoryMappingSchema:
-      type: object
-      required: [id, category_id, moysklad_folder_id, created_at]
-      properties:
-        id:
-          type: string
-          format: uuid
-        category_id:
-          type: string
-          format: uuid
-        moysklad_folder_id:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-
-    MoySkladCreateCategoryMappingRequest:
-      type: object
-      required: [category_id, moysklad_folder_id]
-      properties:
-        category_id:
-          type: string
-          format: uuid
-        moysklad_folder_id:
-          type: string
-          minLength: 1
-          maxLength: 64
-
-    MoySkladSyncLogSchema:
-      type: object
-      required: [id, direction, entity_type, status, created_at]
-      properties:
-        id:
-          type: string
-          format: uuid
-        direction:
-          type: string
-        entity_type:
-          type: string
-        entity_id:
-          type: string
-          nullable: true
-        status:
-          type: string
-        error_message:
-          type: string
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-
-    MoySkladSyncLogListResponse:
-      type: object
-      required: [items]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/MoySkladSyncLogSchema"
-
-    MoySkladOrderExportResponse:
-      type: object
-      required: [status]
-      properties:
-        status:
-          type: string
-        moysklad_order_id:
-          type: string
-          nullable: true
-        error:
-          type: string
-          nullable: true
-
-tags:
-  - name: catalog
-    description: Product catalog
-  - name: auth
-    description: Authentication and user management
-  - name: checkout
-    description: Cart and checkout
-  - name: orders
-    description: Order management
-  - name: payments
-    description: Payment processing
-  - name: admin
-    description: Admin backoffice (RBAC-protected)
-  - name: integrations
-    description: External ERP integrations (MoySklad)
+servers:
+- url: http://localhost:8000
+  description: Local development

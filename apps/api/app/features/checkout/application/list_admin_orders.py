@@ -15,6 +15,7 @@ class ListAdminOrdersUseCase:
         limit: int,
         status: OrderStatus | None,
         export_pending: bool = False,
+        q: str | None = None,
     ) -> tuple[list[AdminOrderListRow], int]:
         page = max(page, 1)
         limit = min(max(limit, 1), 100)
@@ -23,4 +24,5 @@ class ListAdminOrdersUseCase:
             limit=limit,
             status=status,
             export_pending=export_pending,
+            q=q,
         )

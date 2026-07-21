@@ -5,6 +5,7 @@ import uuid
 
 from app.features.checkout.domain.entities import (
     CheckoutSessionStatus,
+    OrderShippingDetails,
     PaymentRecordStatus,
 )
 from app.features.checkout.domain.ports import ICheckoutRepository, IStripeGateway, WebhookVerificationError
@@ -221,6 +222,15 @@ class WebhookService:
             total_cents=session.total_cents,
             payment_record_id=payment.id,
             lines=order_lines,
+            shipping=(
+                OrderShippingDetails(
+                    recipient_name=session.shipping_recipient_name,
+                    phone=session.shipping_phone,
+                    address=session.shipping_address,
+                )
+                if session.shipping_address
+                else None
+            ),
         )
 
         await self._repo.update_payment_record(

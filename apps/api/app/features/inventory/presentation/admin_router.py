@@ -40,6 +40,7 @@ def get_admin_inventory_repository(
 def _row_schema(row) -> AdminInventoryItemSchema:
     return AdminInventoryItemSchema(
         variant_id=row.variant_id,
+        product_id=row.product_id,
         sku=row.sku,
         product_name=row.product_name,
         sync_source=row.sync_source,

@@ -21,6 +21,8 @@ class AdminJwtTokenService:
         email: str,
         role: str,
         permissions: frozenset[str],
+        *,
+        is_active: bool,
     ) -> str:
         expire = datetime.now(timezone.utc) + timedelta(minutes=self._expire_minutes)
         payload = {
@@ -29,6 +31,7 @@ class AdminJwtTokenService:
             "scope": "admin",
             "role": role,
             "permissions": sorted(permissions),
+            "is_active": is_active,
             "exp": expire,
         }
         return jwt.encode(payload, self._secret_key, algorithm=self._algorithm)
@@ -37,6 +40,8 @@ class AdminJwtTokenService:
         try:
             payload = jwt.decode(token, self._secret_key, algorithms=[self._algorithm])
             if payload.get("scope") != "admin":
+                raise InvalidAdminTokenError()
+            if payload.get("is_active") is not True:
                 raise InvalidAdminTokenError()
             admin_id_raw = payload.get("sub")
             email = payload.get("email")

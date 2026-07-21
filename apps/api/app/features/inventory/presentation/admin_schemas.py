@@ -9,6 +9,7 @@ from app.features.inventory.domain.admin_ports import INVENTORY_ADJUST_REASONS
 
 class AdminInventoryItemSchema(BaseModel):
     variant_id: UUID
+    product_id: UUID
     sku: str
     product_name: str
     sync_source: str

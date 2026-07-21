@@ -10,6 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from app.core.client_ip import get_client_ip
 from app.core.config import settings
 
 # Module-level ContextVar so any code in the request lifecycle can read the
@@ -44,6 +45,7 @@ class CheckoutRateLimitMiddleware(BaseHTTPMiddleware):
     WEBHOOK_LIMIT = 100
     PAYMENT_INTENT_LIMIT = 10
     ADMIN_LOGIN_LIMIT = 10
+    ADMIN_MEDIA_UPLOAD_LIMIT = 20
     MUTATING_METHODS = {"POST", "PATCH", "DELETE"}
 
     def __init__(self, app) -> None:
@@ -66,14 +68,13 @@ class CheckoutRateLimitMiddleware(BaseHTTPMiddleware):
             return self.SEARCH_LIMIT
         if path == "/api/v1/admin/auth/login" and request.method == "POST":
             return self.ADMIN_LOGIN_LIMIT
+        if path == "/api/v1/admin/media/upload" and request.method == "POST":
+            return settings.admin_media_upload_limit_per_minute
         return None
 
     @staticmethod
     def _client_key(request: Request) -> str:
-        forwarded_for = request.headers.get("X-Forwarded-For")
-        if forwarded_for:
-            return forwarded_for.split(",", maxsplit=1)[0].strip()
-        return request.client.host if request.client else "unknown"
+        return get_client_ip(request)
 
     async def dispatch(
         self,

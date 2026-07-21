@@ -1,6 +1,7 @@
 """Get order detail for admin."""
 
 from app.features.checkout.domain.admin_ports import (
+    AdminOrderCustomerInfo,
     AdminOrderStatusHistoryEntry,
     IAdminOrdersRepository,
 )
@@ -14,5 +15,5 @@ class GetAdminOrderUseCase:
     async def execute(
         self,
         order_number: str,
-    ) -> tuple[Order, list[OrderLine], list[AdminOrderStatusHistoryEntry], str | None] | None:
+    ) -> tuple[Order, list[OrderLine], list[AdminOrderStatusHistoryEntry], AdminOrderCustomerInfo] | None:
         return await self._repository.get_order_detail(order_number)

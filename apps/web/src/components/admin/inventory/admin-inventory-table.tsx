@@ -9,14 +9,23 @@ import {
 import { MoySkladBadge } from "@/components/admin/moysklad/moysklad-badge";
 import { Badge } from "@/components/ui/badge";
 import type { AdminInventoryItem } from "@/lib/admin/inventory-shared";
+import {
+  buildAdminInventoryProductEditHref,
+  type AdminInventoryListParams,
+} from "@/lib/admin/inventory-list-url";
 import { isMoySkladSynced } from "@/lib/admin/moysklad";
 
 type AdminInventoryTableProps = {
   items: AdminInventoryItem[];
   lowStockThreshold: number;
+  listParams: AdminInventoryListParams;
 };
 
-export function AdminInventoryTable({ items, lowStockThreshold }: AdminInventoryTableProps) {
+export function AdminInventoryTable({
+  items,
+  lowStockThreshold,
+  listParams,
+}: AdminInventoryTableProps) {
   if (items.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -58,6 +67,12 @@ export function AdminInventoryTable({ items, lowStockThreshold }: AdminInventory
                   {item.is_low_stock ? <Badge variant="destructive">Низкий</Badge> : null}
                 </span>
               </AdminMobileCardRow>
+              <Link
+                href={buildAdminInventoryProductEditHref(item.product_id, listParams)}
+                className="text-sm text-primary hover:underline"
+              >
+                Открыть товар
+              </Link>
             </div>
           </AdminMobileCard>
         ))}
@@ -71,6 +86,7 @@ export function AdminInventoryTable({ items, lowStockThreshold }: AdminInventory
               <th className="px-4 py-3">На складе</th>
               <th className="px-4 py-3">Резерв</th>
               <th className="px-4 py-3">Доступно</th>
+              <th className="px-4 py-3">Действия</th>
             </tr>
           </thead>
           <tbody>
@@ -90,6 +106,14 @@ export function AdminInventoryTable({ items, lowStockThreshold }: AdminInventory
                     <span>{item.available}</span>
                     {item.is_low_stock ? <Badge variant="destructive">Низкий</Badge> : null}
                   </div>
+                </td>
+                <td className="px-4 py-3">
+                  <Link
+                    href={buildAdminInventoryProductEditHref(item.product_id, listParams)}
+                    className="text-primary hover:underline"
+                  >
+                    Товар
+                  </Link>
                 </td>
               </tr>
             ))}

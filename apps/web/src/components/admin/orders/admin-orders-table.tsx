@@ -14,6 +14,7 @@ type AdminOrdersTableProps = {
   orders: AdminOrderSummary[];
   getStatusLabel: (status: string) => string;
   showExportStatus?: boolean;
+  buildOrderHref?: (orderNumber: string) => string;
 };
 
 function ExportStatusBadge({ order }: { order: AdminOrderSummary }) {
@@ -38,7 +39,11 @@ export function AdminOrdersTable({
   orders,
   getStatusLabel,
   showExportStatus = false,
+  buildOrderHref,
 }: AdminOrdersTableProps) {
+  function orderHref(orderNumber: string): string {
+    return buildOrderHref?.(orderNumber) ?? `/admin/orders/${encodeURIComponent(orderNumber)}`;
+  }
   if (orders.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
@@ -54,7 +59,7 @@ export function AdminOrdersTable({
           <AdminMobileCard key={order.id}>
             <div className="space-y-2">
               <Link
-                href={`/admin/orders/${encodeURIComponent(order.order_number)}`}
+                href={orderHref(order.order_number)}
                 className="text-base font-semibold text-primary hover:underline"
               >
                 {order.order_number}
@@ -102,7 +107,7 @@ export function AdminOrdersTable({
               <tr key={order.id} className="border-b border-border/60">
                 <td className="px-4 py-3">
                   <Link
-                    href={`/admin/orders/${encodeURIComponent(order.order_number)}`}
+                    href={orderHref(order.order_number)}
                     className="font-medium text-primary hover:underline"
                   >
                     {order.order_number}

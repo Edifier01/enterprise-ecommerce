@@ -51,6 +51,10 @@ class AdminOrderDetailSchema(BaseModel):
     tax_cents: int
     total_cents: int
     customer_email: str | None
+    customer_name: str | None = None
+    customer_phone: str | None = None
+    shipping_address: str | None = None
+    is_wholesaler: bool = False
     moysklad_order_id: str | None = None
     created_at: datetime
     updated_at: datetime

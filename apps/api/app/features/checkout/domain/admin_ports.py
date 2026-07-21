@@ -29,6 +29,15 @@ ALLOWED_ORDER_STATUS_TRANSITIONS: dict[OrderStatus, frozenset[OrderStatus]] = {
 
 
 @dataclass(frozen=True, slots=True)
+class AdminOrderCustomerInfo:
+    email: str | None
+    name: str | None
+    phone: str | None
+    shipping_address: str | None
+    is_wholesaler: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class AdminOrderListRow:
     id: UUID
     order_number: str
@@ -59,6 +68,7 @@ class IAdminOrdersRepository(ABC):
         limit: int,
         status: OrderStatus | None,
         export_pending: bool = False,
+        q: str | None = None,
     ) -> tuple[list[AdminOrderListRow], int]:
         ...
 
@@ -66,7 +76,7 @@ class IAdminOrdersRepository(ABC):
     async def get_order_detail(
         self,
         order_number: str,
-    ) -> tuple[Order, list[OrderLine], list[AdminOrderStatusHistoryEntry], str | None] | None:
+    ) -> tuple[Order, list[OrderLine], list[AdminOrderStatusHistoryEntry], AdminOrderCustomerInfo] | None:
         ...
 
     @abstractmethod
@@ -77,5 +87,5 @@ class IAdminOrdersRepository(ABC):
         new_status: OrderStatus,
         changed_by: str,
         reason: str | None,
-    ) -> tuple[Order, list[OrderLine], list[AdminOrderStatusHistoryEntry], str | None]:
+    ) -> tuple[Order, list[OrderLine], list[AdminOrderStatusHistoryEntry], AdminOrderCustomerInfo]:
         ...

@@ -2,6 +2,7 @@
 
 from app.features.checkout.domain.admin_ports import (
     ALLOWED_ORDER_STATUS_TRANSITIONS,
+    AdminOrderCustomerInfo,
     AdminOrderStatusHistoryEntry,
     IAdminOrdersRepository,
     InvalidOrderStatusTransitionError,
@@ -27,7 +28,7 @@ class UpdateAdminOrderStatusUseCase:
         new_status: OrderStatus,
         changed_by: str,
         reason: str | None,
-    ) -> tuple[Order, list[OrderLine], list[AdminOrderStatusHistoryEntry], str | None]:
+    ) -> tuple[Order, list[OrderLine], list[AdminOrderStatusHistoryEntry], AdminOrderCustomerInfo]:
         existing = await self._repository.get_order_detail(order_number)
         if existing is None:
             raise OrderNotFoundError(order_number)

@@ -1,5 +1,6 @@
 export type AdminInventoryItem = {
   variant_id: string;
+  product_id: string;
   sku: string;
   product_name: string;
   sync_source: string;

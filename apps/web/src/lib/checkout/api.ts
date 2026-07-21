@@ -104,10 +104,19 @@ export function deleteCartLine(lineId: string): Promise<Cart> {
   });
 }
 
-export function createCheckoutSession(): Promise<CheckoutSession> {
+export type CheckoutShippingInput = {
+  recipient_name: string;
+  phone: string;
+  address: string;
+};
+
+export function createCheckoutSession(
+  shipping?: CheckoutShippingInput,
+): Promise<CheckoutSession> {
   return requestJson<CheckoutSession>("/api/v1/checkout/sessions", {
     method: "POST",
     headers: { "Idempotency-Key": createIdempotencyKey("checkout") },
+    body: JSON.stringify(shipping ? { shipping } : {}),
   });
 }
 

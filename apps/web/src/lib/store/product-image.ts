@@ -4,17 +4,14 @@ import { siteConfig } from "@/lib/store/site-config";
 export const PRODUCT_IMAGE_BLUR_DATA_URL =
   "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPjxyZWN0IGZpbGw9IiNlMmU4ZjAiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiLz48L3N2Zz4=";
 
-function readCdnBaseUrl(): string | null {
-  const raw =
-    process.env.NEXT_PUBLIC_CDN_URL?.trim() ||
-    process.env.NEXT_PUBLIC_MEDIA_BASE_URL?.trim() ||
-    "";
+function readMediaBaseUrl(): string | null {
+  const raw = process.env.NEXT_PUBLIC_MEDIA_BASE_URL?.trim() || "";
   return raw.length > 0 ? raw.replace(/\/$/, "") : null;
 }
 
 /**
  * Resolve product image URLs for storefront/admin display.
- * Relative API paths (/media/...) stay same-origin unless CDN base is configured.
+ * Absolute URLs and site-relative paths (/media/...) are returned as-is.
  */
 export function resolveProductImageUrl(src?: string | null): string {
   if (!src || src.trim().length === 0) {
@@ -26,9 +23,9 @@ export function resolveProductImageUrl(src?: string | null): string {
     return trimmed;
   }
 
-  const cdnBase = readCdnBaseUrl();
-  if (cdnBase) {
-    return `${cdnBase}/${trimmed.replace(/^\//, "")}`;
+  const mediaBase = readMediaBaseUrl();
+  if (mediaBase) {
+    return `${mediaBase}/${trimmed.replace(/^\//, "")}`;
   }
 
   return `/${trimmed.replace(/^\//, "")}`;

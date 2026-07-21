@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { cookies } from "next/headers";
 
 import { ADMIN_ACCESS_TOKEN_COOKIE } from "@/lib/admin/constants";
@@ -16,7 +17,8 @@ export async function getAdminAccessToken(): Promise<string | undefined> {
   return cookieStore.get(ADMIN_ACCESS_TOKEN_COOKIE)?.value;
 }
 
-export async function getCurrentAdmin(): Promise<AdminUser | null> {
+/** Deduped per request — layout + pages share one /me call. */
+export const getCurrentAdmin = cache(async (): Promise<AdminUser | null> => {
   const token = await getAdminAccessToken();
   if (!token) return null;
 
@@ -27,9 +29,9 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
 
   if (!res.ok) return null;
   return res.json();
-}
+});
 
-export async function getDashboardSummary(): Promise<DashboardSummary | null> {
+export const getDashboardSummary = cache(async (): Promise<DashboardSummary | null> => {
   const token = await getAdminAccessToken();
   if (!token) return null;
 
@@ -40,7 +42,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary | null> {
 
   if (!res.ok) return null;
   return res.json();
-}
+});
 
 export function buildAdminAuthCookieOptions(maxAgeSeconds = 60 * 30) {
   return {

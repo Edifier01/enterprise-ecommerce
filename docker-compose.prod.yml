@@ -31,8 +31,19 @@ services:
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-stripe}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-      MEDIA_UPLOAD_DIR: /app/uploads
-      MEDIA_PUBLIC_BASE_URL: https://${DOMAIN}/media
+      STOREFRONT_URL: https://${DOMAIN}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-console}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@${DOMAIN}}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      # Local media storage (persistent volume)
+      MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-https://${DOMAIN}/media}
+      MEDIA_UPLOAD_DIR: ${MEDIA_UPLOAD_DIR:-/app/uploads}
+      MEDIA_MAX_UPLOAD_BYTES: ${MEDIA_MAX_UPLOAD_BYTES:-5242880}
+      # MoySklad
       MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
       MOYSKLAD_STORE_ID: ${MOYSKLAD_STORE_ID:-}
       MOYSKLAD_RETAIL_PRICE_TYPE: ${MOYSKLAD_RETAIL_PRICE_TYPE:-Цена продажи}
@@ -43,11 +54,20 @@ services:
       MOYSKLAD_ORGANIZATION_ID: ${MOYSKLAD_ORGANIZATION_ID:-}
       MOYSKLAD_ORDER_EXPORT_ENABLED: ${MOYSKLAD_ORDER_EXPORT_ENABLED:-true}
       STOREFRONT_MIN_AVAILABLE_STOCK: ${STOREFRONT_MIN_AVAILABLE_STOCK:-3}
-    volumes:
-      - media_uploads:/app/uploads
+      ADMIN_LOW_STOCK_THRESHOLD: ${ADMIN_LOW_STOCK_THRESHOLD:-5}
+      ADMIN_INVENTORY_MANUAL_ADJUST_ENABLED: ${ADMIN_INVENTORY_MANUAL_ADJUST_ENABLED:-false}
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+      ADMIN_DEV_EMAIL: ${ADMIN_DEV_EMAIL:-}
+      ADMIN_DEV_PASSWORD: ${ADMIN_DEV_PASSWORD:-}
+      ADMIN_LOGIN_ALLOWED_IPS: ${ADMIN_LOGIN_ALLOWED_IPS:-}
+      ADMIN_LOGIN_MAX_ATTEMPTS: ${ADMIN_LOGIN_MAX_ATTEMPTS:-5}
+      ADMIN_LOGIN_LOCKOUT_MINUTES: ${ADMIN_LOGIN_LOCKOUT_MINUTES:-15}
+      ADMIN_MEDIA_UPLOAD_LIMIT_PER_MINUTE: ${ADMIN_MEDIA_UPLOAD_LIMIT_PER_MINUTE:-20}
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - media_uploads:/app/uploads
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
@@ -70,6 +90,7 @@ services:
         NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
     environment:
       API_INTERNAL_URL: http://api:8000
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       NODE_ENV: production
     depends_on:
       api:

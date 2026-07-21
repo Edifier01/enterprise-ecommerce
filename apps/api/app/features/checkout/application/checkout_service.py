@@ -6,6 +6,7 @@ from app.features.checkout.domain.entities import (
     Cart,
     CheckoutSession,
     CheckoutSessionStatus,
+    OrderShippingDetails,
 )
 from app.features.checkout.domain.ports import ICheckoutRepository, IStripeGateway, StripeGatewayError
 from app.features.checkout.application.cart_service import CartService
@@ -18,6 +19,10 @@ class CheckoutSessionNotFoundError(Exception):
 
 
 class EmptyCartError(Exception):
+    pass
+
+
+class MissingShippingDetailsError(Exception):
     pass
 
 
@@ -41,6 +46,7 @@ class CheckoutService:
         idempotency_key: str | None,
         *,
         is_wholesaler: bool = False,
+        shipping: OrderShippingDetails | None = None,
     ) -> CheckoutSession:
         if idempotency_key:
             existing = await self._repo.get_checkout_session_by_idempotency_key(idempotency_key)
@@ -54,6 +60,9 @@ class CheckoutService:
                     ],
                 )
                 return existing
+
+        if not is_wholesaler and shipping is None:
+            raise MissingShippingDetailsError("Shipping details are required for retail checkout")
 
         cart = await self._cart_service.validate_cart_for_checkout(cart, is_wholesaler=is_wholesaler)
 
@@ -69,6 +78,7 @@ class CheckoutService:
             subtotal_cents=subtotal,
             total_cents=subtotal,
             idempotency_key=idempotency_key,
+            shipping=shipping,
         )
 
         line_snapshots = [

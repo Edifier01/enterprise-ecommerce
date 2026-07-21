@@ -20,20 +20,20 @@ type AdminLoginFormProps = {
 };
 
 export function AdminLoginForm({ redirectTo = "/admin" }: AdminLoginFormProps) {
-  const [state, formAction, pending] = useActionState(adminLoginAction, initialState);
+  const [loginState, loginAction, loginPending] = useActionState(
+    adminLoginAction,
+    initialState,
+  );
 
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
         <CardTitle>Вход в админ-панель</CardTitle>
-        <CardDescription>
-          Доступ только для сотрудников магазина.
-        </CardDescription>
+        <CardDescription>Email и пароль администратора</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={formAction} className="flex flex-col gap-4">
+        <form action={loginAction} className="flex flex-col gap-4">
           <input type="hidden" name="redirect_to" value={redirectTo} />
-
           <div className="flex flex-col gap-2">
             <label htmlFor="admin-email" className="text-sm font-medium">
               Email
@@ -47,7 +47,6 @@ export function AdminLoginForm({ redirectTo = "/admin" }: AdminLoginFormProps) {
               className={adminInputClass}
             />
           </div>
-
           <div className="flex flex-col gap-2">
             <label htmlFor="admin-password" className="text-sm font-medium">
               Пароль
@@ -58,19 +57,17 @@ export function AdminLoginForm({ redirectTo = "/admin" }: AdminLoginFormProps) {
               type="password"
               autoComplete="current-password"
               required
-              maxLength={128}
+              minLength={8}
               className={adminInputClass}
             />
           </div>
-
-          {state.error ? (
+          {loginState.error ? (
             <p className="text-sm text-destructive" role="alert">
-              {state.error}
+              {loginState.error}
             </p>
           ) : null}
-
-          <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Вход..." : "Войти"}
+          <Button type="submit" disabled={loginPending} className="w-full">
+            {loginPending ? "Вход..." : "Войти"}
           </Button>
         </form>
       </CardContent>

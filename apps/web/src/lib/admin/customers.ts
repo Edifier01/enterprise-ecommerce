@@ -17,11 +17,15 @@ export type AdminCustomerList = {
 
 export async function listAdminCustomers(
   page = 1,
+  query?: string,
 ): Promise<AdminFetchResult<AdminCustomerList>> {
   const params = new URLSearchParams({
     page: String(page),
     limit: String(ADMIN_CUSTOMERS_PAGE_SIZE),
   });
+  if (query?.trim()) {
+    params.set("q", query.trim());
+  }
   return adminFetchResult<AdminCustomerList>(`/api/v1/admin/customers?${params}`);
 }
 

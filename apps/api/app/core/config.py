@@ -6,6 +6,8 @@ from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _JWT_DEV_DEFAULT = "dev-secret-change-in-production"
+_ADMIN_DEV_EMAIL_DEFAULT = "admin@localhost"
+_ADMIN_DEV_PASSWORD_DEFAULT = "admin12345"
 
 
 def _env_file_paths() -> tuple[str, ...]:
@@ -51,11 +53,25 @@ class Settings(BaseSettings):
     admin_low_stock_threshold: int = 5
     admin_inventory_manual_adjust_enabled: bool = False
     storefront_min_available_stock: int = 3
-    admin_dev_email: str = "admin@localhost"
-    admin_dev_password: str = "admin12345"
+    admin_dev_email: str = _ADMIN_DEV_EMAIL_DEFAULT
+    admin_dev_password: str = _ADMIN_DEV_PASSWORD_DEFAULT
     media_upload_dir: str = "uploads"
     media_max_upload_bytes: int = 5 * 1024 * 1024
     media_public_base_url: str = "http://localhost:8000/media"
+    admin_login_max_attempts: int = 5
+    admin_login_lockout_minutes: int = 15
+    admin_login_allowed_ips: list[str] = []
+    admin_media_upload_limit_per_minute: int = 20
+    trusted_proxy_hops: int = 0
+
+    @field_validator("admin_login_allowed_ips", mode="before")
+    @classmethod
+    def _parse_admin_login_allowed_ips(cls, value: object) -> object:
+        if isinstance(value, str):
+            if not value.strip():
+                return []
+            return [ip.strip() for ip in value.split(",") if ip.strip()]
+        return value
 
     # MoySklad integration (ADR-010)
     moysklad_api_token: SecretStr = SecretStr("")
@@ -88,17 +104,46 @@ class Settings(BaseSettings):
             return "stripe"
         return "stub"
 
+    def moysklad_enabled(self) -> bool:
+        return bool(self.moysklad_api_token.get_secret_value().strip())
+
     @model_validator(mode="after")
     def _validate_production_secrets(self) -> "Settings":
-        if self.environment == "production":
-            if self.jwt_secret_key.get_secret_value() == _JWT_DEV_DEFAULT:
-                raise ValueError(
-                    "jwt_secret_key must be changed from the development default before running in production."
-                )
-            if self.get_payment_provider() == "stub":
-                raise ValueError(
-                    "payment_provider=stub is not allowed in production."
-                )
+        if self.environment != "production":
+            return self
+
+        if self.jwt_secret_key.get_secret_value() == _JWT_DEV_DEFAULT:
+            raise ValueError(
+                "jwt_secret_key must be changed from the development default before running in production."
+            )
+        if self.get_payment_provider() == "stub":
+            raise ValueError(
+                "payment_provider=stub is not allowed in production."
+            )
+        if not self.media_public_base_url.strip():
+            raise ValueError(
+                "media_public_base_url is required in production."
+            )
+        if not self.media_public_base_url.startswith("https://"):
+            raise ValueError(
+                "media_public_base_url must use https in production."
+            )
+        if self.admin_dev_email == _ADMIN_DEV_EMAIL_DEFAULT:
+            raise ValueError(
+                "admin_dev_email must not use the development default in production."
+            )
+        if self.admin_dev_password == _ADMIN_DEV_PASSWORD_DEFAULT:
+            raise ValueError(
+                "admin_dev_password must not use the development default in production."
+            )
+        if self.moysklad_enabled() and not self.moysklad_webhook_secret.get_secret_value().strip():
+            raise ValueError(
+                "moysklad_webhook_secret is required in production when MOYSKLAD_API_TOKEN is set."
+            )
+        if "*" in self.cors_origins:
+            raise ValueError(
+                "cors_origins must not include '*' when credentials are enabled in production."
+            )
         return self
 
 

@@ -25,6 +25,11 @@ from app.features.catalog.domain.admin_ports import (
     VariantNotFoundError,
 )
 from app.features.catalog.domain.entities import Product
+from app.features.catalog.domain.merchandising_readiness import (
+    format_publish_blockers_ru,
+    get_moysklad_publish_blockers,
+    should_validate_moysklad_publish,
+)
 from app.features.catalog.infrastructure.persistence.admin_catalog_repository import (
     AdminCatalogRepository,
 )
@@ -196,6 +201,31 @@ async def admin_update_product(
             status_code=422,
             detail="compare_at_price_cents must be greater than price_cents",
         )
+
+    next_status = request.status if request.status is not None else existing.status
+    if request.clear_category:
+        next_category_id = None
+    elif request.category_id is not None:
+        next_category_id = request.category_id
+    else:
+        next_category_id = existing.category_id
+    next_image_url = request.image_url if request.image_url is not None else existing.image_url
+
+    if should_validate_moysklad_publish(
+        sync_source=existing.sync_source,
+        current_status=existing.status,
+        next_status=next_status,
+    ):
+        images = await image_repo.list_for_product(product_id)
+        blockers = get_moysklad_publish_blockers(
+            category_id=next_category_id,
+            image_url=next_image_url,
+            gallery_image_count=len(images),
+            variants=existing.variants,
+            image_option_colors=[img.option_color for img in images],
+        )
+        if blockers:
+            raise HTTPException(status_code=422, detail=format_publish_blockers_ru(blockers))
 
     try:
         product = await repo.update_product(

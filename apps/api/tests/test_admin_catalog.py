@@ -121,6 +121,19 @@ async def admin_catalog_client() -> AsyncGenerator[AsyncClient, None]:
                     option_color="Multicam",
                 )
             )
+            ms_draft_id = uuid.uuid4()
+            session.add(
+                ProductModel(
+                    id=ms_draft_id,
+                    name="MS Draft For Publish",
+                    slug="ms-draft-publish",
+                    price_cents=3000,
+                    currency="RUB",
+                    in_stock=True,
+                    status="draft",
+                    sync_source="moysklad",
+                )
+            )
             await session.commit()
         yield ac
     app.dependency_overrides.clear()
@@ -380,7 +393,7 @@ async def test_admin_delete_leaf_category(admin_catalog_client: AsyncClient) -> 
 async def test_admin_search_products_by_name(admin_catalog_client: AsyncClient) -> None:
     token = await _token(admin_catalog_client)
     response = await admin_catalog_client.get(
-        "/api/v1/admin/catalog/products?q=draft",
+        "/api/v1/admin/catalog/products?q=draft-product",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
@@ -624,3 +637,87 @@ async def test_admin_list_products_needs_color_photos_filter(
     assert filtered_after.status_code == 200
     slugs = [item["slug"] for item in filtered_after.json()["items"]]
     assert "multi-color-jacket" not in slugs
+
+
+@pytest.mark.asyncio
+async def test_admin_publish_moysklad_product_requires_merchandising(
+    admin_catalog_client: AsyncClient,
+) -> None:
+    token = await _token(admin_catalog_client)
+
+    category = await admin_catalog_client.post(
+        "/api/v1/admin/catalog/categories",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "slug": "publish-guard-cat",
+            "name": "Publish Guard Category",
+            "sort_order": 1,
+        },
+    )
+    assert category.status_code == 201
+    category_id = category.json()["id"]
+
+    listing = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products?q=ms-draft-publish",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert listing.status_code == 200
+    product_id = listing.json()["items"][0]["id"]
+
+    assigned = await admin_catalog_client.patch(
+        f"/api/v1/admin/catalog/products/{product_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"category_id": category_id},
+    )
+    assert assigned.status_code == 200
+
+    blocked = await admin_catalog_client.patch(
+        f"/api/v1/admin/catalog/products/{product_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"status": "active"},
+    )
+    assert blocked.status_code == 422
+    assert "нет фото" in blocked.json()["detail"]
+
+    with_photo = await admin_catalog_client.patch(
+        f"/api/v1/admin/catalog/products/{product_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"image_url": "https://cdn.example.com/ms-draft.jpg"},
+    )
+    assert with_photo.status_code == 200
+
+    published = await admin_catalog_client.patch(
+        f"/api/v1/admin/catalog/products/{product_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"status": "active"},
+    )
+    assert published.status_code == 200
+    assert published.json()["status"] == "active"
+
+
+@pytest.mark.asyncio
+async def test_admin_publish_moysklad_multicolor_requires_all_color_photos(
+    admin_catalog_client: AsyncClient,
+) -> None:
+    token = await _token(admin_catalog_client)
+
+    listing = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products?q=multi-color-jacket",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    product_id = listing.json()["items"][0]["id"]
+
+    draft = await admin_catalog_client.patch(
+        f"/api/v1/admin/catalog/products/{product_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"status": "draft"},
+    )
+    assert draft.status_code == 200
+
+    blocked = await admin_catalog_client.patch(
+        f"/api/v1/admin/catalog/products/{product_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"status": "active"},
+    )
+    assert blocked.status_code == 422
+    assert "не все цвета" in blocked.json()["detail"]

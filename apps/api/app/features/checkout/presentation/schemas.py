@@ -38,6 +38,16 @@ class UpdateCartLineRequest(BaseModel):
     quantity: int = Field(ge=0)
 
 
+class CheckoutShippingRequest(BaseModel):
+    recipient_name: str = Field(min_length=1, max_length=255)
+    phone: str = Field(min_length=5, max_length=32)
+    address: str = Field(min_length=5, max_length=2000)
+
+
+class CreateCheckoutSessionRequest(BaseModel):
+    shipping: CheckoutShippingRequest | None = None
+
+
 class CheckoutSessionResponse(BaseModel):
     id: UUID
     cart_id: UUID

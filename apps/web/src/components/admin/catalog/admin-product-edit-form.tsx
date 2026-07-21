@@ -52,9 +52,14 @@ function FieldError({
 type AdminProductEditFormProps = {
   product: AdminProduct;
   categories: AdminCategory[];
+  returnTo?: string;
 };
 
-export function AdminProductEditForm({ product, categories }: AdminProductEditFormProps) {
+export function AdminProductEditForm({
+  product,
+  categories,
+  returnTo = "/admin/catalog",
+}: AdminProductEditFormProps) {
   const boundAction = updateProductAction.bind(null, product.id);
   const [state, formAction, pending] = useActionState<CatalogActionState, FormData>(
     boundAction,
@@ -114,6 +119,7 @@ export function AdminProductEditForm({ product, categories }: AdminProductEditFo
         <CardContent>
           <form action={formAction} className="flex flex-col gap-4">
             <input type="hidden" name="sync_source" value={product.sync_source} />
+            <input type="hidden" name="return_to" value={returnTo} />
 
             <div className="relative aspect-square w-full max-w-xs overflow-hidden rounded-lg border bg-muted">
               <Image
@@ -257,7 +263,7 @@ export function AdminProductEditForm({ product, categories }: AdminProductEditFo
                 Сохранить и закрыть
               </Button>
               <Link
-                href="/admin/catalog"
+                href={returnTo}
                 className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
               >
                 Отмена

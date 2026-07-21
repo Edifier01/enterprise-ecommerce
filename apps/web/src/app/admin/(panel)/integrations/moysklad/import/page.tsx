@@ -6,6 +6,10 @@ import { MoySkladImportPanel } from "@/components/admin/integrations/moysklad-im
 import { buttonVariants } from "@/components/ui/button";
 import { listAdminCategories, listAdminProducts } from "@/lib/admin/catalog";
 import { getMoySkladStatus } from "@/lib/admin/integrations/moysklad";
+import {
+  ADMIN_PAGE_FORBIDDEN_MESSAGE,
+  adminHasPermission,
+} from "@/lib/admin/require-admin-permission";
 import { getCurrentAdmin } from "@/lib/admin/session";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +27,13 @@ export default async function MoySkladImportPage({
 }) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
+  if (!adminHasPermission(admin, "catalog:write")) {
+    return (
+      <p className="text-sm text-destructive" role="alert">
+        {ADMIN_PAGE_FORBIDDEN_MESSAGE}
+      </p>
+    );
+  }
 
   const { page: pageRaw } = await searchParams;
   const page = Math.max(1, Number.parseInt(pageRaw ?? "1", 10) || 1);

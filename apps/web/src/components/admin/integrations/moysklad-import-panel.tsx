@@ -23,7 +23,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminCategory, AdminProduct } from "@/lib/admin/catalog-shared";
 import { formatPrice, PRODUCT_STATUS_LABELS } from "@/lib/admin/catalog-shared";
-import { getGalleryColorCoverage } from "@/lib/admin/gallery-color-coverage";
+import { getMerchandisingChecklistItems } from "@/lib/admin/merchandising-readiness";
 import { cn } from "@/lib/utils";
 
 type MoySkladImportPanelProps = {
@@ -36,20 +36,7 @@ type MoySkladImportPanelProps = {
 };
 
 function MerchandisingChecklist({ product }: { product: AdminProduct }) {
-  const colorCoverage = getGalleryColorCoverage(product);
-  const hasPhoto =
-    Boolean(product.image_url?.trim()) || product.images.length > 0;
-  const colorPhotosDone =
-    colorCoverage.colors.length < 2 || !colorCoverage.needsColorPhotos;
-
-  const items = [
-    { label: "Категория", done: Boolean(product.category_id) },
-    { label: "Фото", done: hasPhoto },
-    ...(colorCoverage.colors.length >= 2
-      ? [{ label: "Цвета в галерее", done: colorPhotosDone }]
-      : []),
-    { label: "Опубликован", done: product.status === "active" },
-  ];
+  const items = getMerchandisingChecklistItems(product);
 
   return (
     <ul className="space-y-1 text-xs text-muted-foreground" aria-label="Чеклист оформления">
@@ -80,6 +67,8 @@ export function MoySkladImportPanel({
   const [bulkCategoryId, setBulkCategoryId] = useState("");
   const totalPages = getAdminTotalPages(total, pageSize);
   const allSelected = products.length > 0 && selectedIds.size === products.length;
+  const importReturnPath =
+    page > 1 ? `/admin/integrations/moysklad/import?page=${page}` : "/admin/integrations/moysklad/import";
 
   function toggleProduct(id: string) {
     setSelectedIds((current) => {
@@ -212,6 +201,7 @@ export function MoySkladImportPanel({
                   onToggleSelect={() => toggleProduct(product.id)}
                   onDone={handleDone}
                   layout="mobile"
+                  importReturnPath={importReturnPath}
                 />
               </AdminMobileCard>
             ))}
@@ -261,6 +251,7 @@ export function MoySkladImportPanel({
                     onToggleSelect={() => toggleProduct(product.id)}
                     onDone={handleDone}
                     layout="table"
+                    importReturnPath={importReturnPath}
                   />
                 ))}
               </tbody>
@@ -289,6 +280,7 @@ function ImportProductContent({
   onToggleSelect,
   onDone,
   layout,
+  importReturnPath,
 }: {
   product: AdminProduct;
   categories: AdminCategory[];
@@ -298,11 +290,13 @@ function ImportProductContent({
   onToggleSelect: () => void;
   onDone: (message: string | null) => void;
   layout: "mobile" | "table";
+  importReturnPath: string;
 }) {
   const [categoryId, setCategoryId] = useState("");
   const [, startTransition] = useTransition();
   const defaultVariant = product.variants.find((variant) => variant.is_default) ?? product.variants[0];
   const statusLabel = PRODUCT_STATUS_LABELS[product.status] ?? product.status;
+  const editHref = `/admin/catalog/${product.id}/edit?from=${encodeURIComponent(importReturnPath)}`;
 
   const actions = canWrite ? (
     <div className={cn("flex flex-wrap gap-2", layout === "mobile" && "pt-1")}>
@@ -320,7 +314,7 @@ function ImportProductContent({
         Назначить
       </Button>
       <Link
-        href={`/admin/catalog/${product.id}/edit`}
+        href={editHref}
         className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
       >
         Редактировать
@@ -343,7 +337,7 @@ function ImportProductContent({
   ) : (
     <div className={cn("flex flex-wrap gap-2", layout === "mobile" && "pt-1")}>
       <Link
-        href={`/admin/catalog/${product.id}/edit`}
+        href={editHref}
         className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
       >
         Просмотр

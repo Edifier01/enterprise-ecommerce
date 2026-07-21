@@ -167,6 +167,27 @@ async def test_viewer_cannot_update_wholesaler_returns_403(
 
 
 @pytest.mark.asyncio
+async def test_admin_list_customers_search_by_email(admin_customers_client: AsyncClient) -> None:
+    token = await _admin_token(admin_customers_client)
+
+    response = await admin_customers_client.get(
+        "/api/v1/admin/customers?q=customer@example.com",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["email"] == _CUSTOMER_EMAIL
+
+    empty = await admin_customers_client.get(
+        "/api/v1/admin/customers?q=missing@example.com",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert empty.status_code == 200
+    assert empty.json()["total"] == 0
+
+
+@pytest.mark.asyncio
 async def test_admin_customers_without_token_returns_401(
     admin_customers_client: AsyncClient,
 ) -> None:

@@ -30,6 +30,7 @@ from app.features.inventory.infrastructure.persistence.models import InventoryIt
 _DEFAULT_IN_STOCK_QUANTITY = 50
 _WHOLESALER_EMAIL = "wholesaler@example.com"
 _WHOLESALER_PASSWORD = "wholesale12345"
+_VIEWER_ADMIN_EMAIL = "viewer@example.com"
 
 # --- categories (root + children) -----------------------------------------
 _ROOT_CATEGORIES = [
@@ -183,6 +184,32 @@ async def _seed_admin_user(session: AsyncSession) -> None:
     await session.commit()
 
 
+async def _seed_viewer_admin(session: AsyncSession) -> None:
+    hasher = BcryptPasswordHasher()
+    password_hash = hasher.hash(settings.admin_dev_password)
+    existing = await session.scalar(
+        select(AdminUserModel).where(AdminUserModel.email == _VIEWER_ADMIN_EMAIL)
+    )
+    if existing:
+        existing.hashed_password = password_hash
+        existing.is_active = True
+        existing.role = "viewer"
+        await session.commit()
+        print(f"Refreshed viewer admin credentials: {_VIEWER_ADMIN_EMAIL}")
+        return
+
+    session.add(
+        AdminUserModel(
+            email=_VIEWER_ADMIN_EMAIL,
+            hashed_password=password_hash,
+            role="viewer",
+            is_active=True,
+        )
+    )
+    await session.commit()
+    print(f"Seeded viewer admin user: {_VIEWER_ADMIN_EMAIL}")
+
+
 async def _seed_wholesaler_user(session: AsyncSession) -> None:
     hasher = BcryptPasswordHasher()
     now = datetime.now(timezone.utc)
@@ -218,6 +245,7 @@ async def seed() -> None:
 
     async with session_factory() as session:
         await _seed_admin_user(session)
+        await _seed_viewer_admin(session)
         await _seed_wholesaler_user(session)
 
         count = await session.scalar(select(func.count()).select_from(ProductModel))

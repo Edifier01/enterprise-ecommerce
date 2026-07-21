@@ -1,47 +1,48 @@
-# Handoff
-
-## Current Agent
-
-Implementation Agent
-
-## Completed Work
-
-**Admin Panel UX Wave 7 (2026-07-20):**
-
-- `needs_color_photos` filter — products with 2+ colors and incomplete gallery tags
-- MoySklad status API: `needs_color_photos` count for dashboard alert
-- Gallery: per-color coverage panel, MS placeholder for all missing colors, reorder ↑↓, alt-text
-- Catalog tab «Фото по цветам» + dashboard «Требует внимания» link
-- Import queue: color-aware checklist + bulk «Опубликовать выбранным»
-- Product edit: «Посмотреть на витрине ↗» when active + categorized
-- Pytest: `test_admin_list_products_needs_color_photos_filter`
-- E2E: `admin-wave7-smoke.spec.ts`; multicolor seed in `seed_moysklad_e2e.py`
-
-## Files Changed
-
-| Area | Key paths |
-|------|-----------|
-| Backend | `color_gallery_coverage.py`, `admin_catalog_repository.py`, `admin_router.py`, moysklad `admin_router.py` |
-| Frontend gallery | `admin-product-gallery.tsx`, `gallery-color-coverage.ts` |
-| Import / dashboard | `moysklad-import-panel.tsx`, `admin-dashboard.tsx`, `catalog/page.tsx` |
-| Actions | `admin-moysklad.ts` (`bulkPublishMoySkladProductsAction`) |
-| Tests | `test_admin_catalog.py`, `admin-wave7-smoke.spec.ts`, `seed_moysklad_e2e.py` |
-
-## Known Issues
-
-- Migration 015 may still need `alembic upgrade head` on dev DB
-- `needs_color_photos` ID scan loads all products (acceptable for current catalog size)
-
-## Next Recommended Action
-
-1. `alembic upgrade head` on dev DB
-2. Final YooKassa payment integration (release gate)
-3. Real product photography / S3 CDN upload (production media backlog)
-
-## Workflow
-
-```
-Multi-color MS import → assign category → tag gallery by color (or MS placeholder per color) → publish
-Dashboard «Фото по цветам» → catalog filter → edit → coverage panel → storefront preview
-Import queue: bulk category assign (Wave 6) + bulk publish (Wave 7)
-```
+# Handoff
+
+## Current Agent
+
+Implementation Agent
+
+## Completed Work
+
+**Review follow-ups (2026-07-21):**
+
+1. **Security P1** — `get_client_ip()` with `TRUSTED_PROXY_HOPS`; production validators for admin creds + MoySklad webhook secret; webhook uses `hmac.compare_digest` + header-only secret
+2. **Migrations 018–019** — applied on local dev Postgres (`alembic upgrade head`)
+3. **E2E** — `fillCheckoutShipping()` helper; checkout-stub + wholesale-checkout specs updated
+4. **CI** — Alembic upgrade job + OpenAPI drift check in backend job
+5. **Cleanup** — duplicate ADR-008 marked superseded; TASKS Sprint E duplicates removed; MFA ops follow-ups removed
+6. **OpenAPI** — re-exported after webhook router change
+
+**Verification:** pytest **213 passed**, `tsc` clean, alembic head `019_admin_login_lockout` on dev DB
+
+## Files Changed
+
+| Area | Paths |
+|------|-------|
+| Core | `client_ip.py`, `config.py`, `middleware.py` |
+| Admin | `auth_router.py` |
+| MoySklad | `webhook_router.py` |
+| Tests | `test_production_config.py`, `test_client_ip.py`, `test_admin.py` |
+| E2E | `test-helpers.ts`, `checkout-stub-smoke.spec.ts`, `wholesale-checkout-smoke.spec.ts` |
+| CI | `.github/workflows/ci.yml` |
+| Docs/PM | `openapi.yaml`, `ADR-008-wholesale-pricing-and-customer-tier.md`, `.env.example`, `.env.production.example`, PM files |
+
+## Known Issues
+
+- YooKassa still not implemented (release gate)
+- Prod ops: run `alembic upgrade head` on production server
+- `ProductImageModel` still in moysklad module (P1 architecture debt)
+- Orphan MFA source files may still exist as untracked git entries on disk
+
+## Next Recommended Action
+
+1. Ops: `alembic upgrade head` on prod
+2. YooKassa integration sprint
+3. Move `ProductImageModel` to catalog module
+4. Shipping in MoySklad order export
+
+---
+
+**Previous:** Full project review (multi-agent audit)

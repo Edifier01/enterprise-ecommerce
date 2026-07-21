@@ -33,10 +33,28 @@ export async function adminLoginAction(
   });
 
   if (!res.ok) {
-    return { error: "Неверный email или пароль." };
+    if (res.status === 429) {
+      return {
+        error: "Слишком много попыток входа. Подождите и попробуйте снова.",
+      };
+    }
+    if (res.status === 403) {
+      return { error: "Вход с этого адреса запрещён." };
+    }
+    if (res.status === 401) {
+      return { error: "Неверный email или пароль." };
+    }
+    if (res.status >= 500) {
+      return { error: "Сервер временно недоступен. Попробуйте позже." };
+    }
+    return { error: "Не удалось выполнить вход." };
   }
 
-  const data = (await res.json()) as { access_token: string };
+  const data = (await res.json()) as { access_token?: string };
+  if (!data.access_token) {
+    return { error: "Не удалось выполнить вход." };
+  }
+
   const cookieStore = await cookies();
   cookieStore.set(
     ADMIN_ACCESS_TOKEN_COOKIE,

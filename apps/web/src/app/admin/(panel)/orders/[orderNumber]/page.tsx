@@ -4,6 +4,11 @@ import { notFound, redirect } from "next/navigation";
 
 import { AdminOrderDetail } from "@/components/admin/orders/admin-order-detail";
 import { getAdminOrder } from "@/lib/admin/orders";
+import { getAdminOrdersReturnLabel, parseAdminReturnPath } from "@/lib/admin/orders-list-url";
+import {
+  ADMIN_PAGE_FORBIDDEN_MESSAGE,
+  adminHasPermission,
+} from "@/lib/admin/require-admin-permission";
 import { getCurrentAdmin } from "@/lib/admin/session";
 
 export const metadata: Metadata = {
@@ -13,13 +18,24 @@ export const metadata: Metadata = {
 
 type PageProps = {
   params: Promise<{ orderNumber: string }>;
+  searchParams: Promise<{ from?: string }>;
 };
 
-export default async function AdminOrderDetailPage({ params }: PageProps) {
+export default async function AdminOrderDetailPage({ params, searchParams }: PageProps) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
+  if (!adminHasPermission(admin, "admin:read")) {
+    return (
+      <p className="text-sm text-destructive" role="alert">
+        {ADMIN_PAGE_FORBIDDEN_MESSAGE}
+      </p>
+    );
+  }
 
   const { orderNumber } = await params;
+  const { from } = await searchParams;
+  const returnTo = parseAdminReturnPath(from);
+  const backLabel = getAdminOrdersReturnLabel(returnTo);
   const orderResult = await getAdminOrder(orderNumber);
   if (!orderResult.ok) {
     if (orderResult.status === 404) notFound();
@@ -38,10 +54,10 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
     <div className="space-y-6">
       <div>
         <Link
-          href="/admin/orders"
+          href={returnTo}
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          ← К списку заказов
+          {backLabel}
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">
           Заказ {order.order_number}

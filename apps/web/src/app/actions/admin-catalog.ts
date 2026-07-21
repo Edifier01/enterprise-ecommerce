@@ -6,7 +6,9 @@ import { redirect } from "next/navigation";
 import { CATEGORIES_CACHE_TAG } from "@/lib/cache-tags";
 
 import { parseAdminApiError } from "@/lib/admin/parse-api-error";
+import { parseAdminReturnPath } from "@/lib/admin/catalog-list-url";
 import { parseOptionalRubles, parseRequiredRubles } from "@/lib/admin/money";
+import { requireAdminPermission } from "@/lib/admin/require-admin-permission";
 import { getAdminAccessToken } from "@/lib/admin/session";
 import { siteConfig } from "@/lib/store/site-config";
 
@@ -32,6 +34,11 @@ async function adminMutate(
   method: string,
   body: unknown,
 ): Promise<{ ok: true; data: unknown } | { ok: false; error: CatalogActionState }> {
+  const auth = await requireAdminPermission("catalog:write");
+  if (!auth.ok) {
+    return { ok: false, error: { error: auth.error } };
+  }
+
   const token = await getAdminAccessToken();
   if (!token) {
     return { ok: false, error: { error: "Требуется вход в админ-панель." } };
@@ -133,6 +140,11 @@ function buildProductBody(
 }
 
 function catalogListRedirectPath(formData: FormData): string {
+  const returnTo = formData.get("return_to");
+  if (typeof returnTo === "string") {
+    return parseAdminReturnPath(returnTo, "/admin/catalog?all=1");
+  }
+
   const categoryId = formData.get("category_id");
   if (typeof categoryId === "string" && categoryId) {
     return `/admin/catalog?category_id=${categoryId}`;
@@ -261,6 +273,11 @@ export async function updateCategoryDetailsAction(
 }
 
 export async function deleteCategoryAction(categoryId: string): Promise<CatalogActionState> {
+  const auth = await requireAdminPermission("catalog:write");
+  if (!auth.ok) {
+    return { error: auth.error };
+  }
+
   const token = await getAdminAccessToken();
   if (!token) {
     return { error: "Требуется вход в админ-панель." };
@@ -384,6 +401,11 @@ export async function updateVariantAction(
 export async function uploadAdminMediaAction(
   formData: FormData,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const auth = await requireAdminPermission("catalog:write");
+  if (!auth.ok) {
+    return { ok: false, error: auth.error };
+  }
+
   const token = await getAdminAccessToken();
   if (!token) {
     return { ok: false, error: "Требуется вход в админ-панель." };
@@ -392,6 +414,11 @@ export async function uploadAdminMediaAction(
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
     return { ok: false, error: "Выберите файл изображения." };
+  }
+
+  const maxUploadBytes = 5 * 1024 * 1024;
+  if (file.size > maxUploadBytes) {
+    return { ok: false, error: "Файл слишком большой (максимум 5 МБ)." };
   }
 
   const body = new FormData();
@@ -451,6 +478,11 @@ export async function deleteProductImageAction(
   imageId: string,
   productId: string,
 ): Promise<CatalogActionState> {
+  const auth = await requireAdminPermission("catalog:write");
+  if (!auth.ok) {
+    return { error: auth.error };
+  }
+
   const token = await getAdminAccessToken();
   if (!token) {
     return { error: "Требуется вход в админ-панель." };

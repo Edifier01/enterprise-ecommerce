@@ -17,7 +17,7 @@ export function AdminSidebar({ admin }: AdminSidebarProps) {
         <p className="text-xs text-muted-foreground">{admin.role}</p>
       </div>
 
-      <AdminSidebarNav />
+      <AdminSidebarNav permissions={admin.permissions} />
 
       <form action={adminLogoutAction} className="border-t border-border p-3">
         <button

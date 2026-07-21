@@ -2,9 +2,14 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
+import { AdminCustomersSearch } from "@/components/admin/customers/admin-customers-search";
 import { AdminCustomersTable } from "@/components/admin/customers/admin-customers-table";
 import { ADMIN_CUSTOMERS_PAGE_SIZE } from "@/lib/admin/catalog";
 import { listAdminCustomers } from "@/lib/admin/customers";
+import {
+  ADMIN_PAGE_FORBIDDEN_MESSAGE,
+  adminHasPermission,
+} from "@/lib/admin/require-admin-permission";
 import { getCurrentAdmin } from "@/lib/admin/session";
 
 export const metadata: Metadata = {
@@ -13,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 type PageProps = {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; q?: string }>;
 };
 
 function parsePage(raw: string | undefined): number {
@@ -26,10 +31,18 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
   if (!admin) {
     redirect("/admin/login");
   }
+  if (!adminHasPermission(admin, "customers:read")) {
+    return (
+      <p className="text-sm text-destructive" role="alert">
+        {ADMIN_PAGE_FORBIDDEN_MESSAGE}
+      </p>
+    );
+  }
 
-  const { page: pageRaw } = await searchParams;
+  const { page: pageRaw, q } = await searchParams;
   const page = parsePage(pageRaw);
-  const customersResult = await listAdminCustomers(page);
+  const query = q?.trim() ?? "";
+  const customersResult = await listAdminCustomers(page, query || undefined);
 
   if (!customersResult.ok) {
     return (
@@ -43,7 +56,11 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
   const totalPages = getAdminTotalPages(data.total, ADMIN_CUSTOMERS_PAGE_SIZE);
 
   function buildHref(nextPage: number) {
-    return nextPage > 1 ? `/admin/customers?page=${nextPage}` : "/admin/customers";
+    const params = new URLSearchParams();
+    if (nextPage > 1) params.set("page", String(nextPage));
+    if (query) params.set("q", query);
+    const queryString = params.toString();
+    return queryString ? `/admin/customers?${queryString}` : "/admin/customers";
   }
 
   return (
@@ -55,6 +72,8 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
           через форму для оптовиков ({data.total} всего).
         </p>
       </header>
+
+      <AdminCustomersSearch defaultQuery={query} />
 
       <AdminCustomersTable customers={data.items} />
       <AdminPagination page={page} totalPages={totalPages} buildHref={buildHref} />

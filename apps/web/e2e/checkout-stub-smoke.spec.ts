@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { addPrimaryProductToCart, cartCheckoutButton, primaryAddToCartButton } from "./test-helpers";
+import { addPrimaryProductToCart, cartCheckoutButton, fillCheckoutShipping, primaryAddToCartButton } from "./test-helpers";
 
 /**
  * Full guest checkout via dev payment stub (ADR-006).
@@ -23,6 +23,7 @@ test.describe("Checkout stub smoke", () => {
     await expect(
       page.getByRole("heading", { name: "Оформление заказа" }),
     ).toBeVisible();
+    await fillCheckoutShipping(page);
     await page.getByRole("button", { name: "Перейти к оплате" }).click();
 
     await expect(

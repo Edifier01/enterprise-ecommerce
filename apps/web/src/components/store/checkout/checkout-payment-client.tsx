@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StripePaymentForm } from "@/components/store/checkout/checkout-stripe-payment-form";
 import {
+  CheckoutShippingForm,
+  readCheckoutShippingFromForm,
+} from "@/components/store/checkout/checkout-shipping-form";
+import {
   createCheckoutSession,
   createPaymentIntent,
   getCheckoutErrorMessage,
@@ -36,6 +40,7 @@ export function CheckoutPaymentClient() {
   const resolvedMode = resolvePaymentMode();
   const [cart, setCart] = useState<Cart | null>(null);
   const [payment, setPayment] = useState<PaymentState | null>(null);
+  const shippingFormId = "checkout-shipping-form";
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [stripeModule, setStripeModule] = useState<{
@@ -77,11 +82,12 @@ export function CheckoutPaymentClient() {
 
   const currency = cart?.currency ?? cart?.lines[0]?.currency ?? "USD";
 
-  function preparePayment() {
+  function preparePayment(form: HTMLFormElement) {
     setError(null);
     startTransition(async () => {
       try {
-        const session = await createCheckoutSession();
+        const shipping = readCheckoutShippingFromForm(form);
+        const session = await createCheckoutSession(shipping);
         const intent = await createPaymentIntent(session.id);
         setPayment({
           sessionId: session.id,
@@ -144,25 +150,62 @@ export function CheckoutPaymentClient() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      {resolvedMode === "stub" ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 lg:col-span-2">
+          Тестовый режим оплаты: реальный платёжный провайдер не используется.
+        </p>
+      ) : null}
       <Card>
         <CardHeader>
-          <CardTitle>Оплата</CardTitle>
+          <CardTitle>Доставка</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-5">
-          {resolvedMode === "stub" ? (
-            <p className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              Тестовый режим оплаты: реальный платёжный провайдер не используется.
-            </p>
-          ) : null}
+        <CardContent>
+          <form
+            id={shippingFormId}
+            className="space-y-5"
+            onSubmit={(event) => {
+              event.preventDefault();
+              preparePayment(event.currentTarget);
+            }}
+          >
+            <CheckoutShippingForm disabled={Boolean(payment) || isPending} />
+            {!payment ? (
+              <div className="space-y-4 border-t pt-4">
+                <p className="text-sm text-muted-foreground">
+                  {resolvedMode === "stripe"
+                    ? "После проверки адреса откроется защищённая Stripe Payment Element форма."
+                    : "После проверки адреса откроется тестовая форма оплаты."}
+                </p>
+                {resolvedMode === "stripe" && !publishableKey ? (
+                  <p className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+                    Не задан `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`. Оплата недоступна.
+                  </p>
+                ) : null}
+                {error ? <p className="text-sm text-destructive">{error}</p> : null}
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={
+                    isPending || (resolvedMode === "stripe" && !publishableKey)
+                  }
+                  className="bg-store-cta text-store-cta-foreground hover:bg-store-cta/90"
+                >
+                  {isPending ? "Готовим оплату..." : "Перейти к оплате"}
+                </Button>
+              </div>
+            ) : null}
+          </form>
 
           {payment && resolvedMode === "stripe" && stripePromise && elementsOptions ? (
-            <StripePaymentForm
-              sessionId={payment.sessionId}
-              stripePromise={stripePromise}
-              elementsOptions={elementsOptions}
-            />
+            <div className="mt-6 border-t pt-6">
+              <StripePaymentForm
+                sessionId={payment.sessionId}
+                stripePromise={stripePromise}
+                elementsOptions={elementsOptions}
+              />
+            </div>
           ) : payment && resolvedMode === "stub" ? (
-            <div className="space-y-4">
+            <div className="mt-6 space-y-4 border-t pt-6">
               <p className="text-sm text-muted-foreground">
                 Нажмите кнопку ниже, чтобы симулировать успешную оплату и создать заказ.
               </p>
@@ -177,32 +220,7 @@ export function CheckoutPaymentClient() {
                 {isPending ? "Подтверждаем..." : "Оплатить (тест)"}
               </Button>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                {resolvedMode === "stripe"
-                  ? "На следующем шаге откроется защищённая Stripe Payment Element форма. Данные карты не проходят через сервер магазина."
-                  : "На следующем шаге откроется тестовая форма оплаты без реального провайдера."}
-              </p>
-              {resolvedMode === "stripe" && !publishableKey ? (
-                <p className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
-                  Не задан `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`. Оплата недоступна.
-                </p>
-              ) : null}
-              {error ? <p className="text-sm text-destructive">{error}</p> : null}
-              <Button
-                type="button"
-                size="lg"
-                disabled={
-                  isPending || (resolvedMode === "stripe" && !publishableKey)
-                }
-                className="bg-store-cta text-store-cta-foreground hover:bg-store-cta/90"
-                onClick={preparePayment}
-              >
-                {isPending ? "Готовим оплату..." : "Перейти к оплате"}
-              </Button>
-            </div>
-          )}
+          ) : null}
         </CardContent>
       </Card>
 

@@ -20,12 +20,16 @@ export async function listAdminOrders(
   page = 1,
   status?: string,
   exportPending = false,
+  q?: string,
 ): Promise<AdminFetchResult<AdminOrderList>> {
   const params = new URLSearchParams({ page: String(page), limit: String(ADMIN_ORDERS_PAGE_SIZE) });
   if (exportPending) {
     params.set("export_pending", "true");
   } else if (status) {
     params.set("status", status);
+  }
+  if (q?.trim()) {
+    params.set("q", q.trim());
   }
   return adminFetchResult<AdminOrderList>(`/api/v1/admin/orders?${params}`);
 }

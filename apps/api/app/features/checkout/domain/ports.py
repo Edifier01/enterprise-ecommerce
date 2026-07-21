@@ -10,6 +10,7 @@ from app.features.checkout.domain.entities import (
     CheckoutSessionLine,
     Order,
     OrderLine,
+    OrderShippingDetails,
     PaymentIntentResult,
     PaymentRecord,
     ProductSnapshot,
@@ -84,6 +85,7 @@ class ICheckoutRepository(ABC):
         subtotal_cents: int,
         total_cents: int,
         idempotency_key: str | None,
+        shipping: OrderShippingDetails | None = None,
     ) -> CheckoutSession:
         pass
 
@@ -190,6 +192,7 @@ class ICheckoutRepository(ABC):
         total_cents: int,
         payment_record_id: UUID,
         lines: list[tuple[UUID, int, int, int, ProductSnapshot]],
+        shipping: OrderShippingDetails | None = None,
     ) -> Order:
         pass
 

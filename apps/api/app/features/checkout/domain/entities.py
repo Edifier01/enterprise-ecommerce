@@ -131,6 +131,13 @@ class CheckoutSessionLine:
         return self.unit_price_cents * self.quantity
 
 
+@dataclass(frozen=True)
+class OrderShippingDetails:
+    recipient_name: str
+    phone: str
+    address: str
+
+
 @dataclass
 class CheckoutSession:
     id: UUID
@@ -140,10 +147,13 @@ class CheckoutSession:
     currency: str
     subtotal_cents: int
     total_cents: int
-    idempotency_key: str | None
-    stripe_payment_intent_id: str | None
     created_at: datetime
     updated_at: datetime
+    idempotency_key: str | None = None
+    stripe_payment_intent_id: str | None = None
+    shipping_recipient_name: str | None = None
+    shipping_phone: str | None = None
+    shipping_address: str | None = None
 
 
 @dataclass
@@ -181,6 +191,9 @@ class Order:
     payment_record_id: UUID
     created_at: datetime
     updated_at: datetime
+    shipping_recipient_name: str | None = None
+    shipping_phone: str | None = None
+    shipping_address: str | None = None
     moysklad_order_id: str | None = None
 
 

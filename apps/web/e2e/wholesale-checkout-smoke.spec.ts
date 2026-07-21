@@ -4,6 +4,7 @@ import {
   addPrimaryProductToCart,
   cartCheckoutButton,
   ensureCartEmpty,
+  fillCheckoutShipping,
   loginAsWholesaler,
   productDetailPanel,
 } from "./test-helpers";
@@ -31,6 +32,7 @@ test.describe("Wholesale checkout smoke", () => {
     await cartCheckoutButton(page).click();
     await page.waitForURL("**/checkout");
 
+    await fillCheckoutShipping(page);
     await page.getByRole("button", { name: "Перейти к оплате" }).click();
     await expect(
       page.getByText("Тестовый режим оплаты: реальный платёжный провайдер не используется."),

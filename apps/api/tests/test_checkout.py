@@ -6,6 +6,7 @@ from collections.abc import AsyncGenerator
 
 from tests.auth_helpers import mark_user_email_verified
 from tests.auth_payloads import retail_register_payload
+from tests.checkout_helpers import RETAIL_SHIPPING_JSON
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -231,6 +232,7 @@ async def test_create_checkout_session(checkout_client: AsyncClient) -> None:
     )
     response = await checkout_client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-1"},
     )
     assert response.status_code == 201
@@ -239,6 +241,21 @@ async def test_create_checkout_session(checkout_client: AsyncClient) -> None:
     assert data["total_cents"] == 2500
     assert data["currency"] == "USD"
     assert data["status"] == "open"
+
+
+@pytest.mark.asyncio
+async def test_create_checkout_session_requires_shipping_for_retail(
+    checkout_client: AsyncClient,
+) -> None:
+    await checkout_client.post(
+        "/api/v1/cart/lines",
+        json={"variant_id": str(_VARIANT_ID), "quantity": 1},
+    )
+    response = await checkout_client.post(
+        "/api/v1/checkout/sessions",
+        headers={"Idempotency-Key": "checkout-key-no-shipping"},
+    )
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio
@@ -252,6 +269,7 @@ async def test_create_checkout_session_reserves_inventory(
     )
     response = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-reserve"},
     )
     assert response.status_code == 201
@@ -295,6 +313,7 @@ async def test_checkout_session_insufficient_inventory_returns_409(
 
     response = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-insufficient"},
     )
     assert response.status_code == 409
@@ -309,6 +328,7 @@ async def test_create_payment_intent_with_fake_gateway(checkout_client: AsyncCli
     )
     session_resp = await checkout_client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-2"},
     )
     session_id = session_resp.json()["id"]
@@ -334,6 +354,7 @@ async def test_payment_failed_releases_inventory_reservation(
     )
     session_resp = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-failed-release"},
     )
     session_id = session_resp.json()["id"]
@@ -374,6 +395,7 @@ async def test_order_not_created_before_webhook(
     )
     session_resp = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-3"},
     )
     session_id = session_resp.json()["id"]
@@ -400,6 +422,7 @@ async def test_webhook_success_creates_order(checkout_client_with_db: tuple) -> 
     )
     session_resp = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-4"},
     )
     session_id = session_resp.json()["id"]
@@ -448,6 +471,7 @@ async def test_duplicate_webhook_is_idempotent(checkout_client_with_db: tuple) -
     )
     session_resp = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-5"},
     )
     session_id = session_resp.json()["id"]
@@ -496,6 +520,7 @@ async def test_order_uses_frozen_lines_after_cart_mutation(
 
     session_resp = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-frozen"},
     )
     session_id = session_resp.json()["id"]
@@ -545,6 +570,7 @@ async def test_payment_intent_rejects_foreign_checkout_session(
     )
     session_resp = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-foreign"},
     )
     session_id = session_resp.json()["id"]
@@ -569,6 +595,7 @@ async def test_webhook_amount_mismatch_does_not_create_order(
     )
     session_resp = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-mismatch"},
     )
     session_id = session_resp.json()["id"]
@@ -622,6 +649,7 @@ async def test_checkout_uses_access_token_cookie_for_authenticated_cart(
     )
     session_resp = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-auth-cookie"},
     )
     session_id = session_resp.json()["id"]
@@ -662,6 +690,7 @@ async def test_checkout_session_refreshes_stale_cart_price(
 
     response = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-price-refresh"},
     )
     assert response.status_code == 201
@@ -725,6 +754,7 @@ async def test_stub_payment_intent_without_stripe_keys(
     )
     session_resp = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-stub-pi"},
     )
     session_id = session_resp.json()["id"]
@@ -750,6 +780,7 @@ async def test_stub_simulate_success_creates_order(
     )
     session_resp = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "checkout-key-stub-sim"},
     )
     session_id = session_resp.json()["id"]

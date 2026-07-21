@@ -1,12 +1,13 @@
 """Admin orders repository — list, detail, and status transitions."""
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.features.auth.infrastructure.persistence.models import UserModel
+from app.features.auth.infrastructure.persistence.models import UserModel, WholesalerProfileModel
 from app.features.checkout.domain.admin_ports import (
     ALLOWED_ORDER_STATUS_TRANSITIONS,
+    AdminOrderCustomerInfo,
     AdminOrderListRow,
     AdminOrderStatusHistoryEntry,
     IAdminOrdersRepository,
@@ -32,6 +33,34 @@ def _history_from_model(model: OrderStatusHistoryModel) -> AdminOrderStatusHisto
     )
 
 
+def _customer_info_from_row(
+    order: OrderModel,
+    user: UserModel | None,
+    profile: WholesalerProfileModel | None,
+) -> AdminOrderCustomerInfo:
+    email = (user.email if user else None) or order.guest_email
+    name: str | None = order.shipping_recipient_name
+    if profile is not None and not name:
+        name = profile.full_name
+    elif user is not None and not name:
+        parts = [user.first_name or "", user.last_name or ""]
+        joined = " ".join(part for part in parts if part).strip()
+        name = joined or None
+
+    phone = order.shipping_phone or (profile.phone if profile is not None else None)
+    shipping_address = order.shipping_address or (
+        profile.legal_address if profile is not None else None
+    )
+
+    return AdminOrderCustomerInfo(
+        email=email,
+        name=name,
+        phone=phone,
+        shipping_address=shipping_address,
+        is_wholesaler=bool(user and user.is_wholesaler),
+    )
+
+
 class AdminOrdersRepository(IAdminOrdersRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -43,6 +72,7 @@ class AdminOrdersRepository(IAdminOrdersRepository):
         limit: int,
         status: OrderStatus | None,
         export_pending: bool = False,
+        q: str | None = None,
     ) -> tuple[list[AdminOrderListRow], int]:
         offset = (page - 1) * limit
         filters = []
@@ -52,7 +82,21 @@ class AdminOrdersRepository(IAdminOrdersRepository):
         elif status is not None:
             filters.append(OrderModel.status == status.value)
 
-        count_stmt = select(func.count()).select_from(OrderModel)
+        if q is not None and q.strip():
+            term = f"%{q.strip()}%"
+            filters.append(
+                or_(
+                    OrderModel.order_number.ilike(term),
+                    UserModel.email.ilike(term),
+                    OrderModel.guest_email.ilike(term),
+                )
+            )
+
+        count_stmt = (
+            select(func.count())
+            .select_from(OrderModel)
+            .outerjoin(UserModel, OrderModel.customer_id == UserModel.id)
+        )
         stmt = (
             select(OrderModel, UserModel.email)
             .outerjoin(UserModel, OrderModel.customer_id == UserModel.id)
@@ -84,10 +128,11 @@ class AdminOrdersRepository(IAdminOrdersRepository):
     async def get_order_detail(
         self,
         order_number: str,
-    ) -> tuple[Order, list[OrderLine], list[AdminOrderStatusHistoryEntry], str | None] | None:
+    ) -> tuple[Order, list[OrderLine], list[AdminOrderStatusHistoryEntry], AdminOrderCustomerInfo] | None:
         result = await self._session.execute(
-            select(OrderModel, UserModel.email)
+            select(OrderModel, UserModel, WholesalerProfileModel)
             .outerjoin(UserModel, OrderModel.customer_id == UserModel.id)
+            .outerjoin(WholesalerProfileModel, WholesalerProfileModel.user_id == UserModel.id)
             .where(OrderModel.order_number == order_number)
             .options(
                 selectinload(OrderModel.lines),
@@ -98,13 +143,14 @@ class AdminOrdersRepository(IAdminOrdersRepository):
         if row is None:
             return None
 
-        model, customer_email = row
+        model, user, profile = row
         history = sorted(model.status_history, key=lambda entry: entry.changed_at)
+        customer = _customer_info_from_row(model, user, profile)
         return (
             _order_from_model(model),
             [_order_line_from_model(line) for line in model.lines],
             [_history_from_model(entry) for entry in history],
-            customer_email or model.guest_email,
+            customer,
         )
 
     async def update_order_status(

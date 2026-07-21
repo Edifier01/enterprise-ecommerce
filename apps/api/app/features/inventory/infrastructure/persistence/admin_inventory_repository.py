@@ -30,6 +30,7 @@ class AdminInventoryRepository(IAdminInventoryRepository):
         return (
             select(
                 InventoryItemModel,
+                ProductVariantModel.product_id,
                 ProductVariantModel.sku,
                 ProductModel.name.label("product_name"),
                 ProductModel.sync_source,
@@ -79,6 +80,7 @@ class AdminInventoryRepository(IAdminInventoryRepository):
         items = [
             AdminInventoryRow(
                 variant_id=item.variant_id,
+                product_id=product_id,
                 sku=sku,
                 product_name=product_name,
                 sync_source=sync_source,
@@ -88,7 +90,7 @@ class AdminInventoryRepository(IAdminInventoryRepository):
                 version=item.version,
                 is_low_stock=int(available_qty) <= low_stock_threshold,
             )
-            for item, sku, product_name, sync_source, available_qty in rows
+            for item, product_id, sku, product_name, sync_source, available_qty in rows
         ]
         return items, total
 
@@ -108,7 +110,7 @@ class AdminInventoryRepository(IAdminInventoryRepository):
         if row is None:
             raise InventoryItemNotFoundError(str(variant_id))
 
-        item, sku, product_name, sync_source, available_qty = row
+        item, product_id, sku, product_name, sync_source, available_qty = row
         if item.version != expected_version:
             raise VersionConflictError()
         if quantity_on_hand < item.quantity_reserved:
@@ -145,6 +147,7 @@ class AdminInventoryRepository(IAdminInventoryRepository):
         new_available = item.quantity_on_hand - item.quantity_reserved
         return AdminInventoryRow(
             variant_id=item.variant_id,
+            product_id=product_id,
             sku=sku,
             product_name=product_name,
             sync_source=sync_source,

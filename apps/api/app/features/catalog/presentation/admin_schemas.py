@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.features.catalog.domain.admin_ports import PRODUCT_STATUSES
+from app.features.catalog.domain.media_url import validate_admin_media_url
 from app.features.catalog.presentation.schemas import CategorySchema, ProductVariantSchema
 
 _SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -90,6 +91,13 @@ class AdminCreateProductRequest(BaseModel):
             raise ValueError("invalid product status")
         return value
 
+    @field_validator("image_url")
+    @classmethod
+    def validate_image_url(cls, value: str | None) -> str | None:
+        if value is None or value.strip() == "":
+            return None
+        return validate_admin_media_url(value)
+
 
 class AdminUpdateProductRequest(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
@@ -122,6 +130,13 @@ class AdminUpdateProductRequest(BaseModel):
             raise ValueError("invalid product status")
         return value
 
+    @field_validator("image_url")
+    @classmethod
+    def validate_image_url(cls, value: str | None) -> str | None:
+        if value is None or value.strip() == "":
+            return None
+        return validate_admin_media_url(value)
+
 
 class AdminCreateProductImageRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2048)
@@ -129,12 +144,24 @@ class AdminCreateProductImageRequest(BaseModel):
     option_color: str | None = Field(default=None, max_length=64)
     sort_order: int = Field(default=0, ge=0)
 
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, value: str) -> str:
+        return validate_admin_media_url(value)
+
 
 class AdminUpdateProductImageRequest(BaseModel):
     url: str | None = Field(default=None, min_length=1, max_length=2048)
     alt_text: str | None = Field(default=None, max_length=255)
     option_color: str | None = Field(default=None, max_length=64)
     sort_order: int | None = Field(default=None, ge=0)
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, value: str | None) -> str | None:
+        if value is None or value.strip() == "":
+            return None
+        return validate_admin_media_url(value)
 
 
 class AdminCreateVariantRequest(BaseModel):

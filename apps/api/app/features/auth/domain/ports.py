@@ -40,7 +40,13 @@ class IUserRepository(ABC):
         ...
 
     @abstractmethod
-    async def list_customers(self, page: int, limit: int) -> tuple[list[User], int]:
+    async def list_customers(
+        self,
+        page: int,
+        limit: int,
+        *,
+        q: str | None = None,
+    ) -> tuple[list[User], int]:
         """Return paginated customer users and total count."""
         ...
 

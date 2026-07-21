@@ -21,6 +21,24 @@ class IAdminUserRepository(ABC):
     async def get_by_email(self, email: str) -> AdminUser | None:
         ...
 
+    @abstractmethod
+    async def reset_login_attempts(self, admin_id: UUID) -> None:
+        ...
+
+    @abstractmethod
+    async def record_failed_login(
+        self,
+        admin_id: UUID,
+        *,
+        max_attempts: int,
+        lockout_minutes: int,
+    ) -> AdminUser | None:
+        ...
+
+    @abstractmethod
+    async def commit(self) -> None:
+        ...
+
 
 @dataclass(frozen=True, slots=True)
 class DashboardSummary:

@@ -17,9 +17,10 @@ from app.features.checkout.application.checkout_service import (
     CheckoutService,
     CheckoutSessionNotFoundError,
     EmptyCartError,
+    MissingShippingDetailsError,
 )
 from app.features.checkout.application.webhook_service import WebhookService
-from app.features.checkout.domain.entities import Cart
+from app.features.checkout.domain.entities import Cart, OrderShippingDetails
 from app.features.checkout.domain.ports import ICheckoutRepository, StripeGatewayError, WebhookVerificationError
 from app.features.checkout.presentation.dependencies import (
     get_cart_service,
@@ -33,6 +34,7 @@ from app.features.checkout.presentation.schemas import (
     AddCartLineRequest,
     CartLineSchema,
     CartResponse,
+    CreateCheckoutSessionRequest,
     CheckoutSessionResponse,
     PaymentIntentResponse,
     UpdateCartLineRequest,
@@ -212,6 +214,7 @@ async def delete_cart_line(
 )
 async def create_checkout_session(
     response: Response,
+    body: CreateCheckoutSessionRequest = CreateCheckoutSessionRequest(),
     session_token: str | None = Depends(resolve_cart_session_token),
     user: User | None = Depends(get_optional_current_user),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
@@ -220,15 +223,27 @@ async def create_checkout_session(
     repo: ICheckoutRepository = Depends(get_checkout_repository),
 ) -> CheckoutSessionResponse:
     cart = await _resolve_and_maybe_set_cookie(response, session_token, user, cart_service)
+    shipping = (
+        OrderShippingDetails(
+            recipient_name=body.shipping.recipient_name.strip(),
+            phone=body.shipping.phone.strip(),
+            address=body.shipping.address.strip(),
+        )
+        if body.shipping is not None
+        else None
+    )
     try:
         session = await checkout_service.create_checkout_session(
             cart=cart,
             user_id=user.id if user else None,
             idempotency_key=idempotency_key,
             is_wholesaler=_is_wholesaler(user),
+            shipping=shipping,
         )
     except EmptyCartError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    except MissingShippingDetailsError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     except (WholesalePriceUnavailableError, VariantNotPurchasableError) as exc:
         _raise_cart_errors(exc)
     except InsufficientInventoryError as exc:

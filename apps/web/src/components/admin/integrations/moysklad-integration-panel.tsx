@@ -95,7 +95,13 @@ export function MoySkladIntegrationPanel({
           </p>
           {status.pending_order_exports > 0 ? (
             <p className="text-amber-700">
-              Заказов без экспорта: {status.pending_order_exports}
+              Заказов без экспорта: {status.pending_order_exports}{" "}
+              <Link
+                href="/admin/orders?export_pending=1"
+                className="underline underline-offset-2"
+              >
+                Открыть
+              </Link>
             </p>
           ) : null}
           {status.pending_imports > 0 ? (

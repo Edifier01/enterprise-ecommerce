@@ -1,6 +1,8 @@
 # ADR-008: Wholesale Pricing and Customer Tier
 
-**Status:** Accepted  
+> **Superseded:** Canonical ADR is `ADR-008-wholesale-retail-pricing.md`. This file is retained for history only.
+
+**Status:** Superseded  
 **Date:** 2026-07-10
 
 ## Context

@@ -1,54 +1,35 @@
-"""Admin media upload routes — local filesystem storage (S3-ready URL contract)."""
-
-import uuid
-from pathlib import Path
+"""Admin media upload routes — local filesystem storage."""
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from app.core.config import settings
 from app.features.admin.domain.entities import AdminUser
+from app.features.admin.infrastructure.media.storage import MediaStorageService
 from app.features.admin.presentation.dependencies import require_permission
 
 router = APIRouter(prefix="/admin/media", tags=["admin"])
 
-_ALLOWED_CONTENT_TYPES = frozenset(
-    {
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-        "image/gif",
-    }
-)
-_EXTENSION_BY_TYPE = {
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/webp": ".webp",
-    "image/gif": ".gif",
-}
+
+def get_media_storage_service() -> MediaStorageService:
+    return MediaStorageService()
 
 
 @router.post("/upload", operation_id="adminUploadMedia")
 async def admin_upload_media(
     file: UploadFile = File(...),
     _admin: AdminUser = Depends(require_permission("catalog:write")),
+    storage: MediaStorageService = Depends(get_media_storage_service),
 ) -> dict[str, str]:
     content_type = file.content_type or ""
-    if content_type not in _ALLOWED_CONTENT_TYPES:
-        raise HTTPException(status_code=422, detail="Unsupported image type")
-
     data = await file.read()
     if len(data) == 0:
         raise HTTPException(status_code=422, detail="Empty file")
     if len(data) > settings.media_max_upload_bytes:
         raise HTTPException(status_code=422, detail="File too large")
-
-    upload_root = Path(settings.media_upload_dir)
-    upload_root.mkdir(parents=True, exist_ok=True)
-
-    extension = _EXTENSION_BY_TYPE[content_type]
-    filename = f"{uuid.uuid4().hex}{extension}"
-    destination = upload_root / filename
-    destination.write_bytes(data)
-
-    base = settings.media_public_base_url.rstrip("/")
-    return {"url": f"{base}/{filename}"}
+    try:
+        url = storage.store_bytes(data, content_type)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Media upload failed") from exc
+    return {"url": url}

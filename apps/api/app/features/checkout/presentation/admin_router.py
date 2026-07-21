@@ -12,6 +12,7 @@ from app.features.checkout.application.get_admin_order import GetAdminOrderUseCa
 from app.features.checkout.application.list_admin_orders import ListAdminOrdersUseCase
 from app.features.checkout.application.update_admin_order_status import UpdateAdminOrderStatusUseCase
 from app.features.checkout.domain.admin_ports import (
+    AdminOrderCustomerInfo,
     IAdminOrdersRepository,
     InvalidOrderStatusTransitionError,
     OrderNotFoundError,
@@ -46,7 +47,7 @@ def _detail_schema(
     order,
     lines,
     history,
-    customer_email: str | None,
+    customer: AdminOrderCustomerInfo,
 ) -> AdminOrderDetailSchema:
     return AdminOrderDetailSchema(
         id=order.id,
@@ -58,7 +59,11 @@ def _detail_schema(
         shipping_cents=order.shipping_cents,
         tax_cents=order.tax_cents,
         total_cents=order.total_cents,
-        customer_email=customer_email,
+        customer_email=customer.email,
+        customer_name=customer.name,
+        customer_phone=customer.phone,
+        shipping_address=customer.shipping_address,
+        is_wholesaler=customer.is_wholesaler,
         moysklad_order_id=order.moysklad_order_id,
         created_at=order.created_at,
         updated_at=order.updated_at,
@@ -93,6 +98,7 @@ async def admin_list_orders(
     limit: int = Query(default=20, ge=1, le=100),
     status: OrderStatus | None = Query(default=None),
     export_pending: bool = Query(default=False),
+    q: str | None = Query(default=None, max_length=200),
     _admin: AdminUser = Depends(require_permission("admin:read")),
     repo: IAdminOrdersRepository = Depends(get_admin_orders_repository),
 ) -> AdminOrderListResponse:
@@ -102,6 +108,7 @@ async def admin_list_orders(
         limit=limit,
         status=status,
         export_pending=export_pending,
+        q=q,
     )
     return AdminOrderListResponse(
         items=[
@@ -138,8 +145,8 @@ async def admin_get_order(
     if result is None:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    order, lines, history, customer_email = result
-    return _detail_schema(order, lines, history, customer_email)
+    order, lines, history, customer = result
+    return _detail_schema(order, lines, history, customer)
 
 
 @router.patch(
@@ -159,7 +166,7 @@ async def admin_update_order_status(
     use_case = UpdateAdminOrderStatusUseCase(repo, inventory_service)
 
     try:
-        order, lines, history, customer_email = await use_case.execute(
+        order, lines, history, customer = await use_case.execute(
             order_number=order_number,
             new_status=new_status,
             changed_by=admin.email,
@@ -183,4 +190,4 @@ async def admin_update_order_status(
         },
     )
     await session.commit()
-    return _detail_schema(order, lines, history, customer_email)
+    return _detail_schema(order, lines, history, customer)

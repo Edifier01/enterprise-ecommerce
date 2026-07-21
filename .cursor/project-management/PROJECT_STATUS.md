@@ -31,7 +31,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 **Overall roadmap:** ~99% (25/26 phases)
 
-**Phase 24 (application):** ~99% (Sprint E done; YooKassa pending)
+**Phase 24 (application):** ~85% functional / ~72% production-ready (review follow-ups 2026-07-21; YooKassa pending)
 
 ---
 
@@ -46,13 +46,33 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
-- [ ] Run migration 014 + catalog import on dev DB (Docker/Postgres)
+- [ ] Run migrations 018–019 on dev/prod DB
+- [ ] Set `MEDIA_PUBLIC_BASE_URL` in production `.env` and redeploy
 - [ ] Real product/category photography — BACKLOG
 - [ ] SMTP email delivery (production)
 - [ ] Final YooKassa payment integration
 
 ## Recently Completed
 
+- [x] **Review follow-ups** — security P1, CI alembic/OpenAPI, checkout E2E shipping, PM cleanup (2026-07-21)
+- [x] **Full project review** — architecture, security, QA/CI, devops, backend, frontend (2026-07-21); pytest 213 green
+- [x] **Admin P2 polish** — flaky test, viewer E2E, MFA 404 regression (2026-07-21)
+- [x] **Admin P1 hardening** — page RBAC, login UX, OpenAPI sync (2026-07-21)
+- [x] **Admin P0 security hardening** — lockout, IP allowlist, upload rate limit, `is_active` JWT (2026-07-21)
+- [x] **Admin MFA removed** — password-only login, migration 018, ADR-014 (2026-07-21)
+- [x] **Admin panel review** — P0/P1/P2 findings documented (2026-07-21)
+- [x] **Local server media storage** — S3 removed; Docker volume + `/media` proxy (2026-07-21)
+- [x] **Production S3/MFA configuration** — superseded by ADR-013 (2026-07-21)
+- [x] **Dev DB migrations 014–017** — Docker Postgres + alembic at head + seed_dev (2026-07-21)
+- [x] **Admin P3 hardening** — image URL validation, magic-byte uploads, MoySklad error sanitization (2026-07-21)
+- [x] **Admin P2 hardening** — S3 presign size, React cache dedupe, MFA QR/disable/regenerate (2026-07-21)
+- [x] **Admin P1 hardening** — MFA refresh UX, server-action permissions, permission-aware nav (2026-07-21)
+- [x] **Admin P0 security hardening** — MFA state machine, `ADMIN_MFA_REQUIRED` enforcement, MFA verify rate limit, production JWT fail-hard (2026-07-21)
+- [x] **Admin production hardening** — TOTP MFA, S3 presigned media, migration 017 (2026-07-20)
+- [x] **Catalog navigation UX** — category column + contextual back links (2026-07-20)
+- [x] **Catalog list RBAC** — write actions gated by `catalog:write` (2026-07-20)
+- [x] **Bulk publish merchandising guard** — photo/gallery API + action validation (2026-07-20)
+- [x] **Catalog landing UX fix** — duplicate import tile removed (2026-07-20)
 - [x] **Admin Panel UX Wave 7** — multi-color gallery merchandising, bulk publish (2026-07-20)
 - [x] **Admin Panel UX Wave 6** — bulk import assign, JWT middleware, login rate limit (2026-07-20)
 - [x] **Admin Panel UX Wave 5** — export_pending orders, adminFetch errors, import checklist (2026-07-20)
@@ -84,18 +104,21 @@ None.
 
 ## Next Actions
 
-1. Upload real product photos via admin `image_url`
-2. SMTP production delivery
-3. YooKassa provider integration (replace/refactor Stripe paths)
+1. `alembic upgrade head` (migration 018 — drop MFA columns)
+2. Set `MEDIA_PUBLIC_BASE_URL=https://DOMAIN/media` in `.env.production` and deploy
+3. Back up Docker volume `media_uploads` periodically
+4. Upload real product photos via admin gallery
+5. SMTP production delivery
+6. YooKassa provider integration (replace/refactor Stripe paths)
 
 ---
 
 ## Last Updated
 
-2026-07-20 (admin Wave 7)
+2026-07-21 (full project review)
 
 ---
 
 ## Last Agent
 
-Implementation Agent (homepage search UX)
+Implementation Agent (full project review)

@@ -6,6 +6,7 @@ from collections.abc import AsyncGenerator
 
 from tests.auth_helpers import mark_user_email_verified
 from tests.auth_payloads import retail_register_payload
+from tests.checkout_helpers import RETAIL_SHIPPING_JSON
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -91,6 +92,7 @@ async def _place_authenticated_order(client: AsyncClient) -> tuple[str, str]:
     )
     session_resp = await client.post(
         "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
         headers={"Idempotency-Key": "orders-checkout-key"},
     )
     assert session_resp.status_code == 201, session_resp.text

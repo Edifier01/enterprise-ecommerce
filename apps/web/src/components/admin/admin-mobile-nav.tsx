@@ -90,6 +90,7 @@ export function AdminMobileNav({ admin }: { admin: AdminUser }) {
             </div>
 
             <AdminSidebarNav
+              permissions={admin.permissions}
               onNavigate={() => setOpen(false)}
               className="overflow-y-auto p-3"
             />

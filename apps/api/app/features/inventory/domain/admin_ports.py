@@ -26,6 +26,7 @@ class InsufficientOnHandError(Exception):
 @dataclass(frozen=True, slots=True)
 class AdminInventoryRow:
     variant_id: UUID
+    product_id: UUID
     sku: str
     product_name: str
     sync_source: str

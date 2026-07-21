@@ -1,8 +1,9 @@
 """Public MoySklad webhook endpoint (inbound notifications only)."""
 
+import hmac
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,21 +27,22 @@ class WebhookAckResponse(BaseModel):
 def _verify_webhook_secret(provided: str | None) -> None:
     expected = settings.moysklad_webhook_secret.get_secret_value()
     if not expected:
+        if settings.environment == "production" and settings.moysklad_enabled():
+            raise HTTPException(status_code=503, detail="Webhook secret is not configured")
         return
-    if not provided or provided != expected:
+    if not provided or not hmac.compare_digest(provided, expected):
         raise HTTPException(status_code=401, detail="Invalid webhook secret")
 
 
 @router.post("/webhook", response_model=WebhookAckResponse, operation_id="moySkladWebhook")
 async def moysklad_webhook(
     request: Request,
-    secret: str | None = Query(default=None),
     session: AsyncSession = Depends(get_db_session),
     inventory_service: InventoryService = Depends(get_inventory_service),
 ) -> WebhookAckResponse:
     """Receive MoySklad change notifications. Site pulls updates — never writes to MS."""
     header_secret = request.headers.get("X-MoySklad-Webhook-Secret")
-    _verify_webhook_secret(secret or header_secret)
+    _verify_webhook_secret(header_secret)
 
     try:
         payload = await request.json()
