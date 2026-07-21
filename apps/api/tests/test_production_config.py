@@ -69,3 +69,17 @@ def test_production_requires_moysklad_webhook_secret_when_integration_enabled(
     monkeypatch.setenv("MOYSKLAD_WEBHOOK_SECRET", "")
     with pytest.raises(ValidationError, match="moysklad_webhook_secret"):
         Settings()
+
+
+def test_settings_accepts_empty_admin_login_allowed_ips_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ADMIN_LOGIN_ALLOWED_IPS", "")
+    settings = Settings()
+    assert settings.admin_login_allowed_ips == []
+
+
+def test_settings_parses_admin_login_allowed_ips_csv(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ADMIN_LOGIN_ALLOWED_IPS", "203.0.113.1, 198.51.100.2")
+    settings = Settings()
+    assert settings.admin_login_allowed_ips == ["203.0.113.1", "198.51.100.2"]

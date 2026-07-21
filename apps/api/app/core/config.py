@@ -2,12 +2,34 @@
 
 from pathlib import Path
 
-from pydantic import SecretStr, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _JWT_DEV_DEFAULT = "dev-secret-change-in-production"
 _ADMIN_DEV_EMAIL_DEFAULT = "admin@localhost"
 _ADMIN_DEV_PASSWORD_DEFAULT = "admin12345"
+
+
+def _parse_admin_login_allowed_ips_value(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(ip).strip() for ip in value if str(ip).strip()]
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped or stripped == "[]":
+            return []
+        if stripped.startswith("["):
+            import json
+
+            try:
+                parsed = json.loads(stripped)
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, list):
+                return [str(ip).strip() for ip in parsed if str(ip).strip()]
+        return [ip.strip() for ip in stripped.split(",") if ip.strip()]
+    return []
 
 
 def _env_file_paths() -> tuple[str, ...]:
@@ -60,18 +82,13 @@ class Settings(BaseSettings):
     media_public_base_url: str = "http://localhost:8000/media"
     admin_login_max_attempts: int = 5
     admin_login_lockout_minutes: int = 15
-    admin_login_allowed_ips: list[str] = []
+    admin_login_allowed_ips_env: str = Field(default="", validation_alias="ADMIN_LOGIN_ALLOWED_IPS")
     admin_media_upload_limit_per_minute: int = 20
     trusted_proxy_hops: int = 0
 
-    @field_validator("admin_login_allowed_ips", mode="before")
-    @classmethod
-    def _parse_admin_login_allowed_ips(cls, value: object) -> object:
-        if isinstance(value, str):
-            if not value.strip():
-                return []
-            return [ip.strip() for ip in value.split(",") if ip.strip()]
-        return value
+    @property
+    def admin_login_allowed_ips(self) -> list[str]:
+        return _parse_admin_login_allowed_ips_value(self.admin_login_allowed_ips_env)
 
     # MoySklad integration (ADR-010)
     moysklad_api_token: SecretStr = SecretStr("")
