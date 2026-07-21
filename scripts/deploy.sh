@@ -26,20 +26,17 @@ if [[ -z "${DOMAIN:-}" || -z "${JWT_SECRET_KEY:-}" || -z "${POSTGRES_PASSWORD:-}
   exit 1
 fi
 
-for var in MEDIA_PUBLIC_BASE_URL; do
-  if [[ -z "${!var:-}" ]]; then
-    echo "Missing required production variable: $var"
-    echo "See docs/PRODUCTION-MEDIA.md and .env.production.example"
-    exit 1
-  fi
-done
-
 export DOCKER_BUILDKIT=1
 export COMPOSE_DOCKER_CLI_BUILD=1
 
 log() {
   echo "[$(date -u +%H:%M:%S)] $*"
 }
+
+if [[ -z "${MEDIA_PUBLIC_BASE_URL:-}" ]]; then
+  export MEDIA_PUBLIC_BASE_URL="https://${DOMAIN}/media"
+  log "MEDIA_PUBLIC_BASE_URL not set; defaulting to https://${DOMAIN}/media"
+fi
 
 log "Pulling latest code..."
 git pull --ff-only origin master
