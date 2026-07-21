@@ -319,8 +319,6 @@ async def test_admin_login_ip_allowlist_ignores_spoofed_xff_without_trusted_prox
 async def test_admin_me_rejects_token_without_is_active_claim(
     admin_client: AsyncClient,
 ) -> None:
-    from datetime import datetime, timedelta, timezone
-
     from jose import jwt
 
     from app.core.config import settings

@@ -16,6 +16,10 @@ test.describe("Admin customers smoke", () => {
     await loginAsAdmin(page);
 
     await page.goto("/admin/catalog/categories");
+    const mobileMenu = page.getByRole("button", { name: "Меню админ-панели" });
+    if (await mobileMenu.isVisible()) {
+      await mobileMenu.click();
+    }
     const productsLink = page.getByRole("link", { name: "Товары" });
     await expect(productsLink).not.toHaveAttribute("aria-current", "page");
     await expect(page.getByRole("link", { name: "Категории" })).toHaveAttribute(

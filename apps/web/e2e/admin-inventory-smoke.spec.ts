@@ -21,14 +21,17 @@ test.describe("Admin inventory smoke", () => {
   test("inventory product link opens edit with return context", async ({ page }) => {
     await loginAsAdmin(page);
 
-    await page.goto("/admin/inventory?low_stock=true&q=STOCK");
-    const productLink = page.getByRole("link", { name: "Товар" }).first();
+    await page.goto("/admin/inventory?q=E2E-MS");
+    const productLink = page
+      .getByRole("main")
+      .getByRole("link", { name: /^(Товар|Открыть товар)$/ })
+      .first();
     if ((await productLink.count()) === 0) {
       test.skip(true, "No inventory rows in E2E seed");
     }
     await productLink.click();
     await expect(page).toHaveURL(/\/admin\/catalog\/[^/]+\/edit\?from=/);
-    await expect(page.getByRole("link", { name: "← Низкий остаток" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "← К результатам поиска" })).toBeVisible();
   });
 
   test("inventory SKU search preserves query in URL", async ({ page }) => {

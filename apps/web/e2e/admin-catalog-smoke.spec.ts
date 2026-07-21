@@ -62,14 +62,17 @@ test.describe("Admin catalog smoke", () => {
 
   test("catalog list shows category column and edit back link preserves filter", async ({ page }) => {
     await loginAsAdmin(page);
+    const main = page.getByRole("main");
+
+    await page.goto("/admin/catalog?all=1");
+    await expect(
+      main.getByText("Категория", { exact: true }).and(page.locator(":visible")).first(),
+    ).toBeVisible();
+
     await page.goto("/admin/catalog?all=1&needs_styling=1");
-
-    await expect(page.getByRole("columnheader", { name: "Категория" })).toBeVisible();
-
-    const editLink = page.getByRole("link", { name: "Изменить" }).first();
-    const hasProduct = await editLink.count();
-    if (hasProduct === 0) {
-      test.skip();
+    const editLink = main.getByRole("link", { name: "Изменить" }).first();
+    if ((await editLink.count()) === 0) {
+      test.skip(true, "No products needing styling in E2E seed");
       return;
     }
 
