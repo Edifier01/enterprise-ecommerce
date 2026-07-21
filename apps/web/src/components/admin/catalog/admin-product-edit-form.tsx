@@ -18,7 +18,7 @@ import { useToast } from "@/components/store/ui/toast-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminCategory, AdminProduct } from "@/lib/admin/catalog-shared";
-import { formatPrice } from "@/lib/admin/catalog-shared";
+import { formatPrice, getDefaultAdminVariant } from "@/lib/admin/catalog-shared";
 import { centsToRubles } from "@/lib/admin/money";
 import { isMoySkladSynced } from "@/lib/admin/moysklad";
 import { siteConfig } from "@/lib/store/site-config";
@@ -76,6 +76,7 @@ export function AdminProductEditForm({
   }, [state.success, showToast]);
 
   const msSynced = isMoySkladSynced(product.sync_source);
+  const defaultVariant = getDefaultAdminVariant(product);
   const imageSrc = product.image_url ?? product.erp_image_url ?? siteConfig.images.productPlaceholder;
   const colorOptions = getColorOptionsFromVariants(
     product.variants.map((variant) => ({
@@ -160,7 +161,7 @@ export function AdminProductEditForm({
               </div>
               <div className="flex flex-col gap-2">
                 <label htmlFor="price_rub" className="text-sm font-medium">
-                  Цена, ₽ {msSynced ? "(из МойСклад)" : ""}
+                  Розница, ₽ {msSynced ? "(из МойСклад)" : ""}
                 </label>
                 {msSynced ? (
                   <div className={readOnlyClass}>
@@ -177,6 +178,22 @@ export function AdminProductEditForm({
                     required
                     className={inputClass}
                   />
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">
+                  Опт, ₽ {msSynced ? "(из МойСклад)" : ""}
+                </label>
+                {msSynced ? (
+                  <div className={readOnlyClass}>
+                    {defaultVariant?.wholesale_price_cents != null
+                      ? formatPrice(defaultVariant.wholesale_price_cents, product.currency)
+                      : "—"}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Укажите оптовую цену в блоке вариантов ниже.
+                  </p>
                 )}
               </div>
               <div className="flex flex-col gap-2">

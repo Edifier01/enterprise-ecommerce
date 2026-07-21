@@ -18,11 +18,12 @@ import {
   AdminMobileCardRow,
 } from "@/components/admin/admin-mobile-card";
 import { AdminCascadingCategorySelect } from "@/components/admin/catalog/admin-cascading-category-select";
+import { AdminProductPrices } from "@/components/admin/catalog/admin-product-prices";
 import { MoySkladBadge } from "@/components/admin/moysklad/moysklad-badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminCategory, AdminProduct } from "@/lib/admin/catalog-shared";
-import { formatPrice, PRODUCT_STATUS_LABELS } from "@/lib/admin/catalog-shared";
+import { PRODUCT_STATUS_LABELS } from "@/lib/admin/catalog-shared";
 import { getMerchandisingChecklistItems } from "@/lib/admin/merchandising-readiness";
 import { cn } from "@/lib/utils";
 
@@ -226,7 +227,10 @@ export function MoySkladImportPanel({
                     Товар
                   </th>
                   <th scope="col" className="px-4 py-3">
-                    SKU / цена
+                    SKU
+                  </th>
+                  <th scope="col" className="px-4 py-3">
+                    Розница / опт
                   </th>
                   <th scope="col" className="px-4 py-3">
                     Оформление
@@ -382,7 +386,9 @@ function ImportProductContent({
           ) : null}
         </div>
         <AdminMobileCardRow label="SKU">{defaultVariant?.sku ?? "—"}</AdminMobileCardRow>
-        <AdminMobileCardRow label="Цена">{formatPrice(product.price_cents)}</AdminMobileCardRow>
+        <AdminMobileCardRow label="Розница / опт">
+          <AdminProductPrices product={product} />
+        </AdminMobileCardRow>
         <AdminMobileCardRow label="Статус">{statusLabel}</AdminMobileCardRow>
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground">Оформление</p>
@@ -422,11 +428,9 @@ function ImportProductContent({
           <span className="text-xs text-muted-foreground">{statusLabel}</span>
         </div>
       </td>
+      <td className="px-4 py-3 font-mono text-xs">{defaultVariant?.sku ?? "—"}</td>
       <td className="px-4 py-3">
-        <div className="flex flex-col gap-0.5">
-          <span className="font-mono text-xs">{defaultVariant?.sku ?? "—"}</span>
-          <span>{formatPrice(product.price_cents)}</span>
-        </div>
+        <AdminProductPrices product={product} />
       </td>
       <td className="px-4 py-3">{checklist}</td>
       <td className="min-w-[12rem] px-4 py-3">{categorySelect}</td>

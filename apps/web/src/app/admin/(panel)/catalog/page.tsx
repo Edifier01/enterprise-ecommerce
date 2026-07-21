@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { AdminCatalogCategoryPicker } from "@/components/admin/catalog/admin-catalog-category-picker";
 import { AdminCatalogSearch } from "@/components/admin/catalog/admin-catalog-search";
 import { AdminProductHideButton } from "@/components/admin/catalog/admin-product-hide-button";
+import { AdminProductPrices } from "@/components/admin/catalog/admin-product-prices";
 import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
 import {
   AdminDesktopTable,
@@ -16,6 +17,7 @@ import {
 import {
   ADMIN_CATALOG_PAGE_SIZE,
   formatPrice,
+  getAdminProductListPrices,
   listAdminCategories,
   listAdminProducts,
   PRODUCT_STATUS_LABELS,
@@ -130,26 +132,12 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Каталог</h1>
             <p className="text-sm text-muted-foreground">
-              Товары импортируются из МойСклад. Создайте категории и назначьте их в{" "}
+              Товары импортируются из МойСклад. Назначьте категории в{" "}
               <Link href="/admin/integrations/moysklad/import" className="text-foreground underline">
                 очереди импорта
-              </Link>
-              .
+              </Link>{" "}
+              (раздел «МойСклад» в меню).
             </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/admin/integrations/moysklad/import"
-              className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80"
-            >
-              Очередь импорта
-            </Link>
-            <Link
-              href="/admin/catalog/categories"
-              className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
-            >
-              Категории
-            </Link>
           </div>
         </div>
 
@@ -219,20 +207,6 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
               ? `Результаты поиска (${products.total})`
               : `${products.total} товаров`}
           </p>
-        </div>
-        <div className="flex gap-2">
-          <Link
-            href="/admin/integrations/moysklad/import"
-            className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80"
-          >
-            Очередь импорта
-          </Link>
-          <Link
-            href="/admin/catalog/categories"
-            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
-          >
-            Категории
-          </Link>
         </div>
       </div>
 
@@ -341,8 +315,8 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
                       <AdminMobileCardRow label="Категория">
                         {getProductCategoryName(product.category_id, categoryNames)}
                       </AdminMobileCardRow>
-                      <AdminMobileCardRow label="Цена">
-                        {formatPrice(product.price_cents, product.currency)}
+                      <AdminMobileCardRow label="Розница">
+                        <AdminProductPrices product={product} compact />
                       </AdminMobileCardRow>
                       {canWrite ? (
                         <>
@@ -374,13 +348,15 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
                   <th className="px-4 py-3">Slug</th>
                   <th className="px-4 py-3">Статус</th>
                   <th className="px-4 py-3">Категория</th>
-                  <th className="px-4 py-3">Цена</th>
+                  <th className="px-4 py-3">Розница</th>
+                  <th className="px-4 py-3">Опт</th>
                   {canWrite ? <th className="px-4 py-3">Действия</th> : null}
                 </tr>
               </thead>
               <tbody>
                 {products.items.map((product) => {
                   const image = productImageRenderProps(product.image_url);
+                  const { retailCents, wholesaleCents } = getAdminProductListPrices(product);
                   return (
                     <tr key={product.id} className="border-b border-border/60">
                       <td className="px-4 py-3">
@@ -410,7 +386,12 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
                         {getProductCategoryName(product.category_id, categoryNames)}
                       </td>
                       <td className="px-4 py-3">
-                        {formatPrice(product.price_cents, product.currency)}
+                        {formatPrice(retailCents, product.currency)}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {wholesaleCents != null
+                          ? formatPrice(wholesaleCents, product.currency)
+                          : "—"}
                       </td>
                       {canWrite ? (
                         <td className="px-4 py-3">

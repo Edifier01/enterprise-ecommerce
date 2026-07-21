@@ -83,3 +83,18 @@ export const PRODUCT_STATUS_LABELS: Record<string, string> = {
   active: "Активен",
   archived: "Архив",
 };
+
+export function getDefaultAdminVariant(product: AdminProduct) {
+  return product.variants.find((variant) => variant.is_default) ?? product.variants[0] ?? null;
+}
+
+export function getAdminProductListPrices(product: AdminProduct): {
+  retailCents: number;
+  wholesaleCents: number | null;
+} {
+  const variant = getDefaultAdminVariant(product);
+  return {
+    retailCents: variant?.price_cents ?? product.price_cents,
+    wholesaleCents: variant?.wholesale_price_cents ?? null,
+  };
+}

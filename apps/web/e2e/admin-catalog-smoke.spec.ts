@@ -31,11 +31,13 @@ test.describe("Admin catalog smoke", () => {
     await expect(page.getByRole("link", { name: "Все товары" })).toBeVisible();
   });
 
-  test("category picker shows import queue entry point", async ({ page }) => {
+  test("sidebar links import queue under MoySklad section", async ({ page }) => {
     await loginAsAdmin(page);
 
     await page.goto("/admin/catalog?view=categories");
-    await expect(page.getByRole("link", { name: "Очередь импорта" }).first()).toBeVisible();
+    await expect(
+      page.getByRole("navigation").getByRole("link", { name: "Очередь импорта" }),
+    ).toBeVisible();
     await expect(page.getByRole("link", { name: "Новый товар" })).toHaveCount(0);
   });
 

@@ -74,7 +74,7 @@ function VariantEditRow({
           )}
         </label>
         <label className="flex flex-col gap-1 text-xs">
-          Цена, ₽
+          Розница, ₽
           {msSynced ? (
             <div className={readOnlyClass}>{formatPrice(variant.price_cents)}</div>
           ) : (
@@ -204,7 +204,7 @@ export function AdminVariantPanel({ product }: AdminVariantPanelProps) {
               <input name="name" required className={inputClass} />
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              Цена, ₽
+              Розница, ₽
               <input name="price_rub" type="number" min={0} step={1} required className={inputClass} />
             </label>
             <label className="flex flex-col gap-1 text-xs">

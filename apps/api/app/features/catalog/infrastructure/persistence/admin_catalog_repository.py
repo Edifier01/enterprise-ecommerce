@@ -92,7 +92,11 @@ class AdminCatalogRepository(IAdminCatalogRepository):
             filters.append(ProductModel.category_id == category_id)
 
         count_stmt = select(func.count()).select_from(ProductModel)
-        stmt = select(ProductModel).order_by(ProductModel.updated_at.desc())
+        stmt = (
+            select(ProductModel)
+            .options(selectinload(ProductModel.variants))
+            .order_by(ProductModel.updated_at.desc())
+        )
         if filters:
             count_stmt = count_stmt.where(*filters)
             stmt = stmt.where(*filters)
@@ -101,7 +105,7 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         rows = (
             await self._session.scalars(stmt.offset(offset).limit(limit))
         ).all()
-        return [self._product_to_domain(row) for row in rows], total
+        return [self._product_to_domain(row, include_variants=True) for row in rows], total
 
     async def count_needs_color_photos(self) -> int:
         return len(await self._product_ids_needing_color_photos())

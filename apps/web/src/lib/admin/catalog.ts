@@ -25,6 +25,7 @@ export {
   ADMIN_INVENTORY_PAGE_SIZE,
   ADMIN_ORDERS_PAGE_SIZE,
   formatPrice,
+  getAdminProductListPrices,
   PRODUCT_STATUS_LABELS,
 } from "@/lib/admin/catalog-shared";
 
