@@ -22,7 +22,8 @@ test.describe("Admin MoySklad smoke", () => {
     ).toBeVisible();
 
     await expect(page.locator("#price_rub")).toHaveCount(0);
-    await expect(page.getByText("(из МойСклад)")).toBeVisible();
+    await expect(page.getByText("Розница, ₽ (из МойСклад)")).toBeVisible();
+    await expect(page.getByText("Опт, ₽ (из МойСклад)")).toBeVisible();
 
     await expect(page.locator('input[name="sku"]')).toHaveCount(0);
     await expect(page.getByText("E2E-MS-SKU-001")).toBeVisible();

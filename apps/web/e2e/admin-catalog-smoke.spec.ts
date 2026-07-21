@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { loginAsAdmin, loginAsViewerAdmin } from "./test-helpers";
+import { loginAsAdmin, loginAsViewerAdmin, openAdminNavIfMobile } from "./test-helpers";
 
 /**
  * Admin catalog smoke — MoySklad-only product workflow.
@@ -35,9 +35,8 @@ test.describe("Admin catalog smoke", () => {
     await loginAsAdmin(page);
 
     await page.goto("/admin/catalog?view=categories");
-    await expect(
-      page.getByRole("navigation").getByRole("link", { name: "Очередь импорта" }),
-    ).toBeVisible();
+    await openAdminNavIfMobile(page);
+    await expect(page.getByRole("link", { name: "Очередь импорта" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Новый товар" })).toHaveCount(0);
   });
 

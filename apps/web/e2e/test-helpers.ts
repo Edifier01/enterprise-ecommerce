@@ -32,6 +32,14 @@ export async function loginAsViewerAdmin(page: Page) {
   await expect(page).toHaveURL(/\/admin\/?$/, { timeout: 15_000 });
 }
 
+export async function openAdminNavIfMobile(page: Page) {
+  const mobileMenu = page.getByRole("button", { name: "Меню админ-панели" });
+  if (await mobileMenu.isVisible()) {
+    await mobileMenu.click();
+    await expect(page.getByRole("dialog", { name: "Навигация админ-панели" })).toBeVisible();
+  }
+}
+
 export async function loginAsWholesaler(page: Page) {
   await page.goto("/login");
   const form = page.locator("form").filter({ has: page.getByLabel("Email") }).first();
