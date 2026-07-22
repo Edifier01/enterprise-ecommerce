@@ -3,11 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { MoySkladImportPanel } from "@/components/admin/integrations/moysklad-import-panel";
+import { AdminFetchErrorState, AdminForbiddenState } from "@/components/admin/admin-error-state";
 import { buttonVariants } from "@/components/ui/button";
 import { listAdminCategories, listAdminProducts } from "@/lib/admin/catalog";
 import { getMoySkladStatus } from "@/lib/admin/integrations/moysklad";
 import {
-  ADMIN_PAGE_FORBIDDEN_MESSAGE,
   adminHasPermission,
 } from "@/lib/admin/require-admin-permission";
 import { getCurrentAdmin } from "@/lib/admin/session";
@@ -28,11 +28,7 @@ export default async function MoySkladImportPage({
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
   if (!adminHasPermission(admin, "catalog:write")) {
-    return (
-      <p className="text-sm text-destructive" role="alert">
-        {ADMIN_PAGE_FORBIDDEN_MESSAGE}
-      </p>
-    );
+    return <AdminForbiddenState />;
   }
 
   const { page: pageRaw } = await searchParams;
@@ -76,9 +72,10 @@ export default async function MoySkladImportPage({
       </div>
 
       {!productListResult.ok ? (
-        <p className="text-sm text-destructive" role="alert">
-          {productListResult.error}
-        </p>
+        <AdminFetchErrorState
+          message={productListResult.error}
+          retryHref="/admin/integrations/moysklad/import"
+        />
       ) : (
         <MoySkladImportPanel
           products={productListResult.data.items}

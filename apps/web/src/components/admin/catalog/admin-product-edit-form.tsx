@@ -70,7 +70,7 @@ export function AdminProductEditForm({
 
   useEffect(() => {
     if (state.success && !lastSuccessRef.current) {
-      showToast("Товар сохранён");
+      showToast({ tone: "success", message: "Товар сохранён" });
     }
     lastSuccessRef.current = Boolean(state.success);
   }, [state.success, showToast]);
@@ -118,7 +118,7 @@ export function AdminProductEditForm({
           <CardTitle>Редактирование товара</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="flex flex-col gap-4">
+          <form id="admin-product-form" action={formAction} className="flex flex-col gap-4">
             <input type="hidden" name="sync_source" value={product.sync_source} />
             <input type="hidden" name="return_to" value={returnTo} />
 
@@ -267,30 +267,33 @@ export function AdminProductEditForm({
                 {state.error}
               </p>
             )}
-
-            <div className="flex flex-wrap gap-3">
-              <Button type="submit" name="intent" value="stay" disabled={pending}>
-                {pending ? "Сохранение..." : "Сохранить"}
-              </Button>
-              <Button
-                type="submit"
-                name="intent"
-                value="close"
-                variant="outline"
-                disabled={pending}
-              >
-                Сохранить и закрыть
-              </Button>
-              <Link
-                href={returnTo}
-                className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
-              >
-                Отмена
-              </Link>
-            </div>
           </form>
         </CardContent>
       </Card>
+
+      <div className="sticky bottom-0 z-20 -mx-4 border-t bg-background/95 p-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-0 sm:rounded-lg sm:border md:sticky md:top-4 md:bottom-auto md:max-w-2xl">
+        <div className="flex flex-wrap gap-3">
+          <Button type="submit" form="admin-product-form" name="intent" value="stay" disabled={pending}>
+            {pending ? "Сохранение..." : "Сохранить"}
+          </Button>
+          <Button
+            type="submit"
+            form="admin-product-form"
+            name="intent"
+            value="close"
+            variant="outline"
+            disabled={pending}
+          >
+            Сохранить и закрыть
+          </Button>
+          <Link
+            href={returnTo}
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
+          >
+            Отмена
+          </Link>
+        </div>
+      </div>
 
       <AdminProductGallery
         productId={product.id}

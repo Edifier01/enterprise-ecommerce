@@ -57,7 +57,7 @@ function ImageColorSelect({
         option_color: nextColor || null,
       });
       if (result.error) {
-        showToast(result.error);
+      showToast({ tone: "error", message: result.error });
         return;
       }
       showToast("Цвет фото обновлён");
@@ -118,7 +118,7 @@ function ImageAltTextField({
     startTransition(async () => {
       const result = await updateProductImageAction(image.id, productId, { alt_text: next });
       if (result.error) {
-        showToast(result.error);
+      showToast({ tone: "error", message: result.error });
         return;
       }
       showToast("Alt-текст сохранён");

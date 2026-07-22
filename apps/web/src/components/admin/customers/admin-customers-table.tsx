@@ -1,81 +1,97 @@
 "use client";
 
+import { AdminDataTable, type AdminDataTableColumn } from "@/components/admin/admin-data-table";
+import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import {
-  AdminDesktopTable,
   AdminMobileCard,
-  AdminMobileCardList,
   AdminMobileCardRow,
 } from "@/components/admin/admin-mobile-card";
 import type { AdminCustomer } from "@/lib/admin/customers";
-import { siteConfig } from "@/lib/store/site-config";
+import { formatAdminDate } from "@/lib/admin/format";
 
 type AdminCustomersTableProps = {
   customers: AdminCustomer[];
+  searchQuery?: string;
 };
 
-export function AdminCustomersTable({ customers }: AdminCustomersTableProps) {
-  if (customers.length === 0) {
+function customerTypeLabel(isWholesaler: boolean): string {
+  return isWholesaler ? "Опт" : "Розница";
+}
+
+function CustomerTypeBadge({ isWholesaler }: { isWholesaler: boolean }) {
+  if (isWholesaler) {
     return (
-      <p className="text-sm text-muted-foreground">Зарегистрированных клиентов пока нет.</p>
+      <span className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+        Опт
+      </span>
     );
   }
 
-  return (
-    <>
-      <AdminMobileCardList>
-        {customers.map((customer) => (
-          <AdminMobileCard key={customer.id}>
-            <div className="space-y-2">
-              <p className="break-all text-sm font-medium">{customer.email}</p>
-              <AdminMobileCardRow label="Тип">
-                {customer.is_wholesaler ? (
-                  <span className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                    Опт
-                  </span>
-                ) : (
-                  <span className="font-normal text-muted-foreground">Розница</span>
-                )}
-              </AdminMobileCardRow>
-              <AdminMobileCardRow label="Регистрация">
-                <span className="font-normal text-muted-foreground">
-                  {new Date(customer.created_at).toLocaleDateString(siteConfig.locale)}
-                </span>
-              </AdminMobileCardRow>
-            </div>
-          </AdminMobileCard>
-        ))}
-      </AdminMobileCardList>
+  return <span className="text-muted-foreground">Розница</span>;
+}
 
-      <AdminDesktopTable>
-        <table className="w-full min-w-[480px] text-left text-sm">
-          <thead className="border-b border-border bg-muted/40">
-            <tr>
-              <th className="px-4 py-3 font-medium">Email</th>
-              <th className="px-4 py-3 font-medium">Тип</th>
-              <th className="px-4 py-3 font-medium">Регистрация</th>
-            </tr>
-          </thead>
-          <tbody>
-            {customers.map((customer) => (
-              <tr key={customer.id} className="border-b border-border last:border-0">
-                <td className="px-4 py-3">{customer.email}</td>
-                <td className="px-4 py-3">
-                  {customer.is_wholesaler ? (
-                    <span className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                      Опт
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">Розница</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {new Date(customer.created_at).toLocaleDateString(siteConfig.locale)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </AdminDesktopTable>
-    </>
+const columns: AdminDataTableColumn<AdminCustomer>[] = [
+  {
+    id: "email",
+    header: "Email",
+    sortValue: (customer) => customer.email,
+    cell: (customer) => <span className="break-all">{customer.email}</span>,
+  },
+  {
+    id: "type",
+    header: "Тип",
+    sortValue: (customer) => customerTypeLabel(customer.is_wholesaler),
+    cell: (customer) => <CustomerTypeBadge isWholesaler={customer.is_wholesaler} />,
+  },
+  {
+    id: "created_at",
+    header: "Регистрация",
+    sortValue: (customer) => customer.created_at,
+    cell: (customer) => (
+      <span className="text-muted-foreground">
+        {formatAdminDate(customer.created_at) ?? "—"}
+      </span>
+    ),
+  },
+];
+
+export function AdminCustomersTable({ customers, searchQuery }: AdminCustomersTableProps) {
+  return (
+    <AdminDataTable
+      tableId="admin-customers"
+      columns={columns}
+      rows={customers}
+      getRowId={(customer) => customer.id}
+      stickyHeader
+      density="compact"
+      minWidthClassName="min-w-[480px]"
+      emptyState={
+        <AdminEmptyState
+          title={
+            searchQuery ? "Ничего не найдено" : "Зарегистрированных клиентов пока нет."
+          }
+          description={
+            searchQuery
+              ? "Попробуйте изменить поисковый запрос."
+              : "Клиенты появятся после регистрации на витрине."
+          }
+        />
+      }
+      renderMobileCard={(customer) => (
+        <AdminMobileCard key={customer.id}>
+          <div className="space-y-2">
+            <p className="break-all text-sm font-medium">{customer.email}</p>
+            <AdminMobileCardRow label="Тип">
+              <CustomerTypeBadge isWholesaler={customer.is_wholesaler} />
+            </AdminMobileCardRow>
+            <AdminMobileCardRow label="Регистрация">
+              <span className="font-normal text-muted-foreground">
+                {formatAdminDate(customer.created_at) ?? "—"}
+              </span>
+            </AdminMobileCardRow>
+          </div>
+        </AdminMobileCard>
+      )}
+    />
   );
 }

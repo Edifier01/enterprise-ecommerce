@@ -13,6 +13,7 @@ from app.features.admin.infrastructure.persistence.models import AdminUserModel
 from app.features.auth.infrastructure.security.bcrypt_hasher import BcryptPasswordHasher
 from app.features.catalog.infrastructure.persistence.models import ProductModel, ProductVariantModel
 from app.features.integrations.moysklad.infrastructure.persistence.models import ProductImageModel
+from app.features.inventory.infrastructure.persistence.models import InventoryItemModel
 from app.main import app
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -76,6 +77,8 @@ async def admin_catalog_client() -> AsyncGenerator[AsyncClient, None]:
                 )
             )
             multicolor_id = uuid.uuid4()
+            variant_multicam_id = uuid.uuid4()
+            variant_coyote_id = uuid.uuid4()
             session.add(
                 ProductModel(
                     id=multicolor_id,
@@ -92,6 +95,7 @@ async def admin_catalog_client() -> AsyncGenerator[AsyncClient, None]:
             session.add_all(
                 [
                     ProductVariantModel(
+                        id=variant_multicam_id,
                         product_id=multicolor_id,
                         sku="MC-MULTICAM-M",
                         name="Multicam M",
@@ -102,6 +106,7 @@ async def admin_catalog_client() -> AsyncGenerator[AsyncClient, None]:
                         attributes={"color": "Multicam", "size": "M"},
                     ),
                     ProductVariantModel(
+                        id=variant_coyote_id,
                         product_id=multicolor_id,
                         sku="MC-COYOTE-M",
                         name="Coyote M",
@@ -110,6 +115,20 @@ async def admin_catalog_client() -> AsyncGenerator[AsyncClient, None]:
                         is_default=False,
                         sort_order=1,
                         attributes={"color": "Coyote", "size": "M"},
+                    ),
+                ]
+            )
+            session.add_all(
+                [
+                    InventoryItemModel(
+                        variant_id=variant_multicam_id,
+                        quantity_on_hand=12,
+                        quantity_reserved=2,
+                    ),
+                    InventoryItemModel(
+                        variant_id=variant_coyote_id,
+                        quantity_on_hand=5,
+                        quantity_reserved=0,
                     ),
                 ]
             )
@@ -180,6 +199,25 @@ async def test_admin_list_products_includes_drafts(admin_catalog_client: AsyncCl
     statuses = {item["status"] for item in data["items"]}
     assert "draft" in statuses
     assert "active" in statuses
+
+
+@pytest.mark.asyncio
+async def test_admin_catalog_overview(admin_catalog_client: AsyncClient) -> None:
+    token = await _token(admin_catalog_client)
+    response = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/overview",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 2
+    assert data["uncategorized"] == 2
+    assert data["needs_styling"] == 1
+    assert data["needs_color_photos"] == 1
+    assert data["ready_to_publish"] == 0
+    assert data["draft"] == 1
+    assert data["active"] == 1
+    assert data["archived"] == 0
 
 
 @pytest.mark.asyncio
@@ -559,6 +597,21 @@ async def test_admin_upload_media(admin_catalog_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_admin_upload_media_sniffs_png_when_mime_is_wrong(
+    admin_catalog_client: AsyncClient,
+) -> None:
+    token = await _token(admin_catalog_client)
+    png_header = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+    response = await admin_catalog_client.post(
+        "/api/v1/admin/media/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("photo.jpg", png_header, "image/jpeg")},
+    )
+    assert response.status_code == 200
+    assert response.json()["url"].endswith(".png")
+
+
+@pytest.mark.asyncio
 async def test_admin_list_products_filter_by_category(admin_catalog_client: AsyncClient) -> None:
     token = await _token(admin_catalog_client)
 
@@ -764,3 +817,46 @@ async def test_admin_publish_moysklad_multicolor_requires_all_color_photos(
     )
     assert blocked.status_code == 422
     assert "не все цвета" in blocked.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_admin_list_products_includes_moysklad_stock_totals(
+    admin_catalog_client: AsyncClient,
+) -> None:
+    token = await _token(admin_catalog_client)
+    response = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products?q=multi-color-jacket",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    product = response.json()["items"][0]
+    assert product["stock_available_total"] == 15
+    assert product["stock_quantity_on_hand_total"] == 17
+    assert product["is_low_stock"] is False
+
+    variants = {variant["sku"]: variant for variant in product["variants"]}
+    assert variants["MC-MULTICAM-M"]["quantity_on_hand"] == 12
+    assert variants["MC-MULTICAM-M"]["quantity_reserved"] == 2
+    assert variants["MC-MULTICAM-M"]["available"] == 10
+    assert variants["MC-COYOTE-M"]["available"] == 5
+
+
+@pytest.mark.asyncio
+async def test_admin_get_product_includes_variant_stock(
+    admin_catalog_client: AsyncClient,
+) -> None:
+    token = await _token(admin_catalog_client)
+    listed = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products?q=multi-color-jacket",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    product_id = listed.json()["items"][0]["id"]
+
+    response = await admin_catalog_client.get(
+        f"/api/v1/admin/catalog/products/{product_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["stock_available_total"] == 15
+    assert all("available" in variant for variant in data["variants"])

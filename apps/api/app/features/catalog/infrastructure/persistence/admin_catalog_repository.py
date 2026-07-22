@@ -2,12 +2,13 @@
 
 import uuid
 
-from sqlalchemy import exists, func, or_, select, update
+from sqlalchemy import and_, exists, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.features.catalog.domain.admin_ports import (
+    AdminCatalogOverview,
     CategoryHasChildrenError,
     CategoryNotFoundError,
     InvalidCategoryParentError,
@@ -21,6 +22,7 @@ from app.features.catalog.domain.admin_ports import (
     UpdateCategoryData,
     UpdateProductData,
     UpdateVariantData,
+    VariantInventorySnapshot,
     VariantNotFoundError,
 )
 from app.features.integrations.moysklad.domain.sync_guard import (
@@ -38,11 +40,74 @@ from app.features.catalog.infrastructure.persistence.models import (
     ProductVariantModel,
 )
 from app.features.integrations.moysklad.infrastructure.persistence.models import ProductImageModel
+from app.features.inventory.infrastructure.persistence.models import InventoryItemModel
 
 
 class AdminCatalogRepository(IAdminCatalogRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+
+    @staticmethod
+    def _moysklad_filter():
+        return ProductModel.sync_source == "moysklad"
+
+    def _needs_styling_filter_clauses(self):
+        return [
+            ProductModel.status == "draft",
+            or_(
+                ProductModel.image_url.is_(None),
+                ProductModel.image_url == "",
+            ),
+            ~exists(
+                select(1).where(ProductImageModel.product_id == ProductModel.id)
+            ),
+        ]
+
+    async def _count_products(self, filters: list) -> int:
+        stmt = select(func.count()).select_from(ProductModel)
+        if filters:
+            stmt = stmt.where(*filters)
+        return int((await self._session.scalar(stmt)) or 0)
+
+    async def _count_ready_to_publish(self, color_photo_ids: set[uuid.UUID]) -> int:
+        has_photo = or_(
+            and_(ProductModel.image_url.is_not(None), ProductModel.image_url != ""),
+            exists(select(1).where(ProductImageModel.product_id == ProductModel.id)),
+        )
+        product_ids = (
+            await self._session.scalars(
+                select(ProductModel.id).where(
+                    self._moysklad_filter(),
+                    ProductModel.status == "draft",
+                    ProductModel.category_id.is_not(None),
+                    has_photo,
+                )
+            )
+        ).all()
+        return sum(1 for product_id in product_ids if product_id not in color_photo_ids)
+
+    async def get_catalog_overview(self) -> AdminCatalogOverview:
+        ms = self._moysklad_filter()
+        color_photo_ids = set(await self._product_ids_needing_color_photos())
+
+        total = await self._count_products([ms])
+        uncategorized = await self._count_products([ms, ProductModel.category_id.is_(None)])
+        needs_styling = await self._count_products([ms, *self._needs_styling_filter_clauses()])
+        draft = await self._count_products([ms, ProductModel.status == "draft"])
+        active = await self._count_products([ms, ProductModel.status == "active"])
+        archived = await self._count_products([ms, ProductModel.status == "archived"])
+        ready_to_publish = await self._count_ready_to_publish(color_photo_ids)
+
+        return AdminCatalogOverview(
+            total=total,
+            uncategorized=uncategorized,
+            needs_styling=needs_styling,
+            needs_color_photos=len(color_photo_ids),
+            ready_to_publish=ready_to_publish,
+            draft=draft,
+            active=active,
+            archived=archived,
+        )
 
     async def list_products(
         self,
@@ -72,18 +137,7 @@ class AdminCatalogRepository(IAdminCatalogRepository):
             filters.append(ProductModel.sync_source == "moysklad")
             filters.append(ProductModel.category_id.is_(None))
         if needs_styling:
-            filters.append(ProductModel.status == "draft")
-            filters.append(
-                or_(
-                    ProductModel.image_url.is_(None),
-                    ProductModel.image_url == "",
-                )
-            )
-            filters.append(
-                ~exists(
-                    select(1).where(ProductImageModel.product_id == ProductModel.id)
-                )
-            )
+            filters.extend(self._needs_styling_filter_clauses())
         if q is not None and q.strip():
             filters.append(self._admin_search_filter(q.strip()))
         if uncategorized:
@@ -178,6 +232,30 @@ class AdminCatalogRepository(IAdminCatalogRepository):
         if row is None:
             return None
         return self._product_to_domain(row, include_variants=True)
+
+    async def get_variant_inventory_snapshots(
+        self, variant_ids: list[uuid.UUID]
+    ) -> dict[uuid.UUID, VariantInventorySnapshot]:
+        if not variant_ids:
+            return {}
+
+        rows = (
+            await self._session.scalars(
+                select(InventoryItemModel).where(
+                    InventoryItemModel.variant_id.in_(variant_ids)
+                )
+            )
+        ).all()
+
+        snapshots: dict[uuid.UUID, VariantInventorySnapshot] = {}
+        for row in rows:
+            available = row.quantity_on_hand - row.quantity_reserved
+            snapshots[row.variant_id] = VariantInventorySnapshot(
+                quantity_on_hand=row.quantity_on_hand,
+                quantity_reserved=row.quantity_reserved,
+                available=available,
+            )
+        return snapshots
 
     async def create_product(self, data: CreateProductData) -> Product:
         product_id = uuid.uuid4()

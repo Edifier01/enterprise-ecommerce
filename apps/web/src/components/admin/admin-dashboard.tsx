@@ -2,6 +2,8 @@ import Link from "next/link";
 
 
 
+import type { AdminInventoryOverview } from "@/lib/admin/inventory-shared";
+
 import type { DashboardSummary } from "@/lib/admin/types";
 
 import type { MoySkladIntegrationStatus } from "@/lib/admin/integrations/moysklad";
@@ -60,6 +62,8 @@ function buildActionItems(
 
   needsColorPhotosCount: number,
 
+  lowStockProducts: number,
+
   moyskladStatus: MoySkladIntegrationStatus | null,
 
 ): ActionItem[] {
@@ -115,6 +119,24 @@ function buildActionItems(
       href: "/admin/catalog?needs_color_photos=1&all=1",
 
       count: needsColorPhotosCount,
+
+    });
+
+  }
+
+
+
+  if (lowStockProducts > 0) {
+
+    items.push({
+
+      label: "Низкий остаток",
+
+      description: `${lowStockProducts} товар(ов) с низким остатком`,
+
+      href: "/admin/inventory?low_stock=true&group_by=product",
+
+      count: lowStockProducts,
 
     });
 
@@ -184,6 +206,8 @@ type AdminDashboardProps = {
 
   needsColorPhotosCount?: number;
 
+  inventoryOverview?: AdminInventoryOverview | null;
+
   moyskladStatus?: MoySkladIntegrationStatus | null;
 
 };
@@ -200,16 +224,23 @@ export function AdminDashboard({
 
   needsColorPhotosCount = 0,
 
+  inventoryOverview = null,
+
   moyskladStatus = null,
 
 }: AdminDashboardProps) {
 
   const statusEntries = Object.entries(summary.orders_by_status);
 
+  const lowStockProducts = inventoryOverview?.low_stock_products ?? summary.low_stock_count;
+
+  const lowStockVariants = inventoryOverview?.low_stock_variants ?? summary.low_stock_count;
+
   const actionItems = buildActionItems(
     pendingImports,
     needsStylingCount,
     needsColorPhotosCount,
+    inventoryOverview?.low_stock_products ?? 0,
     moyskladStatus,
   );
 
@@ -307,7 +338,7 @@ export function AdminDashboard({
 
         <Card className="transition-colors hover:bg-muted/30">
 
-          <Link href="/admin/inventory?low_stock=true" className="block">
+          <Link href="/admin/inventory?low_stock=true&group_by=product" className="block">
 
             <CardHeader className="pb-2">
 
@@ -321,9 +352,19 @@ export function AdminDashboard({
 
             <CardContent>
 
-              <p className="text-3xl font-semibold">{summary.low_stock_count}</p>
+              <p className="text-3xl font-semibold">{lowStockProducts}</p>
 
-              <p className="mt-1 text-xs text-primary">Перейти на склад →</p>
+              {inventoryOverview ? (
+
+                <p className="text-sm text-muted-foreground">
+
+                  {lowStockVariants} вариантов · порог {inventoryOverview.low_stock_threshold}
+
+                </p>
+
+              ) : null}
+
+              <p className="mt-1 text-xs text-primary">По товарам →</p>
 
             </CardContent>
 

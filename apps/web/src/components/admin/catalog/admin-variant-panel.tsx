@@ -8,6 +8,7 @@ import {
   type CatalogActionState,
 } from "@/app/actions/admin-catalog";
 import { Button } from "@/components/ui/button";
+import { AdminVariantStock } from "@/components/admin/catalog/admin-product-stock";
 import type { AdminProduct } from "@/lib/admin/catalog-shared";
 import { formatPrice } from "@/lib/admin/catalog-shared";
 import { centsToRubles } from "@/lib/admin/money";
@@ -134,12 +135,19 @@ function VariantEditRow({
       </div>
 
       {msSynced ? (
-        <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
-          {attributeText ? <p>Атрибуты: {attributeText}</p> : null}
-          {variant.barcode ? <p>Штрихкод: {variant.barcode}</p> : null}
-          {variant.weight_grams != null ? <p>Вес: {variant.weight_grams} г</p> : null}
-          {dimensions ? <p>Габариты: {dimensions}</p> : null}
-          <p>В наличии: {variant.in_stock ? "да" : "нет"}</p>
+        <div className="grid gap-2 text-xs text-muted-foreground">
+          <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-4">
+            {attributeText ? <p>Атрибуты: {attributeText}</p> : null}
+            {variant.barcode ? <p>Штрихкод: {variant.barcode}</p> : null}
+            {variant.weight_grams != null ? <p>Вес: {variant.weight_grams} г</p> : null}
+            {dimensions ? <p>Габариты: {dimensions}</p> : null}
+            <p>На витрине: {variant.in_stock ? "да" : "нет"}</p>
+          </div>
+          <AdminVariantStock
+            quantityOnHand={variant.quantity_on_hand}
+            quantityReserved={variant.quantity_reserved}
+            available={variant.available}
+          />
         </div>
       ) : null}
 

@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.features.admin.presentation.auth_router import router as auth_router
+from app.features.admin.presentation.bulk_job_router import router as bulk_job_router
 from app.features.admin.presentation.dashboard_router import router as dashboard_router
 from app.features.admin.presentation.media_router import router as media_admin_router
 from app.features.auth.presentation.admin_customers_router import router as customers_admin_router
@@ -15,6 +16,7 @@ from app.features.integrations.moysklad.presentation.admin_router import (
 
 router = APIRouter()
 router.include_router(auth_router)
+router.include_router(bulk_job_router)
 router.include_router(dashboard_router)
 router.include_router(media_admin_router)
 router.include_router(customers_admin_router)

@@ -1,5 +1,6 @@
 """Admin inventory API schemas."""
 
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
@@ -20,11 +21,35 @@ class AdminInventoryItemSchema(BaseModel):
     is_low_stock: bool
 
 
+class AdminInventoryProductGroupSchema(BaseModel):
+    product_id: UUID
+    product_name: str
+    sync_source: str
+    total_on_hand: int
+    total_reserved: int
+    total_available: int
+    is_low_stock: bool
+    variant_count: int
+    variants: list[AdminInventoryItemSchema]
+
+
 class AdminInventoryListResponse(BaseModel):
-    items: list[AdminInventoryItemSchema]
+    items: list[AdminInventoryItemSchema] = Field(default_factory=list)
+    groups: list[AdminInventoryProductGroupSchema] = Field(default_factory=list)
+    group_by: Literal["variant", "product"] = "variant"
     total: int
     page: int
     limit: int
+    low_stock_threshold: int
+
+
+class AdminInventoryOverviewResponse(BaseModel):
+    total_variants: int
+    total_products: int
+    low_stock_variants: int
+    low_stock_products: int
+    out_of_stock_variants: int
+    out_of_stock_products: int
     low_stock_threshold: int
 
 

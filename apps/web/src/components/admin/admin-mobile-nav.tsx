@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 
 import { adminLogoutAction } from "@/app/actions/admin-auth";
+import { AdminCommandPaletteTrigger } from "@/components/admin/admin-command-palette";
 import { AdminSidebarNav } from "@/components/admin/admin-sidebar-nav";
 import type { AdminUser } from "@/lib/admin/types";
 import { usePathname } from "next/navigation";
@@ -41,16 +42,19 @@ export function AdminMobileNav({ admin }: { admin: AdminUser }) {
   return (
     <>
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 md:hidden">
-        <button
-          type="button"
-          className="inline-flex size-11 items-center justify-center rounded-md border border-border text-foreground hover:bg-muted"
-          aria-expanded={open}
-          aria-controls="admin-mobile-nav"
-          aria-label="Меню админ-панели"
-          onClick={() => setOpen(true)}
-        >
-          <Menu className="size-5" aria-hidden />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex size-11 items-center justify-center rounded-md border border-border text-foreground hover:bg-muted"
+            aria-expanded={open}
+            aria-controls="admin-mobile-nav"
+            aria-label="Меню админ-панели"
+            onClick={() => setOpen(true)}
+          >
+            <Menu className="size-5" aria-hidden />
+          </button>
+          <AdminCommandPaletteTrigger compact />
+        </div>
         <div className="min-w-0 flex-1 text-right">
           <p className="truncate text-sm font-medium">{admin.email}</p>
           <p className="text-xs text-muted-foreground">{admin.role}</p>

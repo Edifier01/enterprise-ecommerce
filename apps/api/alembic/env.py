@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.database import Base
 
 # Import models so metadata is registered
+from app.features.admin.infrastructure.persistence import bulk_job_models as admin_bulk_job_models  # noqa: F401
 from app.features.admin.infrastructure.persistence import models as admin_models  # noqa: F401
 from app.features.auth.infrastructure.persistence import models as auth_models  # noqa: F401
 from app.features.catalog.infrastructure.persistence import models as catalog_models  # noqa: F401

@@ -1,20 +1,23 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import {
+  startBulkAssignCategoryJobAction,
+  startBulkPublishProductsJobAction,
+} from "@/app/actions/admin-bulk-jobs";
+import {
   assignMoySkladProductCategoryAction,
-  bulkAssignMoySkladCategoryAction,
-  bulkPublishMoySkladProductsAction,
   hideProductAction,
 } from "@/app/actions/admin-moysklad";
+import { AdminBulkJobProgress } from "@/components/admin/admin-bulk-job-progress";
+import { AdminDataTable, type AdminDataTableColumn } from "@/components/admin/admin-data-table";
+import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
 import {
-  AdminDesktopTable,
   AdminMobileCard,
-  AdminMobileCardList,
   AdminMobileCardRow,
 } from "@/components/admin/admin-mobile-card";
 import { AdminCascadingCategorySelect } from "@/components/admin/catalog/admin-cascading-category-select";
@@ -25,6 +28,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminCategory, AdminProduct } from "@/lib/admin/catalog-shared";
 import { PRODUCT_STATUS_LABELS } from "@/lib/admin/catalog-shared";
 import { getMerchandisingChecklistItems } from "@/lib/admin/merchandising-readiness";
+import type { AdminBulkJob } from "@/lib/admin/bulk-jobs";
 import { cn } from "@/lib/utils";
 
 type MoySkladImportPanelProps = {
@@ -53,6 +57,174 @@ function MerchandisingChecklist({ product }: { product: AdminProduct }) {
   );
 }
 
+function getDefaultSku(product: AdminProduct): string {
+  const defaultVariant = product.variants.find((variant) => variant.is_default) ?? product.variants[0];
+  return defaultVariant?.sku ?? "—";
+}
+
+function ImportProductCategoryAssign({
+  product,
+  categories,
+  disabled,
+  canWrite,
+  onDone,
+}: {
+  product: AdminProduct;
+  categories: AdminCategory[];
+  disabled: boolean;
+  canWrite: boolean;
+  onDone: (message: string | null) => void;
+}) {
+  const [categoryId, setCategoryId] = useState("");
+  const [, startTransition] = useTransition();
+
+  if (!canWrite) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  return (
+    <div className="flex min-w-[12rem] flex-col gap-2">
+      <AdminCascadingCategorySelect
+        categories={categories}
+        onValueChange={setCategoryId}
+        disabled={disabled}
+      />
+      <Button
+        type="button"
+        size="sm"
+        disabled={disabled || !categoryId}
+        onClick={() =>
+          startTransition(async () => {
+            const result = await assignMoySkladProductCategoryAction(product.id, categoryId);
+            onDone(result.message ?? result.error ?? null);
+          })
+        }
+      >
+        Назначить
+      </Button>
+    </div>
+  );
+}
+
+function ImportProductActions({
+  product,
+  disabled,
+  canWrite,
+  importReturnPath,
+  onDone,
+}: {
+  product: AdminProduct;
+  disabled: boolean;
+  canWrite: boolean;
+  importReturnPath: string;
+  onDone: (message: string | null) => void;
+}) {
+  const [, startTransition] = useTransition();
+  const editHref = `/admin/catalog/${product.id}/edit?from=${encodeURIComponent(importReturnPath)}`;
+
+  if (!canWrite) {
+    return (
+      <Link href={editHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+        Просмотр
+      </Link>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Link href={editHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+        Редактировать
+      </Link>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={disabled}
+        onClick={() =>
+          startTransition(async () => {
+            const result = await hideProductAction(product.id);
+            onDone(result.message ?? result.error ?? null);
+          })
+        }
+      >
+        Скрыть
+      </Button>
+    </div>
+  );
+}
+
+function buildImportColumns(
+  categories: AdminCategory[],
+  canWrite: boolean,
+  disabled: boolean,
+  importReturnPath: string,
+  onDone: (message: string | null) => void,
+): AdminDataTableColumn<AdminProduct>[] {
+  return [
+    {
+      id: "name",
+      header: "Товар",
+      sortValue: (product) => product.name,
+      cell: (product) => (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{product.name}</span>
+            <MoySkladBadge />
+          </div>
+          {product.erp_name && product.erp_name !== product.name ? (
+            <span className="text-xs text-muted-foreground">MS: {product.erp_name}</span>
+          ) : null}
+          <span className="text-xs text-muted-foreground">
+            {PRODUCT_STATUS_LABELS[product.status] ?? product.status}
+          </span>
+        </div>
+      ),
+    },
+    {
+      id: "sku",
+      header: "SKU",
+      sortValue: (product) => getDefaultSku(product),
+      cell: (product) => <span className="font-mono text-xs">{getDefaultSku(product)}</span>,
+    },
+    {
+      id: "prices",
+      header: "Розница / опт",
+      cell: (product) => <AdminProductPrices product={product} />,
+    },
+    {
+      id: "merchandising",
+      header: "Оформление",
+      cell: (product) => <MerchandisingChecklist product={product} />,
+    },
+    {
+      id: "category",
+      header: "Категория",
+      cell: (product) => (
+        <ImportProductCategoryAssign
+          product={product}
+          categories={categories}
+          disabled={disabled}
+          canWrite={canWrite}
+          onDone={onDone}
+        />
+      ),
+    },
+    {
+      id: "actions",
+      header: "Действия",
+      cell: (product) => (
+        <ImportProductActions
+          product={product}
+          disabled={disabled}
+          canWrite={canWrite}
+          importReturnPath={importReturnPath}
+          onDone={onDone}
+        />
+      ),
+    },
+  ];
+}
+
 export function MoySkladImportPanel({
   products,
   categories,
@@ -66,19 +238,12 @@ export function MoySkladImportPanel({
   const [message, setMessage] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [bulkCategoryId, setBulkCategoryId] = useState("");
+  const [activeJob, setActiveJob] = useState<AdminBulkJob | null>(null);
+  const [activeJobTitle, setActiveJobTitle] = useState<string | null>(null);
   const totalPages = getAdminTotalPages(total, pageSize);
   const allSelected = products.length > 0 && selectedIds.size === products.length;
   const importReturnPath =
     page > 1 ? `/admin/integrations/moysklad/import?page=${page}` : "/admin/integrations/moysklad/import";
-
-  function toggleProduct(id: string) {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   function toggleSelectAll() {
     setSelectedIds(allSelected ? new Set() : new Set(products.map((product) => product.id)));
@@ -86,25 +251,42 @@ export function MoySkladImportPanel({
 
   function handleBulkAssign() {
     startTransition(async () => {
-      const result = await bulkAssignMoySkladCategoryAction([...selectedIds], bulkCategoryId);
-      setMessage(result.message ?? result.error ?? null);
-      if (result.success) {
+      const result = await startBulkAssignCategoryJobAction([...selectedIds], bulkCategoryId);
+      if (result.error) {
+        setMessage(result.error);
+        return;
+      }
+      if (result.job) {
+        setActiveJob(result.job);
+        setActiveJobTitle("Назначение категории");
+        setMessage(null);
         setSelectedIds(new Set());
         setBulkCategoryId("");
-        router.refresh();
       }
     });
   }
 
   function handleBulkPublish() {
     startTransition(async () => {
-      const result = await bulkPublishMoySkladProductsAction([...selectedIds]);
-      setMessage(result.message ?? result.error ?? null);
-      if (result.success) {
+      const result = await startBulkPublishProductsJobAction([...selectedIds]);
+      if (result.error) {
+        setMessage(result.error);
+        return;
+      }
+      if (result.job) {
+        setActiveJob(result.job);
+        setActiveJobTitle("Публикация товаров");
+        setMessage(null);
         setSelectedIds(new Set());
-        router.refresh();
       }
     });
+  }
+
+  function handleJobComplete(job: AdminBulkJob) {
+    setMessage(job.result_message ?? (job.status === "failed" ? "Массовая операция завершилась с ошибкой." : null));
+    setActiveJob(null);
+    setActiveJobTitle(null);
+    router.refresh();
   }
 
   function buildHref(nextPage: number) {
@@ -117,6 +299,11 @@ export function MoySkladImportPanel({
     setMessage(text);
     router.refresh();
   }
+
+  const columns = useMemo(
+    () => buildImportColumns(categories, canWrite, pending, importReturnPath, handleDone),
+    [categories, canWrite, pending, importReturnPath],
+  );
 
   return (
     <div className="space-y-6">
@@ -136,133 +323,137 @@ export function MoySkladImportPanel({
         </CardContent>
       </Card>
 
-      {products.length === 0 ? (
+      {canWrite && products.length > 0 ? (
         <Card>
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Нет товаров, ожидающих категорию. Запустите импорт на{" "}
-            <Link href="/admin/integrations/moysklad" className="text-foreground underline">
-              странице интеграции
-            </Link>
-            .
+          <CardHeader>
+            <CardTitle className="text-base">Массовое назначение</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleSelectAll}
+                disabled={pending}
+                aria-label="Выбрать все на странице"
+              />
+              Выбрано: {selectedIds.size}
+            </label>
+            <div className="min-w-[14rem] flex-1">
+              <AdminCascadingCategorySelect
+                categories={categories}
+                onValueChange={setBulkCategoryId}
+                disabled={pending}
+              />
+            </div>
+            <Button
+              type="button"
+              disabled={pending || selectedIds.size === 0 || !bulkCategoryId}
+              onClick={handleBulkAssign}
+            >
+              {pending ? "Назначение…" : "Назначить выбранным"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending || selectedIds.size === 0}
+              onClick={handleBulkPublish}
+            >
+              {pending ? "Публикация…" : "Опубликовать выбранным"}
+            </Button>
           </CardContent>
         </Card>
-      ) : (
-        <>
-          {canWrite ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Массовое назначение</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+      ) : null}
+
+      {activeJob && activeJobTitle ? (
+        <AdminBulkJobProgress
+          job={activeJob}
+          title={activeJobTitle}
+          onComplete={handleJobComplete}
+        />
+      ) : null}
+
+      <AdminDataTable
+        tableId="admin-moysklad-import"
+        columns={columns}
+        rows={products}
+        getRowId={(product) => product.id}
+        stickyHeader
+        density="compact"
+        minWidthClassName="min-w-[960px]"
+        selectable={canWrite}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        emptyState={
+          <AdminEmptyState
+            title="Очередь импорта пуста"
+            description="Нет товаров, ожидающих категорию. Запустите импорт на странице интеграции."
+            action={{ label: "Интеграция МойСклад", href: "/admin/integrations/moysklad" }}
+          />
+        }
+        renderMobileCard={(product) => (
+          <AdminMobileCard key={product.id}>
+            <div className="space-y-3">
+              {canWrite ? (
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
-                    checked={allSelected}
-                    onChange={toggleSelectAll}
+                    checked={selectedIds.has(product.id)}
+                    onChange={() => {
+                      setSelectedIds((current) => {
+                        const next = new Set(current);
+                        if (next.has(product.id)) next.delete(product.id);
+                        else next.add(product.id);
+                        return next;
+                      });
+                    }}
                     disabled={pending}
-                    aria-label="Выбрать все на странице"
+                    aria-label={`Выбрать ${product.name}`}
                   />
-                  Выбрано: {selectedIds.size}
+                  Выбрать для массового назначения
                 </label>
-                <div className="min-w-[14rem] flex-1">
-                  <AdminCascadingCategorySelect
-                    categories={categories}
-                    onValueChange={setBulkCategoryId}
-                    disabled={pending}
-                  />
+              ) : null}
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium leading-snug">{product.name}</p>
+                  <MoySkladBadge />
                 </div>
-                <Button
-                  type="button"
-                  disabled={pending || selectedIds.size === 0 || !bulkCategoryId}
-                  onClick={handleBulkAssign}
-                >
-                  {pending ? "Назначение…" : "Назначить выбранным"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={pending || selectedIds.size === 0}
-                  onClick={handleBulkPublish}
-                >
-                  {pending ? "Публикация…" : "Опубликовать выбранным"}
-                </Button>
-              </CardContent>
-            </Card>
-          ) : null}
-
-          <AdminMobileCardList>
-            {products.map((product) => (
-              <AdminMobileCard key={product.id}>
-                <ImportProductContent
+                {product.erp_name && product.erp_name !== product.name ? (
+                  <p className="text-xs text-muted-foreground">MS: {product.erp_name}</p>
+                ) : null}
+              </div>
+              <AdminMobileCardRow label="SKU">{getDefaultSku(product)}</AdminMobileCardRow>
+              <AdminMobileCardRow label="Розница / опт">
+                <AdminProductPrices product={product} />
+              </AdminMobileCardRow>
+              <AdminMobileCardRow label="Статус">
+                {PRODUCT_STATUS_LABELS[product.status] ?? product.status}
+              </AdminMobileCardRow>
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Оформление</p>
+                <MerchandisingChecklist product={product} />
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Категория</p>
+                <ImportProductCategoryAssign
                   product={product}
                   categories={categories}
                   disabled={pending}
                   canWrite={canWrite}
-                  selected={selectedIds.has(product.id)}
-                  onToggleSelect={() => toggleProduct(product.id)}
                   onDone={handleDone}
-                  layout="mobile"
-                  importReturnPath={importReturnPath}
                 />
-              </AdminMobileCard>
-            ))}
-          </AdminMobileCardList>
-
-          <AdminDesktopTable className="rounded-xl">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40 text-left text-muted-foreground">
-                  {canWrite ? (
-                    <th scope="col" className="w-10 px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={allSelected}
-                        onChange={toggleSelectAll}
-                        disabled={pending}
-                        aria-label="Выбрать все на странице"
-                      />
-                    </th>
-                  ) : null}
-                  <th scope="col" className="px-4 py-3">
-                    Товар
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    SKU
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    Розница / опт
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    Оформление
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    Категория
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    Действия
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <ImportProductContent
-                    key={product.id}
-                    product={product}
-                    categories={categories}
-                    disabled={pending}
-                    canWrite={canWrite}
-                    selected={selectedIds.has(product.id)}
-                    onToggleSelect={() => toggleProduct(product.id)}
-                    onDone={handleDone}
-                    layout="table"
-                    importReturnPath={importReturnPath}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </AdminDesktopTable>
-        </>
-      )}
+              </div>
+              <ImportProductActions
+                product={product}
+                disabled={pending}
+                canWrite={canWrite}
+                importReturnPath={importReturnPath}
+                onDone={handleDone}
+              />
+            </div>
+          </AdminMobileCard>
+        )}
+      />
 
       <AdminPagination page={page} totalPages={totalPages} buildHref={buildHref} />
 
@@ -272,169 +463,5 @@ export function MoySkladImportPanel({
 
       {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
     </div>
-  );
-}
-
-function ImportProductContent({
-  product,
-  categories,
-  disabled,
-  canWrite,
-  selected,
-  onToggleSelect,
-  onDone,
-  layout,
-  importReturnPath,
-}: {
-  product: AdminProduct;
-  categories: AdminCategory[];
-  disabled: boolean;
-  canWrite: boolean;
-  selected: boolean;
-  onToggleSelect: () => void;
-  onDone: (message: string | null) => void;
-  layout: "mobile" | "table";
-  importReturnPath: string;
-}) {
-  const [categoryId, setCategoryId] = useState("");
-  const [, startTransition] = useTransition();
-  const defaultVariant = product.variants.find((variant) => variant.is_default) ?? product.variants[0];
-  const statusLabel = PRODUCT_STATUS_LABELS[product.status] ?? product.status;
-  const editHref = `/admin/catalog/${product.id}/edit?from=${encodeURIComponent(importReturnPath)}`;
-
-  const actions = canWrite ? (
-    <div className={cn("flex flex-wrap gap-2", layout === "mobile" && "pt-1")}>
-      <Button
-        type="button"
-        size="sm"
-        disabled={disabled || !categoryId}
-        onClick={() =>
-          startTransition(async () => {
-            const result = await assignMoySkladProductCategoryAction(product.id, categoryId);
-            onDone(result.message ?? result.error ?? null);
-          })
-        }
-      >
-        Назначить
-      </Button>
-      <Link
-        href={editHref}
-        className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-      >
-        Редактировать
-      </Link>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        disabled={disabled}
-        onClick={() =>
-          startTransition(async () => {
-            const result = await hideProductAction(product.id);
-            onDone(result.message ?? result.error ?? null);
-          })
-        }
-      >
-        Скрыть
-      </Button>
-    </div>
-  ) : (
-    <div className={cn("flex flex-wrap gap-2", layout === "mobile" && "pt-1")}>
-      <Link
-        href={editHref}
-        className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-      >
-        Просмотр
-      </Link>
-    </div>
-  );
-
-  const categorySelect = canWrite ? (
-    <AdminCascadingCategorySelect
-      categories={categories}
-      onValueChange={setCategoryId}
-      disabled={disabled}
-    />
-  ) : (
-    <span className="text-muted-foreground">—</span>
-  );
-
-  const checklist = <MerchandisingChecklist product={product} />;
-
-  if (layout === "mobile") {
-    return (
-      <div className="space-y-3">
-        {canWrite ? (
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={selected}
-              onChange={onToggleSelect}
-              disabled={disabled}
-              aria-label={`Выбрать ${product.name}`}
-            />
-            Выбрать для массового назначения
-          </label>
-        ) : null}
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="font-medium leading-snug">{product.name}</p>
-            <MoySkladBadge />
-          </div>
-          {product.erp_name && product.erp_name !== product.name ? (
-            <p className="text-xs text-muted-foreground">MS: {product.erp_name}</p>
-          ) : null}
-        </div>
-        <AdminMobileCardRow label="SKU">{defaultVariant?.sku ?? "—"}</AdminMobileCardRow>
-        <AdminMobileCardRow label="Розница / опт">
-          <AdminProductPrices product={product} />
-        </AdminMobileCardRow>
-        <AdminMobileCardRow label="Статус">{statusLabel}</AdminMobileCardRow>
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Оформление</p>
-          {checklist}
-        </div>
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Категория</p>
-          {categorySelect}
-        </div>
-        {actions}
-      </div>
-    );
-  }
-
-  return (
-    <tr className="border-b border-border/60 align-top">
-      {canWrite ? (
-        <td className="px-4 py-3">
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={onToggleSelect}
-            disabled={disabled}
-            aria-label={`Выбрать ${product.name}`}
-          />
-        </td>
-      ) : null}
-      <td className="px-4 py-3">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{product.name}</span>
-            <MoySkladBadge />
-          </div>
-          {product.erp_name && product.erp_name !== product.name ? (
-            <span className="text-xs text-muted-foreground">MS: {product.erp_name}</span>
-          ) : null}
-          <span className="text-xs text-muted-foreground">{statusLabel}</span>
-        </div>
-      </td>
-      <td className="px-4 py-3 font-mono text-xs">{defaultVariant?.sku ?? "—"}</td>
-      <td className="px-4 py-3">
-        <AdminProductPrices product={product} />
-      </td>
-      <td className="px-4 py-3">{checklist}</td>
-      <td className="min-w-[12rem] px-4 py-3">{categorySelect}</td>
-      <td className="px-4 py-3">{actions}</td>
-    </tr>
   );
 }

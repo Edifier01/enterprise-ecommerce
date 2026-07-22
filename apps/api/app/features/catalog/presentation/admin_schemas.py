@@ -23,6 +23,12 @@ class ProductImageSchema(BaseModel):
     sort_order: int = 0
 
 
+class AdminProductVariantSchema(ProductVariantSchema):
+    quantity_on_hand: int | None = None
+    quantity_reserved: int | None = None
+    available: int | None = None
+
+
 class AdminProductSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -45,7 +51,10 @@ class AdminProductSchema(BaseModel):
     meta_description: str | None = None
     erp_image_url: str | None = None
     images: list[ProductImageSchema] = []
-    variants: list[ProductVariantSchema] = []
+    variants: list[AdminProductVariantSchema] = []
+    stock_available_total: int = 0
+    stock_quantity_on_hand_total: int = 0
+    is_low_stock: bool = False
 
 
 class AdminProductListResponse(BaseModel):
@@ -53,6 +62,17 @@ class AdminProductListResponse(BaseModel):
     total: int
     page: int
     limit: int
+
+
+class AdminCatalogOverviewResponse(BaseModel):
+    total: int
+    uncategorized: int
+    needs_styling: int
+    needs_color_photos: int
+    ready_to_publish: int
+    draft: int
+    active: int
+    archived: int
 
 
 class AdminCreateProductRequest(BaseModel):

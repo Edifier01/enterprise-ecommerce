@@ -9,6 +9,8 @@ from app.features.catalog.domain.stock_availability import is_in_stock_for_store
 from app.features.catalog.infrastructure.persistence.models import ProductModel, ProductVariantModel
 from app.features.integrations.moysklad.domain.sync_guard import assert_inventory_adjust_allowed
 from app.features.inventory.domain.admin_ports import (
+    AdminInventoryOverview,
+    AdminInventoryProductGroup,
     AdminInventoryRow,
     IAdminInventoryRepository,
     InsufficientOnHandError,
@@ -40,6 +42,45 @@ class AdminInventoryRepository(IAdminInventoryRepository):
             .join(ProductModel, ProductModel.id == ProductVariantModel.product_id)
         )
 
+    def _filtered_stmt(
+        self,
+        *,
+        low_stock_only: bool,
+        low_stock_threshold: int,
+        sku_query: str | None,
+    ):
+        available = self._available_expr()
+        stmt = self._base_stmt()
+        if sku_query:
+            pattern = f"%{sku_query.strip()}%"
+            stmt = stmt.where(
+                ProductVariantModel.sku.ilike(pattern) | ProductModel.name.ilike(pattern)
+            )
+        if low_stock_only:
+            stmt = stmt.where(available <= low_stock_threshold)
+        return stmt
+
+    def _row_from_result(
+        self,
+        row,
+        *,
+        low_stock_threshold: int,
+    ) -> AdminInventoryRow:
+        item, product_id, sku, product_name, sync_source, available_qty = row
+        available = int(available_qty)
+        return AdminInventoryRow(
+            variant_id=item.variant_id,
+            product_id=product_id,
+            sku=sku,
+            product_name=product_name,
+            sync_source=sync_source,
+            quantity_on_hand=item.quantity_on_hand,
+            quantity_reserved=item.quantity_reserved,
+            available=available,
+            version=item.version,
+            is_low_stock=available <= low_stock_threshold,
+        )
+
     async def list_inventory(
         self,
         *,
@@ -50,49 +91,153 @@ class AdminInventoryRepository(IAdminInventoryRepository):
         sku_query: str | None = None,
     ) -> tuple[list[AdminInventoryRow], int]:
         offset = (page - 1) * limit
-        available = self._available_expr()
-        base = self._base_stmt()
+        base = self._filtered_stmt(
+            low_stock_only=low_stock_only,
+            low_stock_threshold=low_stock_threshold,
+            sku_query=sku_query,
+        )
 
-        if sku_query:
-            pattern = f"%{sku_query.strip()}%"
-            base = base.where(
-                ProductVariantModel.sku.ilike(pattern) | ProductModel.name.ilike(pattern)
-            )
-
-        count_stmt = select(func.count()).select_from(InventoryItemModel)
-        if low_stock_only or sku_query:
-            count_base = self._base_stmt()
-            if sku_query:
-                pattern = f"%{sku_query.strip()}%"
-                count_base = count_base.where(
-                    ProductVariantModel.sku.ilike(pattern) | ProductModel.name.ilike(pattern)
-                )
-            if low_stock_only:
-                count_base = count_base.where(available <= low_stock_threshold)
-            count_stmt = select(func.count()).select_from(count_base.subquery())
-        if low_stock_only:
-            base = base.where(available <= low_stock_threshold)
-
+        count_stmt = select(func.count()).select_from(base.subquery())
         total = int((await self._session.scalar(count_stmt)) or 0)
         stmt = base.order_by(ProductVariantModel.sku).offset(offset).limit(limit)
         rows = (await self._session.execute(stmt)).all()
 
         items = [
-            AdminInventoryRow(
-                variant_id=item.variant_id,
-                product_id=product_id,
-                sku=sku,
-                product_name=product_name,
-                sync_source=sync_source,
-                quantity_on_hand=item.quantity_on_hand,
-                quantity_reserved=item.quantity_reserved,
-                available=int(available_qty),
-                version=item.version,
-                is_low_stock=int(available_qty) <= low_stock_threshold,
-            )
-            for item, product_id, sku, product_name, sync_source, available_qty in rows
+            self._row_from_result(row, low_stock_threshold=low_stock_threshold) for row in rows
         ]
         return items, total
+
+    async def list_inventory_grouped_by_product(
+        self,
+        *,
+        page: int,
+        limit: int,
+        low_stock_only: bool,
+        low_stock_threshold: int,
+        sku_query: str | None = None,
+    ) -> tuple[list[AdminInventoryProductGroup], int]:
+        offset = (page - 1) * limit
+        filtered = self._filtered_stmt(
+            low_stock_only=low_stock_only,
+            low_stock_threshold=low_stock_threshold,
+            sku_query=sku_query,
+        )
+        subq = filtered.subquery("inventory_rows")
+
+        grouped_stmt = (
+            select(
+                subq.c.product_id,
+                subq.c.product_name,
+                subq.c.sync_source,
+                func.sum(subq.c.quantity_on_hand).label("total_on_hand"),
+                func.sum(subq.c.quantity_reserved).label("total_reserved"),
+                func.sum(subq.c.available).label("total_available"),
+                func.count().label("variant_count"),
+            )
+            .group_by(subq.c.product_id, subq.c.product_name, subq.c.sync_source)
+            .order_by(subq.c.product_name)
+        )
+
+        total = int((await self._session.scalar(select(func.count()).select_from(grouped_stmt.subquery()))) or 0)
+        grouped_rows = (
+            await self._session.execute(grouped_stmt.offset(offset).limit(limit))
+        ).all()
+
+        if not grouped_rows:
+            return [], total
+
+        product_ids = [row.product_id for row in grouped_rows]
+        variant_rows = (
+            await self._session.execute(
+                filtered.where(ProductVariantModel.product_id.in_(product_ids)).order_by(
+                    ProductVariantModel.sku
+                )
+            )
+        ).all()
+
+        variants_by_product: dict[UUID, list[AdminInventoryRow]] = {}
+        for row in variant_rows:
+            item = self._row_from_result(row, low_stock_threshold=low_stock_threshold)
+            variants_by_product.setdefault(item.product_id, []).append(item)
+
+        groups = [
+            AdminInventoryProductGroup(
+                product_id=row.product_id,
+                product_name=row.product_name,
+                sync_source=row.sync_source,
+                total_on_hand=int(row.total_on_hand),
+                total_reserved=int(row.total_reserved),
+                total_available=int(row.total_available),
+                is_low_stock=int(row.total_available) <= low_stock_threshold,
+                variant_count=int(row.variant_count),
+                variants=tuple(variants_by_product.get(row.product_id, [])),
+            )
+            for row in grouped_rows
+        ]
+        return groups, total
+
+    async def get_inventory_overview(self, *, low_stock_threshold: int) -> AdminInventoryOverview:
+        subq = self._base_stmt().subquery("inventory_overview")
+
+        total_variants = int(
+            (await self._session.scalar(select(func.count()).select_from(subq))) or 0
+        )
+        total_products = int(
+            (
+                await self._session.scalar(
+                    select(func.count(func.distinct(subq.c.product_id))).select_from(subq)
+                )
+            )
+            or 0
+        )
+        low_stock_variants = int(
+            (
+                await self._session.scalar(
+                    select(func.count())
+                    .select_from(subq)
+                    .where(subq.c.available <= low_stock_threshold)
+                )
+            )
+            or 0
+        )
+        low_stock_products = int(
+            (
+                await self._session.scalar(
+                    select(func.count(func.distinct(subq.c.product_id)))
+                    .select_from(subq)
+                    .where(subq.c.available <= low_stock_threshold)
+                )
+            )
+            or 0
+        )
+        out_of_stock_variants = int(
+            (
+                await self._session.scalar(
+                    select(func.count()).select_from(subq).where(subq.c.available <= 0)
+                )
+            )
+            or 0
+        )
+        out_of_stock_products = int(
+            (
+                await self._session.scalar(
+                    select(func.count(func.distinct(subq.c.product_id)))
+                    .select_from(subq)
+                    .where(subq.c.available <= 0)
+                )
+            )
+            or 0
+        )
+
+        return AdminInventoryOverview(
+            total_variants=total_variants,
+            total_products=total_products,
+            low_stock_variants=low_stock_variants,
+            low_stock_products=low_stock_products,
+            out_of_stock_variants=out_of_stock_variants,
+            out_of_stock_products=out_of_stock_products,
+            low_stock_threshold=low_stock_threshold,
+        )
 
     async def adjust_quantity_on_hand(
         self,

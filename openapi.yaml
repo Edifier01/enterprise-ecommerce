@@ -691,6 +691,62 @@ paths:
                 $ref: '#/components/schemas/AdminMeResponse'
       security:
       - bearerAuth: []
+  /api/v1/admin/jobs/bulk:
+    post:
+      tags:
+      - admin
+      summary: Admin Create Bulk Job
+      operationId: adminCreateBulkJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminBulkJobCreateRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminBulkJobResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - bearerAuth: []
+  /api/v1/admin/jobs/bulk/{job_id}:
+    get:
+      tags:
+      - admin
+      summary: Admin Get Bulk Job
+      operationId: adminGetBulkJob
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminBulkJobResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/admin/dashboard/summary:
     get:
       tags:
@@ -819,6 +875,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/catalog/overview:
+    get:
+      tags:
+      - admin
+      summary: Admin Catalog Overview
+      operationId: adminCatalogOverview
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCatalogOverviewResponse'
+      security:
+      - bearerAuth: []
   /api/v1/admin/catalog/products:
     get:
       tags:
@@ -1304,6 +1375,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/inventory/overview:
+    get:
+      tags:
+      - admin
+      summary: Admin Inventory Overview
+      operationId: adminInventoryOverview
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminInventoryOverviewResponse'
+      security:
+      - bearerAuth: []
   /api/v1/admin/inventory:
     get:
       tags:
@@ -1346,6 +1432,16 @@ paths:
             maxLength: 100
           - type: 'null'
           title: Q
+      - name: group_by
+        in: query
+        required: false
+        schema:
+          enum:
+          - variant
+          - product
+          type: string
+          default: variant
+          title: Group By
       responses:
         '200':
           description: Successful Response
@@ -2210,6 +2306,170 @@ components:
       - reason
       - version
       title: AdminAdjustInventoryRequest
+    AdminBulkJobCreateRequest:
+      properties:
+        job_type:
+          $ref: '#/components/schemas/AdminBulkJobTypeSchema'
+        product_ids:
+          items:
+            type: string
+            format: uuid
+          type: array
+          minItems: 1
+          title: Product Ids
+        category_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Category Id
+      type: object
+      required:
+      - job_type
+      - product_ids
+      title: AdminBulkJobCreateRequest
+    AdminBulkJobErrorSchema:
+      properties:
+        product_id:
+          type: string
+          title: Product Id
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - product_id
+      - message
+      title: AdminBulkJobErrorSchema
+    AdminBulkJobResponse:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        job_type:
+          $ref: '#/components/schemas/AdminBulkJobTypeSchema'
+        status:
+          $ref: '#/components/schemas/AdminBulkJobStatusSchema'
+        total:
+          type: integer
+          title: Total
+        processed:
+          type: integer
+          title: Processed
+        succeeded:
+          type: integer
+          title: Succeeded
+        failed:
+          type: integer
+          title: Failed
+        skipped:
+          type: integer
+          title: Skipped
+        skip_reasons:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Skip Reasons
+        errors:
+          items:
+            $ref: '#/components/schemas/AdminBulkJobErrorSchema'
+          type: array
+          title: Errors
+        result_message:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Result Message
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        started_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Started At
+        finished_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Finished At
+      type: object
+      required:
+      - id
+      - job_type
+      - status
+      - total
+      - processed
+      - succeeded
+      - failed
+      - skipped
+      - skip_reasons
+      - errors
+      - result_message
+      - created_at
+      - updated_at
+      - started_at
+      - finished_at
+      title: AdminBulkJobResponse
+    AdminBulkJobStatusSchema:
+      type: string
+      enum:
+      - pending
+      - running
+      - completed
+      - failed
+      title: AdminBulkJobStatusSchema
+    AdminBulkJobTypeSchema:
+      type: string
+      enum:
+      - assign_category
+      - publish_products
+      title: AdminBulkJobTypeSchema
+    AdminCatalogOverviewResponse:
+      properties:
+        total:
+          type: integer
+          title: Total
+        uncategorized:
+          type: integer
+          title: Uncategorized
+        needs_styling:
+          type: integer
+          title: Needs Styling
+        needs_color_photos:
+          type: integer
+          title: Needs Color Photos
+        ready_to_publish:
+          type: integer
+          title: Ready To Publish
+        draft:
+          type: integer
+          title: Draft
+        active:
+          type: integer
+          title: Active
+        archived:
+          type: integer
+          title: Archived
+      type: object
+      required:
+      - total
+      - uncategorized
+      - needs_styling
+      - needs_color_photos
+      - ready_to_publish
+      - draft
+      - active
+      - archived
+      title: AdminCatalogOverviewResponse
     AdminCategoryListResponse:
       properties:
         items:
@@ -2501,6 +2761,18 @@ components:
             $ref: '#/components/schemas/AdminInventoryItemSchema'
           type: array
           title: Items
+        groups:
+          items:
+            $ref: '#/components/schemas/AdminInventoryProductGroupSchema'
+          type: array
+          title: Groups
+        group_by:
+          type: string
+          enum:
+          - variant
+          - product
+          title: Group By
+          default: variant
         total:
           type: integer
           title: Total
@@ -2515,12 +2787,88 @@ components:
           title: Low Stock Threshold
       type: object
       required:
-      - items
       - total
       - page
       - limit
       - low_stock_threshold
       title: AdminInventoryListResponse
+    AdminInventoryOverviewResponse:
+      properties:
+        total_variants:
+          type: integer
+          title: Total Variants
+        total_products:
+          type: integer
+          title: Total Products
+        low_stock_variants:
+          type: integer
+          title: Low Stock Variants
+        low_stock_products:
+          type: integer
+          title: Low Stock Products
+        out_of_stock_variants:
+          type: integer
+          title: Out Of Stock Variants
+        out_of_stock_products:
+          type: integer
+          title: Out Of Stock Products
+        low_stock_threshold:
+          type: integer
+          title: Low Stock Threshold
+      type: object
+      required:
+      - total_variants
+      - total_products
+      - low_stock_variants
+      - low_stock_products
+      - out_of_stock_variants
+      - out_of_stock_products
+      - low_stock_threshold
+      title: AdminInventoryOverviewResponse
+    AdminInventoryProductGroupSchema:
+      properties:
+        product_id:
+          type: string
+          format: uuid
+          title: Product Id
+        product_name:
+          type: string
+          title: Product Name
+        sync_source:
+          type: string
+          title: Sync Source
+        total_on_hand:
+          type: integer
+          title: Total On Hand
+        total_reserved:
+          type: integer
+          title: Total Reserved
+        total_available:
+          type: integer
+          title: Total Available
+        is_low_stock:
+          type: boolean
+          title: Is Low Stock
+        variant_count:
+          type: integer
+          title: Variant Count
+        variants:
+          items:
+            $ref: '#/components/schemas/AdminInventoryItemSchema'
+          type: array
+          title: Variants
+      type: object
+      required:
+      - product_id
+      - product_name
+      - sync_source
+      - total_on_hand
+      - total_reserved
+      - total_available
+      - is_low_stock
+      - variant_count
+      - variants
+      title: AdminInventoryProductGroupSchema
     AdminLoginRequest:
       properties:
         email:
@@ -2876,10 +3224,22 @@ components:
           default: []
         variants:
           items:
-            $ref: '#/components/schemas/ProductVariantSchema'
+            $ref: '#/components/schemas/AdminProductVariantSchema'
           type: array
           title: Variants
           default: []
+        stock_available_total:
+          type: integer
+          title: Stock Available Total
+          default: 0
+        stock_quantity_on_hand_total:
+          type: integer
+          title: Stock Quantity On Hand Total
+          default: 0
+        is_low_stock:
+          type: boolean
+          title: Is Low Stock
+          default: false
       type: object
       required:
       - id
@@ -2890,6 +3250,88 @@ components:
       - in_stock
       - status
       title: AdminProductSchema
+    AdminProductVariantSchema:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        sku:
+          type: string
+          title: Sku
+        name:
+          type: string
+          title: Name
+        price_cents:
+          type: integer
+          title: Price Cents
+        wholesale_price_cents:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Wholesale Price Cents
+        in_stock:
+          type: boolean
+          title: In Stock
+        is_default:
+          type: boolean
+          title: Is Default
+        sort_order:
+          type: integer
+          title: Sort Order
+        attributes:
+          additionalProperties:
+            type: string
+          type: object
+          title: Attributes
+        moysklad_variant_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Moysklad Variant Id
+        barcode:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Barcode
+        weight_grams:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Weight Grams
+        dimensions_cm:
+          anyOf:
+          - additionalProperties:
+              type: number
+            type: object
+          - type: 'null'
+          title: Dimensions Cm
+        quantity_on_hand:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Quantity On Hand
+        quantity_reserved:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Quantity Reserved
+        available:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Available
+      type: object
+      required:
+      - id
+      - sku
+      - name
+      - price_cents
+      - in_stock
+      - is_default
+      - sort_order
+      - attributes
+      title: AdminProductVariantSchema
     AdminTokenResponse:
       properties:
         access_token:

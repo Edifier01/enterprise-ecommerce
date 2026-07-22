@@ -22,6 +22,11 @@ export const ADMIN_NAV_SECTIONS: readonly AdminNavSection[] = [
     items: [
       { href: "/admin/catalog?all=1", label: "Товары", exact: false },
       {
+        href: "/admin/catalog/workflow",
+        label: "Оформление",
+        exact: false,
+      },
+      {
         href: "/admin/catalog/categories",
         label: "Категории",
         exact: false,

@@ -37,6 +37,30 @@ class AdminInventoryRow:
     is_low_stock: bool
 
 
+@dataclass(frozen=True, slots=True)
+class AdminInventoryProductGroup:
+    product_id: UUID
+    product_name: str
+    sync_source: str
+    total_on_hand: int
+    total_reserved: int
+    total_available: int
+    is_low_stock: bool
+    variant_count: int
+    variants: tuple[AdminInventoryRow, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class AdminInventoryOverview:
+    total_variants: int
+    total_products: int
+    low_stock_variants: int
+    low_stock_products: int
+    out_of_stock_variants: int
+    out_of_stock_products: int
+    low_stock_threshold: int
+
+
 class IAdminInventoryRepository(ABC):
     @abstractmethod
     async def list_inventory(
@@ -48,6 +72,22 @@ class IAdminInventoryRepository(ABC):
         low_stock_threshold: int,
         sku_query: str | None = None,
     ) -> tuple[list[AdminInventoryRow], int]:
+        ...
+
+    @abstractmethod
+    async def list_inventory_grouped_by_product(
+        self,
+        *,
+        page: int,
+        limit: int,
+        low_stock_only: bool,
+        low_stock_threshold: int,
+        sku_query: str | None = None,
+    ) -> tuple[list[AdminInventoryProductGroup], int]:
+        ...
+
+    @abstractmethod
+    async def get_inventory_overview(self, *, low_stock_threshold: int) -> AdminInventoryOverview:
         ...
 
     @abstractmethod

@@ -1,6 +1,7 @@
 """Admin inventory HTTP routes."""
 
 import logging
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -24,6 +25,8 @@ from app.features.inventory.presentation.admin_schemas import (
     AdminAdjustInventoryRequest,
     AdminInventoryItemSchema,
     AdminInventoryListResponse,
+    AdminInventoryOverviewResponse,
+    AdminInventoryProductGroupSchema,
 )
 
 logger = logging.getLogger(__name__)
@@ -52,17 +55,72 @@ def _row_schema(row) -> AdminInventoryItemSchema:
     )
 
 
+def _group_schema(group) -> AdminInventoryProductGroupSchema:
+    return AdminInventoryProductGroupSchema(
+        product_id=group.product_id,
+        product_name=group.product_name,
+        sync_source=group.sync_source,
+        total_on_hand=group.total_on_hand,
+        total_reserved=group.total_reserved,
+        total_available=group.total_available,
+        is_low_stock=group.is_low_stock,
+        variant_count=group.variant_count,
+        variants=[_row_schema(variant) for variant in group.variants],
+    )
+
+
+@router.get(
+    "/overview",
+    response_model=AdminInventoryOverviewResponse,
+    operation_id="adminInventoryOverview",
+)
+async def admin_inventory_overview(
+    _admin: AdminUser = Depends(require_permission("admin:read")),
+    repo: IAdminInventoryRepository = Depends(get_admin_inventory_repository),
+) -> AdminInventoryOverviewResponse:
+    threshold = settings.admin_low_stock_threshold
+    overview = await repo.get_inventory_overview(low_stock_threshold=threshold)
+    return AdminInventoryOverviewResponse(
+        total_variants=overview.total_variants,
+        total_products=overview.total_products,
+        low_stock_variants=overview.low_stock_variants,
+        low_stock_products=overview.low_stock_products,
+        out_of_stock_variants=overview.out_of_stock_variants,
+        out_of_stock_products=overview.out_of_stock_products,
+        low_stock_threshold=overview.low_stock_threshold,
+    )
+
+
 @router.get("", response_model=AdminInventoryListResponse, operation_id="adminListInventory")
 async def admin_list_inventory(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
     low_stock: bool = Query(default=False),
     q: str | None = Query(default=None, max_length=100),
+    group_by: Literal["variant", "product"] = Query(default="variant"),
     _admin: AdminUser = Depends(require_permission("admin:read")),
     repo: IAdminInventoryRepository = Depends(get_admin_inventory_repository),
 ) -> AdminInventoryListResponse:
     threshold = settings.admin_low_stock_threshold
     sku_query = q.strip() if q and q.strip() else None
+
+    if group_by == "product":
+        groups, total = await repo.list_inventory_grouped_by_product(
+            page=page,
+            limit=limit,
+            low_stock_only=low_stock,
+            low_stock_threshold=threshold,
+            sku_query=sku_query,
+        )
+        return AdminInventoryListResponse(
+            groups=[_group_schema(group) for group in groups],
+            group_by="product",
+            total=total,
+            page=page,
+            limit=limit,
+            low_stock_threshold=threshold,
+        )
+
     items, total = await repo.list_inventory(
         page=page,
         limit=limit,
@@ -72,6 +130,7 @@ async def admin_list_inventory(
     )
     return AdminInventoryListResponse(
         items=[_row_schema(item) for item in items],
+        group_by="variant",
         total=total,
         page=page,
         limit=limit,

@@ -7,6 +7,7 @@ import {
   ADMIN_CUSTOMERS_PAGE_SIZE,
   ADMIN_INVENTORY_PAGE_SIZE,
   ADMIN_ORDERS_PAGE_SIZE,
+  type AdminCatalogOverview,
   type AdminCategory,
   type AdminProduct,
   type AdminProductList,
@@ -14,6 +15,7 @@ import {
 
 export type {
   AdminCategory,
+  AdminCatalogOverview,
   AdminProduct,
   AdminProductList,
   ProductImage,
@@ -55,6 +57,10 @@ export async function listAdminProducts(
   else if (options?.categoryId) params.set("category_id", options.categoryId);
   params.set("sync_source", options?.syncSource ?? "moysklad");
   return adminFetchResult<AdminProductList>(`/api/v1/admin/catalog/products?${params}`);
+}
+
+export async function getAdminCatalogOverview(): Promise<AdminFetchResult<AdminCatalogOverview>> {
+  return adminFetchResult<AdminCatalogOverview>("/api/v1/admin/catalog/overview");
 }
 
 export async function getAdminProduct(id: string): Promise<AdminProduct | null> {

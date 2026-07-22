@@ -2,6 +2,7 @@ export type AdminInventoryListParams = {
   page?: number;
   lowStockOnly?: boolean;
   q?: string;
+  groupBy?: "variant" | "product";
 };
 
 export function buildAdminInventoryListHref(params: AdminInventoryListParams = {}): string {
@@ -15,6 +16,9 @@ export function buildAdminInventoryListHref(params: AdminInventoryListParams = {
   }
   if (params.q?.trim()) {
     search.set("q", params.q.trim());
+  }
+  if (params.groupBy === "product") {
+    search.set("group_by", "product");
   }
 
   const query = search.toString();

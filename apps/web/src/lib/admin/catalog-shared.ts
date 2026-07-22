@@ -42,7 +42,13 @@ export type AdminProduct = {
     barcode?: string | null;
     weight_grams?: number | null;
     dimensions_cm?: Record<string, number> | null;
+    quantity_on_hand?: number | null;
+    quantity_reserved?: number | null;
+    available?: number | null;
   }>;
+  stock_available_total?: number;
+  stock_quantity_on_hand_total?: number;
+  is_low_stock?: boolean;
 };
 
 export type AdminProductList = {
@@ -50,6 +56,17 @@ export type AdminProductList = {
   total: number;
   page: number;
   limit: number;
+};
+
+export type AdminCatalogOverview = {
+  total: number;
+  uncategorized: number;
+  needs_styling: number;
+  needs_color_photos: number;
+  ready_to_publish: number;
+  draft: number;
+  active: number;
+  archived: number;
 };
 
 export type AdminCategory = {
@@ -97,4 +114,20 @@ export function getAdminProductListPrices(product: AdminProduct): {
     retailCents: variant?.price_cents ?? product.price_cents,
     wholesaleCents: variant?.wholesale_price_cents ?? null,
   };
+}
+
+export function getAdminProductStockAvailable(product: AdminProduct): number {
+  if (product.stock_available_total != null) {
+    return product.stock_available_total;
+  }
+  return product.variants.reduce((sum, variant) => sum + (variant.available ?? 0), 0);
+}
+
+export function formatAdminProductStockLabel(product: AdminProduct): string {
+  const available = getAdminProductStockAvailable(product);
+  const variantCount = product.variants.length;
+  if (variantCount <= 1) {
+    return `${available} шт.`;
+  }
+  return `${available} шт. (${variantCount} вариант.)`;
 }

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { AdminFilterChips } from "@/components/admin/admin-filter-chips";
+import { AdminSavedViews } from "@/components/admin/admin-saved-views";
+import { AdminFetchErrorState, AdminForbiddenState } from "@/components/admin/admin-error-state";
 import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
 import { AdminOrdersSearch } from "@/components/admin/orders/admin-orders-search";
 import { AdminOrdersTable } from "@/components/admin/orders/admin-orders-table";
@@ -16,7 +18,6 @@ import {
   type AdminOrdersListParams,
 } from "@/lib/admin/orders-list-url";
 import {
-  ADMIN_PAGE_FORBIDDEN_MESSAGE,
   adminHasPermission,
 } from "@/lib/admin/require-admin-permission";
 import { getCurrentAdmin } from "@/lib/admin/session";
@@ -47,11 +48,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
   if (!adminHasPermission(admin, "admin:read")) {
-    return (
-      <p className="text-sm text-destructive" role="alert">
-        {ADMIN_PAGE_FORBIDDEN_MESSAGE}
-      </p>
-    );
+    return <AdminForbiddenState />;
   }
 
   const { page: pageRaw, status, export_pending, q } = await searchParams;
@@ -71,11 +68,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
   );
 
   if (!ordersResult.ok) {
-    return (
-      <p className="text-sm text-destructive" role="alert">
-        {ordersResult.error}
-      </p>
-    );
+    return <AdminFetchErrorState message={ordersResult.error} retryHref="/admin/orders" />;
   }
 
   const orders = ordersResult.data;
@@ -108,34 +101,32 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Заказы</h1>
-          <p className="text-sm text-muted-foreground">
-            {searchQuery
-              ? `Результаты поиска (${orders.total})`
-              : `Управление заказами (${orders.total} всего).`}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 text-sm">
-          {STATUS_FILTERS.map((filter) => {
-            const isActive = activeFilter === filter.value;
-            return (
-              <Link
-                key={filter.label}
-                href={filterHref(filter.value)}
-                className={
-                  isActive
-                    ? "font-medium text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }
-              >
-                {filter.label}
-              </Link>
-            );
-          })}
-        </div>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Заказы</h1>
+        <p className="text-sm text-muted-foreground">
+          {searchQuery
+            ? `Результаты поиска (${orders.total})`
+            : `Управление заказами (${orders.total} всего).`}
+        </p>
       </div>
+
+      <AdminSavedViews
+        activeId={activeFilter || "all"}
+        views={STATUS_FILTERS.map((filter) => ({
+          id: filter.value || "all",
+          label: filter.label,
+          href: filterHref(filter.value),
+        }))}
+      />
+
+      <AdminFilterChips
+        items={STATUS_FILTERS.map((filter) => ({
+          label: filter.label,
+          href: filterHref(filter.value),
+          active: activeFilter === filter.value,
+        }))}
+        resetHref={buildAdminOrdersListHref({ q: searchQuery || undefined })}
+      />
 
       <AdminOrdersSearch
         defaultQuery={searchQuery}

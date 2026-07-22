@@ -96,6 +96,13 @@ class UpdateVariantData:
 
 
 @dataclass(frozen=True, slots=True)
+class VariantInventorySnapshot:
+    quantity_on_hand: int
+    quantity_reserved: int
+    available: int
+
+
+@dataclass(frozen=True, slots=True)
 class CreateCategoryData:
     slug: str
     name: str
@@ -114,6 +121,18 @@ class UpdateCategoryData:
     clear_parent: bool = False
     is_active: bool | None = None
     sort_order: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AdminCatalogOverview:
+    total: int
+    uncategorized: int
+    needs_styling: int
+    needs_color_photos: int
+    ready_to_publish: int
+    draft: int
+    active: int
+    archived: int
 
 
 class IAdminCatalogRepository(ABC):
@@ -138,6 +157,10 @@ class IAdminCatalogRepository(ABC):
         ...
 
     @abstractmethod
+    async def get_catalog_overview(self) -> AdminCatalogOverview:
+        ...
+
+    @abstractmethod
     async def get_product_by_id(self, product_id: UUID) -> Product | None:
         ...
 
@@ -155,6 +178,12 @@ class IAdminCatalogRepository(ABC):
 
     @abstractmethod
     async def update_variant(self, variant_id: UUID, data: UpdateVariantData) -> ProductVariant:
+        ...
+
+    @abstractmethod
+    async def get_variant_inventory_snapshots(
+        self, variant_ids: list[UUID]
+    ) -> dict[UUID, VariantInventorySnapshot]:
         ...
 
     @abstractmethod

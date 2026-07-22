@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db_session
 from app.features.admin.domain.entities import AdminUser
 from app.features.admin.presentation.dependencies import require_permission
@@ -22,9 +23,10 @@ from app.features.catalog.domain.admin_ports import (
     UpdateCategoryData,
     UpdateProductData,
     UpdateVariantData,
+    VariantInventorySnapshot,
     VariantNotFoundError,
 )
-from app.features.catalog.domain.entities import Product
+from app.features.catalog.domain.entities import Product, ProductVariant
 from app.features.catalog.domain.merchandising_readiness import (
     format_publish_blockers_ru,
     get_moysklad_publish_blockers,
@@ -34,6 +36,7 @@ from app.features.catalog.infrastructure.persistence.admin_catalog_repository im
     AdminCatalogRepository,
 )
 from app.features.catalog.presentation.admin_schemas import (
+    AdminCatalogOverviewResponse,
     AdminCategoryListResponse,
     AdminCreateCategoryRequest,
     AdminCreateProductImageRequest,
@@ -41,6 +44,7 @@ from app.features.catalog.presentation.admin_schemas import (
     AdminCreateVariantRequest,
     AdminProductListResponse,
     AdminProductSchema,
+    AdminProductVariantSchema,
     AdminUpdateCategoryRequest,
     AdminUpdateProductImageRequest,
     AdminUpdateProductRequest,
@@ -77,10 +81,52 @@ async def _load_product_schema(
     if product is None:
         return None
     images = await image_repo.list_for_product(product_id)
-    return _product_schema(product, images)
+    inventory = await repo.get_variant_inventory_snapshots(
+        [variant.id for variant in product.variants]
+    )
+    return _product_schema(product, images, inventory)
 
 
-def _product_schema(product: Product, images: list | None = None) -> AdminProductSchema:
+def _variant_schema(
+    variant: ProductVariant,
+    inventory: dict[UUID, VariantInventorySnapshot],
+) -> AdminProductVariantSchema:
+    snapshot = inventory.get(variant.id)
+    return AdminProductVariantSchema(
+        id=variant.id,
+        sku=variant.sku,
+        name=variant.name,
+        price_cents=variant.price_cents,
+        wholesale_price_cents=variant.wholesale_price_cents,
+        in_stock=variant.in_stock,
+        is_default=variant.is_default,
+        sort_order=variant.sort_order,
+        attributes=variant.attributes,
+        moysklad_variant_id=variant.moysklad_variant_id,
+        barcode=variant.barcode,
+        weight_grams=variant.weight_grams,
+        dimensions_cm=variant.dimensions_cm,
+        quantity_on_hand=snapshot.quantity_on_hand if snapshot else None,
+        quantity_reserved=snapshot.quantity_reserved if snapshot else None,
+        available=snapshot.available if snapshot else None,
+    )
+
+
+def _product_schema(
+    product: Product,
+    images: list | None = None,
+    inventory: dict[UUID, VariantInventorySnapshot] | None = None,
+) -> AdminProductSchema:
+    inventory = inventory or {}
+    variant_schemas = [_variant_schema(variant, inventory) for variant in product.variants]
+    stock_available_total = sum(
+        snapshot.available for snapshot in inventory.values()
+    )
+    stock_quantity_on_hand_total = sum(
+        snapshot.quantity_on_hand for snapshot in inventory.values()
+    )
+    low_stock_threshold = settings.admin_low_stock_threshold
+
     return AdminProductSchema(
         id=product.id,
         name=product.name,
@@ -101,7 +147,32 @@ def _product_schema(product: Product, images: list | None = None) -> AdminProduc
         meta_description=product.meta_description,
         erp_image_url=product.erp_image_url,
         images=[ProductImageSchema.model_validate(img) for img in (images or [])],
-        variants=[ProductVariantSchema.model_validate(v) for v in product.variants],
+        variants=variant_schemas,
+        stock_available_total=stock_available_total,
+        stock_quantity_on_hand_total=stock_quantity_on_hand_total,
+        is_low_stock=stock_available_total <= low_stock_threshold,
+    )
+
+
+@router.get(
+    "/overview",
+    response_model=AdminCatalogOverviewResponse,
+    operation_id="adminCatalogOverview",
+)
+async def admin_catalog_overview(
+    _admin: AdminUser = Depends(require_permission("admin:read")),
+    repo: IAdminCatalogRepository = Depends(get_admin_catalog_repository),
+) -> AdminCatalogOverviewResponse:
+    overview = await repo.get_catalog_overview()
+    return AdminCatalogOverviewResponse(
+        total=overview.total,
+        uncategorized=overview.uncategorized,
+        needs_styling=overview.needs_styling,
+        needs_color_photos=overview.needs_color_photos,
+        ready_to_publish=overview.ready_to_publish,
+        draft=overview.draft,
+        active=overview.active,
+        archived=overview.archived,
     )
 
 
@@ -132,8 +203,10 @@ async def admin_list_products(
         sync_source=sync_source,
         moysklad_pending=moysklad_pending,
     )
+    variant_ids = [variant.id for product in products for variant in product.variants]
+    inventory = await repo.get_variant_inventory_snapshots(variant_ids)
     return AdminProductListResponse(
-        items=[_product_schema(p) for p in products],
+        items=[_product_schema(p, inventory=inventory) for p in products],
         total=total,
         page=page,
         limit=limit,
@@ -253,7 +326,10 @@ async def admin_update_product(
         raise HTTPException(status_code=409, detail="Slug already exists")
     await session.commit()
     images = await image_repo.list_for_product(product_id)
-    return _product_schema(product, images)
+    inventory = await repo.get_variant_inventory_snapshots(
+        [variant.id for variant in product.variants]
+    )
+    return _product_schema(product, images, inventory)
 
 
 @router.get(

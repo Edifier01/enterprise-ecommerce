@@ -820,6 +820,70 @@ The third duplicate Sprint E section was removed during full project review. All
 - [x] Import queue edit links preserve import page context
 - [x] E2E filter back-link smoke
 
+#### Feature: Admin Panel UX Wave 14 — COMPLETED
+
+- [x] `admin_bulk_jobs` table + migration 020
+- [x] Bulk job API (`POST/GET /admin/jobs/bulk`) with progress counters
+- [x] Background runner for assign category + publish products
+- [x] `AdminBulkJobProgress` UI on import queue; polling + revalidation
+
+#### Feature: Admin Panel UX Wave 13 — COMPLETED
+
+- [x] Global command palette (`Cmd/Ctrl+K`) with RBAC-filtered navigation, search, quick views, MoySklad actions
+- [x] `AdminForbiddenState` / `AdminFetchErrorState` on main admin pages
+- [x] E2E command palette smoke
+
+#### Feature: Admin Panel UX Wave 12 — COMPLETED
+
+- [x] Customers list migrated to `AdminDataTable` (`admin-customers-table.tsx`)
+- [x] MoySklad import queue migrated to `AdminDataTable` with selection + bulk toolbar
+- [x] Search-aware empty states; `formatAdminDate` on customers
+
+#### Feature: Admin Panel UX Wave 11 — COMPLETED
+
+- [x] `GET /api/v1/admin/inventory/overview` — variant + product low/out-of-stock counts
+- [x] Dashboard low-stock card wired to overview (product count, variant subtitle, grouped link)
+- [x] Dashboard page uses `getAdminCatalogOverview()` for merchandising counts
+- [x] Pytest `test_admin_inventory_overview` + OpenAPI sync (55 paths)
+
+#### Feature: Admin Panel UX Wave 10 — COMPLETED
+
+- [x] `GET /api/v1/admin/catalog/overview` — merchandising workflow counts
+- [x] Catalog list migrated to `AdminDataTable` (`admin-catalog-table.tsx`)
+- [x] Workflow page uses single overview API (replaces 7 list calls)
+- [x] Saved views show counts from overview on catalog page
+- [x] Pytest + OpenAPI sync
+
+#### Feature: Admin Panel UX Wave 9 — COMPLETED
+
+- [x] `AdminDataTable` foundation (sort, sticky header, column visibility, mobile cards)
+- [x] `AdminEmptyState`, `AdminErrorState`, `AdminSavedViews`
+- [x] Inventory API `group_by=product` + grouped UI (`InventoryProductGroup`)
+- [x] Inventory saved views + orders table on AdminDataTable
+- [x] Merchandising workflow board `/admin/catalog/workflow`
+- [x] Catalog/orders/inventory saved view tabs
+- [x] OpenAPI sync + pytest inventory grouped test
+
+#### Feature: Admin Panel UX Wave 8 (P0 + Quick Wins) — COMPLETED
+
+- [x] Sidebar nav full-width block links (desktop + mobile drawer)
+- [x] Hydration fix — `formatAdminDate()` + MoySklad sync label
+- [x] `AdminFilterChips` on catalog, orders, inventory
+- [x] `AdminSearchBar` shared across catalog/orders/inventory/customers
+- [x] Sticky save bar on product edit
+- [x] `AdminConfirmDialog` for category delete
+- [x] Toast severity tones (`success` / `warning` / `error` / `info`)
+
+**Ops:** prod deploy for MS stock column + Wave 8 UI
+
+#### Feature: Admin Catalog MS Stock Visibility — COMPLETED
+
+- [x] Admin catalog API — variant inventory snapshot + product totals
+- [x] Catalog list column «Остаток (МС)» with low-stock badge
+- [x] Product edit variant panel — numeric stock (read-only)
+- [x] Pytest + E2E smoke for stock column
+- [x] OpenAPI sync
+
 #### Feature: Remove Admin MFA — COMPLETED
 
 - [x] ADR-014 — password-only admin auth
@@ -986,6 +1050,7 @@ None reported (review findings tracked in epic above).
 
 **Status:** COMPLETED
 
+- [x] Admin Panel UX Improvement Plan saved to `docs/reviews/ADMIN-PANEL-UX-IMPROVEMENT-PLAN-2026-07-22.md`
 - [x] Add Phase 25 to PROJECT_ROADMAP for Project Management Layer
 - [x] Sync DECISIONS.md when new ADRs are created (architecture-decision-records skill)
 - [x] Cursor hooks for sessionStart/stop/subagentStop

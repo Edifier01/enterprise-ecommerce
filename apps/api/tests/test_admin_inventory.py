@@ -125,6 +125,46 @@ async def test_admin_list_inventory(admin_inventory_client: AsyncClient) -> None
 
 
 @pytest.mark.asyncio
+async def test_admin_list_inventory_grouped_by_product(
+    admin_inventory_client: AsyncClient,
+) -> None:
+    token = await _token(admin_inventory_client)
+    response = await admin_inventory_client.get(
+        "/api/v1/admin/inventory?group_by=product",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["group_by"] == "product"
+    assert data["total"] == 1
+    assert data["items"] == []
+    group = data["groups"][0]
+    assert group["product_name"] == "Stock Test Product"
+    assert group["total_available"] == 15
+    assert group["variant_count"] == 1
+    assert len(group["variants"]) == 1
+    assert group["variants"][0]["sku"] == "STOCK-TEST-1"
+
+
+@pytest.mark.asyncio
+async def test_admin_inventory_overview(admin_inventory_client: AsyncClient) -> None:
+    token = await _token(admin_inventory_client)
+    response = await admin_inventory_client.get(
+        "/api/v1/admin/inventory/overview",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total_variants"] == 1
+    assert data["total_products"] == 1
+    assert data["low_stock_variants"] == 0
+    assert data["low_stock_products"] == 0
+    assert data["out_of_stock_variants"] == 0
+    assert data["out_of_stock_products"] == 0
+    assert data["low_stock_threshold"] == settings.admin_low_stock_threshold
+
+
+@pytest.mark.asyncio
 async def test_admin_list_inventory_sku_search(admin_inventory_client: AsyncClient) -> None:
     token = await _token(admin_inventory_client)
     response = await admin_inventory_client.get(

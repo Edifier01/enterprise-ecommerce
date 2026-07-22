@@ -398,6 +398,22 @@ export async function updateVariantAction(
   }
 }
 
+function translateMediaUploadError(message: string): string {
+  if (message === "Invalid image file" || message.startsWith("Invalid image file.")) {
+    return "Файл не распознан как изображение. Сохраните фото в JPEG, PNG, WebP или GIF.";
+  }
+  if (message.startsWith("Unsupported image type")) {
+    return "Формат не поддерживается. Используйте JPEG, PNG, WebP или GIF.";
+  }
+  if (message === "Empty file") {
+    return "Файл пустой.";
+  }
+  if (message === "File too large") {
+    return "Файл слишком большой (максимум 5 МБ).";
+  }
+  return message;
+}
+
 export async function uploadAdminMediaAction(
   formData: FormData,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
@@ -432,7 +448,7 @@ export async function uploadAdminMediaAction(
 
   if (!res.ok) {
     const parsed = parseAdminApiError(await res.json().catch(() => null));
-    return { ok: false, error: parsed.message };
+    return { ok: false, error: translateMediaUploadError(parsed.message) };
   }
 
   const data = (await res.json()) as { url: string };

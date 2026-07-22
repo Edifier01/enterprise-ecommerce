@@ -2,7 +2,11 @@
 
 import pytest
 
-from app.features.admin.infrastructure.media.validation import validate_image_bytes
+from app.features.admin.infrastructure.media.validation import (
+    detect_image_content_type,
+    resolve_upload_content_type,
+    validate_image_bytes,
+)
 from app.features.catalog.domain.media_url import validate_admin_media_url
 
 
@@ -44,3 +48,18 @@ def test_validate_image_bytes_accepts_png() -> None:
 def test_validate_image_bytes_rejects_mismatch() -> None:
     with pytest.raises(ValueError, match="Invalid image file"):
         validate_image_bytes(b"not-an-image", "image/png")
+
+
+def test_detect_image_content_type_from_png_bytes() -> None:
+    png_header = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+    assert detect_image_content_type(png_header) == "image/png"
+
+
+def test_resolve_upload_content_type_sniffs_when_declared_mime_wrong() -> None:
+    png_header = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+    assert resolve_upload_content_type(png_header, "image/jpeg") == "image/png"
+
+
+def test_resolve_upload_content_type_accepts_octet_stream() -> None:
+    png_header = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+    assert resolve_upload_content_type(png_header, "application/octet-stream") == "image/png"

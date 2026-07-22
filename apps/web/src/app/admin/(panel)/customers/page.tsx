@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { AdminFetchErrorState, AdminForbiddenState } from "@/components/admin/admin-error-state";
 import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
 import { AdminCustomersSearch } from "@/components/admin/customers/admin-customers-search";
 import { AdminCustomersTable } from "@/components/admin/customers/admin-customers-table";
 import { ADMIN_CUSTOMERS_PAGE_SIZE } from "@/lib/admin/catalog";
 import { listAdminCustomers } from "@/lib/admin/customers";
 import {
-  ADMIN_PAGE_FORBIDDEN_MESSAGE,
   adminHasPermission,
 } from "@/lib/admin/require-admin-permission";
 import { getCurrentAdmin } from "@/lib/admin/session";
@@ -32,11 +32,7 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
     redirect("/admin/login");
   }
   if (!adminHasPermission(admin, "customers:read")) {
-    return (
-      <p className="text-sm text-destructive" role="alert">
-        {ADMIN_PAGE_FORBIDDEN_MESSAGE}
-      </p>
-    );
+    return <AdminForbiddenState />;
   }
 
   const { page: pageRaw, q } = await searchParams;
@@ -45,11 +41,7 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
   const customersResult = await listAdminCustomers(page, query || undefined);
 
   if (!customersResult.ok) {
-    return (
-      <p className="text-sm text-destructive" role="alert">
-        {customersResult.error}
-      </p>
-    );
+    return <AdminFetchErrorState message={customersResult.error} retryHref="/admin/customers" />;
   }
 
   const data = customersResult.data;
@@ -75,7 +67,7 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
 
       <AdminCustomersSearch defaultQuery={query} />
 
-      <AdminCustomersTable customers={data.items} />
+      <AdminCustomersTable customers={data.items} searchQuery={query || undefined} />
       <AdminPagination page={page} totalPages={totalPages} buildHref={buildHref} />
     </div>
   );

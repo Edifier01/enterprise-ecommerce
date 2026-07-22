@@ -1,12 +1,15 @@
+"use client";
+
 import Link from "next/link";
 
+import { AdminDataTable, type AdminDataTableColumn } from "@/components/admin/admin-data-table";
+import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import {
-  AdminDesktopTable,
   AdminMobileCard,
-  AdminMobileCardList,
   AdminMobileCardRow,
 } from "@/components/admin/admin-mobile-card";
 import { Badge } from "@/components/ui/badge";
+import { formatAdminDate } from "@/lib/admin/format";
 import type { AdminOrderSummary } from "@/lib/admin/orders-shared";
 import { formatOrderMoney } from "@/lib/admin/orders-shared";
 
@@ -44,99 +47,110 @@ export function AdminOrdersTable({
   function orderHref(orderNumber: string): string {
     return buildOrderHref?.(orderNumber) ?? `/admin/orders/${encodeURIComponent(orderNumber)}`;
   }
-  if (orders.length === 0) {
-    return (
-      <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-        Заказов не найдено.
-      </p>
-    );
-  }
+
+  const columns: AdminDataTableColumn<AdminOrderSummary>[] = [
+    {
+      id: "order_number",
+      header: "Номер",
+      sortValue: (order) => order.order_number,
+      cell: (order) => (
+        <Link href={orderHref(order.order_number)} className="font-medium text-primary hover:underline">
+          {order.order_number}
+        </Link>
+      ),
+    },
+    {
+      id: "customer",
+      header: "Клиент",
+      sortValue: (order) => order.customer_email ?? "",
+      cell: (order) => <span className="text-muted-foreground">{order.customer_email ?? "—"}</span>,
+    },
+    {
+      id: "status",
+      header: "Статус",
+      sortValue: (order) => order.status,
+      cell: (order) => (
+        <Badge variant={order.status === "canceled" ? "secondary" : "default"}>
+          {getStatusLabel(order.status)}
+        </Badge>
+      ),
+    },
+    ...(showExportStatus
+      ? [
+          {
+            id: "export",
+            header: "МойСклад",
+            cell: (order: AdminOrderSummary) => <ExportStatusBadge order={order} />,
+          } satisfies AdminDataTableColumn<AdminOrderSummary>,
+        ]
+      : []),
+    {
+      id: "total",
+      header: "Сумма",
+      sortValue: (order) => order.total_cents,
+      cellClassName: "text-right",
+      headerClassName: "text-right",
+      cell: (order) => formatOrderMoney(order.total_cents, order.currency),
+    },
+    {
+      id: "created_at",
+      header: "Дата",
+      sortValue: (order) => order.created_at,
+      cell: (order) => (
+        <span className="text-muted-foreground">
+          {formatAdminDate(order.created_at) ?? "—"}
+        </span>
+      ),
+    },
+  ];
 
   return (
-    <>
-      <AdminMobileCardList>
-        {orders.map((order) => (
-          <AdminMobileCard key={order.id}>
-            <div className="space-y-2">
-              <Link
-                href={orderHref(order.order_number)}
-                className="text-base font-semibold text-primary hover:underline"
-              >
-                {order.order_number}
-              </Link>
-              <AdminMobileCardRow label="Клиент">
-                <span className="font-normal text-muted-foreground">
-                  {order.customer_email ?? "—"}
-                </span>
-              </AdminMobileCardRow>
-              <AdminMobileCardRow label="Статус">
-                <span className="inline-flex flex-wrap items-center gap-2">
-                  <Badge variant={order.status === "canceled" ? "secondary" : "default"}>
-                    {getStatusLabel(order.status)}
-                  </Badge>
-                  {showExportStatus ? <ExportStatusBadge order={order} /> : null}
-                </span>
-              </AdminMobileCardRow>
-              <AdminMobileCardRow label="Сумма">
-                {formatOrderMoney(order.total_cents, order.currency)}
-              </AdminMobileCardRow>
-              <AdminMobileCardRow label="Дата">
-                <span className="font-normal text-muted-foreground">
-                  {new Date(order.created_at).toLocaleString("ru-RU")}
-                </span>
-              </AdminMobileCardRow>
-            </div>
-          </AdminMobileCard>
-        ))}
-      </AdminMobileCardList>
-
-      <AdminDesktopTable className="rounded-lg">
-        <table className="w-full min-w-[720px] text-sm">
-          <thead className="border-b border-border bg-muted/40 text-left">
-            <tr>
-              <th className="px-4 py-3 font-medium">Номер</th>
-              <th className="px-4 py-3 font-medium">Клиент</th>
-              <th className="px-4 py-3 font-medium">Статус</th>
-              {showExportStatus ? <th className="px-4 py-3 font-medium">МойСклад</th> : null}
-              <th className="px-4 py-3 font-medium">Сумма</th>
-              <th className="px-4 py-3 font-medium">Дата</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((order) => (
-              <tr key={order.id} className="border-b border-border/60">
-                <td className="px-4 py-3">
-                  <Link
-                    href={orderHref(order.order_number)}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {order.order_number}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {order.customer_email ?? "—"}
-                </td>
-                <td className="px-4 py-3">
-                  <Badge variant={order.status === "canceled" ? "secondary" : "default"}>
-                    {getStatusLabel(order.status)}
-                  </Badge>
-                </td>
-                {showExportStatus ? (
-                  <td className="px-4 py-3">
-                    <ExportStatusBadge order={order} />
-                  </td>
-                ) : null}
-                <td className="px-4 py-3">
-                  {formatOrderMoney(order.total_cents, order.currency)}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {new Date(order.created_at).toLocaleString("ru-RU")}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </AdminDesktopTable>
-    </>
+    <AdminDataTable
+      tableId="admin-orders"
+      columns={columns}
+      rows={orders}
+      getRowId={(order) => order.id}
+      stickyHeader
+      density="compact"
+      emptyState={
+        <AdminEmptyState
+          title="Заказов не найдено"
+          description="Измените фильтры или поисковый запрос."
+        />
+      }
+      renderMobileCard={(order) => (
+        <AdminMobileCard key={order.id}>
+          <div className="space-y-2">
+            <Link
+              href={orderHref(order.order_number)}
+              className="text-base font-semibold text-primary hover:underline"
+            >
+              {order.order_number}
+            </Link>
+            <AdminMobileCardRow label="Клиент">
+              <span className="font-normal text-muted-foreground">
+                {order.customer_email ?? "—"}
+              </span>
+            </AdminMobileCardRow>
+            <AdminMobileCardRow label="Статус">
+              <span className="inline-flex flex-wrap items-center gap-2">
+                <Badge variant={order.status === "canceled" ? "secondary" : "default"}>
+                  {getStatusLabel(order.status)}
+                </Badge>
+                {showExportStatus ? <ExportStatusBadge order={order} /> : null}
+              </span>
+            </AdminMobileCardRow>
+            <AdminMobileCardRow label="Сумма">
+              {formatOrderMoney(order.total_cents, order.currency)}
+            </AdminMobileCardRow>
+            <AdminMobileCardRow label="Дата">
+              <span className="font-normal text-muted-foreground">
+                {formatAdminDate(order.created_at) ?? "—"}
+              </span>
+            </AdminMobileCardRow>
+          </div>
+        </AdminMobileCard>
+      )}
+    />
   );
 }

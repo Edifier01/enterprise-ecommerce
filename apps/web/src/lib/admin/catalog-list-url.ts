@@ -65,6 +65,9 @@ export function getAdminReturnLabel(href: string): string {
       return "← К очереди импорта";
     }
     if (url.pathname === "/admin/inventory") {
+      if (params.get("group_by") === "product") {
+        return "← По товарам";
+      }
       if (params.get("low_stock") === "true") {
         return "← Низкий остаток";
       }

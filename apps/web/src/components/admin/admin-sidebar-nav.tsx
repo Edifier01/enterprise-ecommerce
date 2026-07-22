@@ -21,7 +21,7 @@ export function AdminSidebarNav({
   return (
     <nav className={cn("flex flex-1 flex-col gap-4 p-3", className)}>
       {sections.map((section) => (
-        <div key={section.title ?? "root"} className="space-y-1">
+        <div key={section.title ?? "root"} className="flex flex-col gap-1">
           {section.title ? (
             <p className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {section.title}
@@ -37,7 +37,7 @@ export function AdminSidebarNav({
                 aria-current={active ? "page" : undefined}
                 onClick={onNavigate}
                 className={cn(
-                  "min-h-11 rounded-md px-3 py-2.5 text-sm font-medium",
+                  "flex min-h-11 w-full items-center rounded-md px-3 py-2.5 text-sm font-medium",
                   active
                     ? "bg-muted text-foreground"
                     : "text-foreground hover:bg-muted",

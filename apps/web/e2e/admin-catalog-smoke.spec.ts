@@ -61,6 +61,16 @@ test.describe("Admin catalog smoke", () => {
     await expect(page.getByRole("link", { name: "+ Категория" })).toHaveCount(0);
   });
 
+  test("catalog list shows MoySklad stock column", async ({ page }) => {
+    await loginAsAdmin(page);
+    const main = page.getByRole("main");
+
+    await page.goto("/admin/catalog?all=1");
+    await expect(
+      main.getByText("Остаток (МС)", { exact: true }).and(page.locator(":visible")).first(),
+    ).toBeVisible();
+  });
+
   test("catalog list shows category column and edit back link preserves filter", async ({ page }) => {
     await loginAsAdmin(page);
     const main = page.getByRole("main");

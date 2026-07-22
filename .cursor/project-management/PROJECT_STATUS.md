@@ -31,7 +31,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 **Overall roadmap:** ~99% (25/26 phases)
 
-**Phase 24 (application):** ~85% functional / ~72% production-ready (review follow-ups 2026-07-21; YooKassa pending)
+**Phase 24 (application):** ~89% functional / ~79% production-ready (admin UX Waves 8–13 local; YooKassa pending)
 
 ---
 
@@ -46,6 +46,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
+- [ ] Deploy admin UX Waves 8–13 to production
 - [ ] Run migrations 018–019 on dev/prod DB
 - [ ] Set `MEDIA_PUBLIC_BASE_URL` in production `.env` and redeploy
 - [ ] Real product/category photography — BACKLOG
@@ -54,6 +55,14 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Recently Completed
 
+- [x] **Admin UX Wave 14** — bulk background jobs for import queue assign/publish (2026-07-22)
+- [x] **Admin UX Wave 13** — command palette Cmd+K + AdminErrorState rollout (2026-07-22)
+- [x] **Admin UX Wave 12** — import queue + customers on AdminDataTable (2026-07-22)
+- [x] **Admin UX Wave 11** — inventory overview API + dashboard low-stock card (2026-07-22)
+- [x] **Admin UX Wave 10** — catalog overview API + catalog AdminDataTable (2026-07-22)
+- [x] **Admin UX Wave 8 (P0 + quick wins)** — sidebar, hydration, filter chips, search, sticky save, confirm dialog, toast tones (2026-07-22)
+- [x] **Admin UX browser audit + improvement plan** — production browser review and saved roadmap (`docs/reviews/ADMIN-PANEL-UX-IMPROVEMENT-PLAN-2026-07-22.md`) (2026-07-22)
+- [x] **Admin MS stock visibility** — catalog list + variant detail from MoySklad inventory (2026-07-22)
 - [x] **Review follow-ups** — security P1, CI alembic/OpenAPI, checkout E2E shipping, PM cleanup (2026-07-21)
 - [x] **Full project review** — architecture, security, QA/CI, devops, backend, frontend (2026-07-21); pytest 213 green
 - [x] **Admin P2 polish** — flaky test, viewer E2E, MFA 404 regression (2026-07-21)
@@ -115,7 +124,7 @@ None.
 
 ## Last Updated
 
-2026-07-21 (full project review)
+2026-07-22 (admin UX Wave 9)
 
 ---
 

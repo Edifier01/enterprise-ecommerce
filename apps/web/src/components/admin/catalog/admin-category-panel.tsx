@@ -11,6 +11,7 @@ import {
   type CatalogActionState,
 } from "@/app/actions/admin-catalog";
 import { AdminCategorySelect } from "@/components/admin/catalog/admin-category-select";
+import { AdminConfirmDialog } from "@/components/admin/admin-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminCategory } from "@/lib/admin/catalog-shared";
@@ -119,6 +120,7 @@ function CategoryEditRow({
 export function AdminCategoryPanel({ categories, canWrite = false }: AdminCategoryPanelProps) {
   const router = useRouter();
   const [pendingCategoryId, setPendingCategoryId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminCategory | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [createState, createAction, createPending] = useActionState(
@@ -309,24 +311,9 @@ export function AdminCategoryPanel({ categories, canWrite = false }: AdminCatego
                                   : undefined
                               }
                               onClick={() => {
-                                if (
-                                  !window.confirm(
-                                    `Удалить категорию «${category.name}»? Товары останутся без категории и скроются с витрины.`,
-                                  )
-                                ) {
-                                  return;
-                                }
+                                if (hasSubcategories) return;
                                 setActionError(null);
-                                setPendingCategoryId(category.id);
-                                startTransition(async () => {
-                                  const result = await deleteCategoryAction(category.id);
-                                  setPendingCategoryId(null);
-                                  if (result.error) {
-                                    setActionError(result.error);
-                                    return;
-                                  }
-                                  router.refresh();
-                                });
+                                setDeleteTarget(category);
                               }}
                             >
                               Удалить
@@ -357,6 +344,36 @@ export function AdminCategoryPanel({ categories, canWrite = false }: AdminCatego
           ) : null}
         </CardContent>
       </Card>
+
+      <AdminConfirmDialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title="Удалить категорию?"
+        description={
+          deleteTarget
+            ? `Категория «${deleteTarget.name}» будет удалена. Товары останутся без категории и скроются с витрины.`
+            : ""
+        }
+        confirmLabel="Удалить категорию"
+        destructive
+        pending={deleteTarget != null && pendingCategoryId === deleteTarget.id}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          setPendingCategoryId(deleteTarget.id);
+          startTransition(async () => {
+            const result = await deleteCategoryAction(deleteTarget.id);
+            setPendingCategoryId(null);
+            setDeleteTarget(null);
+            if (result.error) {
+              setActionError(result.error);
+              return;
+            }
+            router.refresh();
+          });
+        }}
+      />
     </div>
   );
 }

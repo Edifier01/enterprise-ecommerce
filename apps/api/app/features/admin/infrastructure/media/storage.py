@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 
 from app.core.config import settings
-from app.features.admin.infrastructure.media.validation import validate_image_bytes
+from app.features.admin.infrastructure.media.validation import resolve_upload_content_type
 
 _ALLOWED_CONTENT_TYPES = frozenset(
     {
@@ -38,11 +38,10 @@ class MediaStorageService:
     """Stores admin catalog images on local disk."""
 
     def store_bytes(self, data: bytes, content_type: str) -> str:
-        validate_image_content_type(content_type)
-        validate_image_bytes(data, content_type)
+        resolved_type = resolve_upload_content_type(data, content_type or "")
         upload_root = Path(settings.media_upload_dir)
         upload_root.mkdir(parents=True, exist_ok=True)
-        extension = extension_for_content_type(content_type)
+        extension = extension_for_content_type(resolved_type)
         filename = f"{uuid.uuid4().hex}{extension}"
         destination = upload_root / filename
         destination.write_bytes(data)
