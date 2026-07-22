@@ -8,12 +8,8 @@ import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pa
 import { AdminOrdersSearch } from "@/components/admin/orders/admin-orders-search";
 import { AdminOrdersTable } from "@/components/admin/orders/admin-orders-table";
 import { ADMIN_ORDERS_PAGE_SIZE } from "@/lib/admin/catalog";
+import { listAdminOrders } from "@/lib/admin/orders";
 import {
-  getAdminOrderStatusLabel,
-  listAdminOrders,
-} from "@/lib/admin/orders";
-import {
-  buildAdminOrderDetailHref,
   buildAdminOrdersListHref,
   type AdminOrdersListParams,
 } from "@/lib/admin/orders-list-url";
@@ -134,12 +130,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
         exportPending={exportPending}
       />
 
-      <AdminOrdersTable
-        orders={orders.items}
-        getStatusLabel={getAdminOrderStatusLabel}
-        showExportStatus
-        buildOrderHref={(orderNumber) => buildAdminOrderDetailHref(orderNumber, listParams)}
-      />
+      <AdminOrdersTable orders={orders.items} showExportStatus listParams={listParams} />
 
       <AdminPagination page={page} totalPages={totalPages} buildHref={buildHref} />
     </div>

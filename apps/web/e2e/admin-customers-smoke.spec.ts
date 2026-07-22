@@ -7,7 +7,7 @@ test.describe("Admin customers smoke", () => {
     await loginAsAdmin(page);
 
     await page.goto("/admin/customers");
-    await page.getByPlaceholder("Поиск по email…").fill("example.com");
+    await page.getByLabel("Поиск по клиентам").fill("example.com");
     await page.getByRole("button", { name: "Найти" }).click();
     await expect(page).toHaveURL(/q=example\.com/);
   });

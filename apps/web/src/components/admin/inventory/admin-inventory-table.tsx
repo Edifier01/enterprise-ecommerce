@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 import { AdminDataTable, type AdminDataTableColumn } from "@/components/admin/admin-data-table";

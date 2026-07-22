@@ -8,7 +8,9 @@ test.describe("Admin UX Wave 7 smoke", () => {
     await page.goto("/admin/catalog?needs_color_photos=1&all=1");
 
     await expect(page.getByRole("heading", { name: "Все товары" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Фото по цветам" })).toHaveClass(/font-medium/);
+    await expect(
+      page.getByRole("link", { name: "Фото по цветам", exact: true }).first(),
+    ).toHaveClass(/font-medium/);
   });
 
   test("product edit shows gallery color coverage when multi-color", async ({ page }) => {

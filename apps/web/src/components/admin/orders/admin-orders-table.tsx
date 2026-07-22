@@ -10,14 +10,17 @@ import {
 } from "@/components/admin/admin-mobile-card";
 import { Badge } from "@/components/ui/badge";
 import { formatAdminDate } from "@/lib/admin/format";
+import {
+  buildAdminOrderDetailHref,
+  type AdminOrdersListParams,
+} from "@/lib/admin/orders-list-url";
 import type { AdminOrderSummary } from "@/lib/admin/orders-shared";
-import { formatOrderMoney } from "@/lib/admin/orders-shared";
+import { formatOrderMoney, getAdminOrderStatusLabel } from "@/lib/admin/orders-shared";
 
 type AdminOrdersTableProps = {
   orders: AdminOrderSummary[];
-  getStatusLabel: (status: string) => string;
   showExportStatus?: boolean;
-  buildOrderHref?: (orderNumber: string) => string;
+  listParams?: AdminOrdersListParams;
 };
 
 function ExportStatusBadge({ order }: { order: AdminOrderSummary }) {
@@ -40,12 +43,11 @@ function ExportStatusBadge({ order }: { order: AdminOrderSummary }) {
 
 export function AdminOrdersTable({
   orders,
-  getStatusLabel,
   showExportStatus = false,
-  buildOrderHref,
+  listParams = {},
 }: AdminOrdersTableProps) {
   function orderHref(orderNumber: string): string {
-    return buildOrderHref?.(orderNumber) ?? `/admin/orders/${encodeURIComponent(orderNumber)}`;
+    return buildAdminOrderDetailHref(orderNumber, listParams);
   }
 
   const columns: AdminDataTableColumn<AdminOrderSummary>[] = [
@@ -71,7 +73,7 @@ export function AdminOrdersTable({
       sortValue: (order) => order.status,
       cell: (order) => (
         <Badge variant={order.status === "canceled" ? "secondary" : "default"}>
-          {getStatusLabel(order.status)}
+          {getAdminOrderStatusLabel(order.status)}
         </Badge>
       ),
     },
@@ -135,7 +137,7 @@ export function AdminOrdersTable({
             <AdminMobileCardRow label="Статус">
               <span className="inline-flex flex-wrap items-center gap-2">
                 <Badge variant={order.status === "canceled" ? "secondary" : "default"}>
-                  {getStatusLabel(order.status)}
+                  {getAdminOrderStatusLabel(order.status)}
                 </Badge>
                 {showExportStatus ? <ExportStatusBadge order={order} /> : null}
               </span>

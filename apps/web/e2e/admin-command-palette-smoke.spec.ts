@@ -6,6 +6,7 @@ test.describe("Admin command palette", () => {
   test("opens with keyboard shortcut and navigates to inventory", async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto("/admin");
+    await expect(page.getByRole("main")).toBeVisible();
 
     await page.keyboard.press("Control+K");
     await expect(page.getByRole("dialog", { name: "Палитра команд" })).toBeVisible();

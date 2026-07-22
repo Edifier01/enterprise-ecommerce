@@ -278,8 +278,8 @@ export function AdminCommandPaletteProvider({
       }
     }
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => document.removeEventListener("keydown", onKeyDown, true);
   }, [togglePalette]);
 
   const value = useMemo(

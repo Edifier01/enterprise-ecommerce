@@ -12,7 +12,9 @@ test.describe("Admin UX Wave 5 smoke", () => {
     if (hasAlert > 0) {
       await exportAlert.click();
       await expect(page).toHaveURL(/export_pending=1/);
-      await expect(page.getByRole("link", { name: "Ожидает экспорта в MS" })).toHaveClass(/font-medium/);
+      await expect(
+        page.getByRole("link", { name: "Ожидает экспорта в MS", exact: true }).first(),
+      ).toHaveClass(/font-medium/);
     }
   });
 
@@ -20,6 +22,8 @@ test.describe("Admin UX Wave 5 smoke", () => {
     await loginAsAdmin(page);
     await page.goto("/admin/orders?export_pending=1");
     await expect(page.getByRole("heading", { name: "Заказы" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Ожидает экспорта в MS" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Ожидает экспорта в MS", exact: true }).first(),
+    ).toBeVisible();
   });
 });

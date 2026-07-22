@@ -38,7 +38,7 @@ test.describe("Admin inventory smoke", () => {
     await loginAsAdmin(page);
 
     await page.goto("/admin/inventory");
-    await page.getByPlaceholder("Поиск по SKU или названию…").fill("STOCK");
+    await page.getByLabel("Поиск по складу").fill("STOCK");
     await page.getByRole("button", { name: "Найти" }).click();
     await expect(page).toHaveURL(/q=STOCK/);
   });

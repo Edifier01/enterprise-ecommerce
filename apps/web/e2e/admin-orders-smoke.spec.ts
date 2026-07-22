@@ -12,7 +12,7 @@ test.describe("Admin orders smoke", () => {
 
     await page.goto("/admin/orders");
     await expect(page.getByRole("heading", { name: "Заказы" })).toBeVisible();
-    await expect(page.getByPlaceholder("Поиск по номеру заказа или email…")).toBeVisible();
+    await expect(page.getByLabel("Поиск по заказам")).toBeVisible();
 
     const orderLink = page.getByRole("link", { name: /^ORD-/ }).first();
     const hasOrders = await orderLink.count();
