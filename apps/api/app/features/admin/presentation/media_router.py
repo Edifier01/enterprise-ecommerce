@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from app.core.config import settings
 from app.features.admin.domain.entities import AdminUser
-from app.features.admin.infrastructure.media.storage import MediaStorageService
+from app.features.admin.infrastructure.media.storage import MediaStorageError, MediaStorageService
 from app.features.admin.presentation.dependencies import require_permission
 
 router = APIRouter(prefix="/admin/media", tags=["admin"])
@@ -30,6 +30,8 @@ async def admin_upload_media(
         url = storage.store_bytes(data, content_type)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except Exception as exc:
+    except MediaStorageError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except OSError as exc:
         raise HTTPException(status_code=500, detail="Media upload failed") from exc
     return {"url": url}

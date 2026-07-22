@@ -6,13 +6,13 @@
 
 ## Current Module
 
-Admin panel UX — post-deploy polish
+Admin media upload & gallery display fix
 
 ---
 
 ## Current Feature
 
-**Admin design system / loading states** (next in UX roadmap)
+**Media upload reliability** — relative `/media/` URLs, video rejection, preview fix
 
 ---
 
@@ -32,7 +32,7 @@ Implementation Agent
 
 1. YooKassa payment integration (release gate)
 2. SMTP production delivery
-3. `MEDIA_PUBLIC_BASE_URL` verify + media volume backup on prod (ops)
+3. Prod: re-upload gallery photos lost before volume fix; verify `media_uploads` volume after deploy
 
 ---
 
@@ -40,8 +40,8 @@ Implementation Agent
 
 | Area | Status |
 |------|--------|
+| Admin media upload fix (code) | ✅ ready to deploy |
 | Admin UX Waves 8–14 on prod | ✅ (deploy #32, 2026-07-22) |
-| Migration 020 (`admin_bulk_jobs`) | ✅ |
 | Command palette Cmd+K | ✅ prod |
 | YooKassa | ❌ |
 
@@ -49,4 +49,4 @@ Implementation Agent
 
 ## Last Updated
 
-2026-07-22 (prod deploy Waves 8–14)
+2026-07-22 (admin media upload fix)

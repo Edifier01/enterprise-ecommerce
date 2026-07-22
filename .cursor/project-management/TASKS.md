@@ -1042,11 +1042,22 @@ The third duplicate Sprint E section was removed during full project review. All
 
 ## Bugs
 
-None reported (review findings tracked in epic above).
+### BUG: Admin media upload — video error + photos not displayed on prod
+
+**Status:** COMPLETED (code fix 2026-07-22; prod deploy + re-upload pending)
+
+- [x] Return `/media/{file}` relative URLs from upload API
+- [x] Verify file on disk after write
+- [x] Reject video with clear RU message
+- [x] Fix admin gallery preview (`productImageRenderProps`, unoptimized `/media/*`)
+- [x] Pytest: upload + StaticFiles serve + video rejection
+- [ ] Deploy to prod
+- [ ] Ops: verify `media_uploads` Docker volume
+- [ ] Re-upload photos for products with 404 gallery URLs
 
 ---
 
-## Improvements
+## Improvements (previous)
 
 **Status:** COMPLETED
 

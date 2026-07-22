@@ -14,6 +14,7 @@ import { useToast } from "@/components/store/ui/toast-provider";
 import { Button } from "@/components/ui/button";
 import type { ProductImage } from "@/lib/admin/catalog-shared";
 import { getSwatchStyle } from "@/lib/store/color-swatch";
+import { productImageRenderProps } from "@/lib/store/product-image";
 
 const selectClass =
   "h-8 w-full min-w-[10rem] rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -223,6 +224,10 @@ export function AdminProductGallery({
 
   function handleUpload(file: File) {
     setError(null);
+    if (file.type.startsWith("video/")) {
+      setError("Видео не поддерживается. Загружайте фото в формате JPEG, PNG, WebP или GIF.");
+      return;
+    }
     startTransition(async () => {
       const formData = new FormData();
       formData.append("file", file);
@@ -418,7 +423,12 @@ export function AdminProductGallery({
               className="flex flex-wrap items-start gap-3 rounded-md border border-border/60 p-3"
             >
               <div className="relative size-16 shrink-0 overflow-hidden rounded-md border bg-muted">
-                <Image src={image.url} alt="" fill className="object-cover" unoptimized />
+                <Image
+                  {...productImageRenderProps(image.url)}
+                  alt=""
+                  fill
+                  className="object-cover"
+                />
               </div>
               <div className="min-w-0 flex-1 space-y-2">
                 <p className="truncate text-xs text-muted-foreground">{image.url}</p>

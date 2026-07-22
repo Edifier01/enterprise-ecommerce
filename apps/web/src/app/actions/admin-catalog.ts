@@ -405,11 +405,17 @@ function translateMediaUploadError(message: string): string {
   if (message.startsWith("Unsupported image type")) {
     return "Формат не поддерживается. Используйте JPEG, PNG, WebP или GIF.";
   }
+  if (message.startsWith("Video files are not supported")) {
+    return "Видео не поддерживается. Загружайте фото в формате JPEG, PNG, WebP или GIF.";
+  }
   if (message === "Empty file") {
     return "Файл пустой.";
   }
   if (message === "File too large") {
     return "Файл слишком большой (максимум 5 МБ).";
+  }
+  if (message === "Internal server error" || message === "Media upload failed") {
+    return "Не удалось сохранить файл на сервере. Попробуйте снова или обратитесь к администратору.";
   }
   return message;
 }

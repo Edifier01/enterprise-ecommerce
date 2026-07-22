@@ -6,31 +6,36 @@ Implementation Agent
 
 ## Completed Work
 
-**Prod deploy Admin UX Waves 8–14 (2026-07-22):**
+**Admin media upload & gallery display fix (2026-07-22):**
 
-1. Pre-deploy gate — 51 admin pytest green; `tsc --noEmit` clean
-2. Release commit `cf34f46` — Waves 8–14 + migration 020 + OpenAPI
-3. Deploy #31 failed — Next.js Docker build: client imported `server-only` from `bulk-jobs.ts`
-4. Hotfix `e3c7360` — split types to `bulk-jobs-shared.ts`; `npm run build` green
-5. Deploy #32 **success** (~6 min) — [Actions run](https://github.com/Edifier01/enterprise-ecommerce/actions/runs/29919250880)
-6. Post-deploy checks — `/health/ready` → `ready`; new admin APIs return 401 (not 404)
+1. Upload API now returns site-relative URLs `/media/{file}` instead of absolute punycode URLs — works through Caddy on same domain
+2. Verify-after-write on disk before returning URL; clearer errors on I/O failure
+3. Video files rejected with explicit message (API magic-byte + declared MIME; client-side pre-check)
+4. Admin gallery + product preview use `productImageRenderProps` with `unoptimized` for `/media/*`
+5. RU translations for video/500 upload errors and generic `Internal server error` on save
+6. Tests: 18 media pytest green (upload, serve via StaticFiles, video rejection)
+
+**Root cause on prod:** uploaded file URL returned 404 — file missing from `media_uploads` volume (likely lost on deploy or volume not persisted). Code fix prevents bad URLs; ops must verify volume + re-upload photos.
 
 ## Files Changed
 
 | Area | Paths |
 |------|-------|
-| Release | 83 files (Waves 8–14 backend + frontend + migration 020) |
-| Hotfix | `bulk-jobs-shared.ts`, `bulk-jobs.ts`, `admin-bulk-job-progress.tsx`, `moysklad-import-panel.tsx` |
-| PM | `CURRENT_CONTEXT.md`, `PROJECT_STATUS.md`, `HANDOFF.md`, `TASKS.md` |
+| Backend | `storage.py`, `validation.py`, `media_router.py` |
+| Frontend | `admin-product-gallery.tsx`, `admin-product-edit-form.tsx`, `admin-image-field.tsx`, `product-image.ts`, `admin-catalog.ts`, `parse-api-error.ts` |
+| Tests | `test_admin_media_validation.py`, `test_admin_catalog.py` |
+| PM | `CURRENT_CONTEXT.md`, `PROJECT_STATUS.md`, `TASKS.md`, `HANDOFF.md` |
 
 ## Known Issues
 
-- Bulk jobs in-process (asyncio) — API restart drops pending queue; OK for single-node VPS
-- Legacy sync bulk actions remain in `admin-moysklad.ts` (unused by import panel)
-- Manual prod UI smoke not run (no admin credentials in agent session)
+- Existing prod gallery rows with absolute `https://…/media/…` URLs that 404 must be **re-uploaded** after deploy
+- Video in product gallery not supported by design (images only)
+- Bulk jobs in-process — API restart drops pending queue
 
 ## Next Recommended Action
 
-1. **Manual check** on https://сухопут-кмв.рф/admin — catalog «Остаток (МС)», Cmd+K, `/admin/catalog/workflow`
-2. **Next UX roadmap item** — admin design system / loading states polish
-3. Optional — extract bulk worker to ARQ/Celery for multi-node prod
+1. **Deploy** media fix to prod
+2. On VPS: `docker volume inspect enterprise-ecommerce_media_uploads` — confirm mount on API container
+3. **Re-upload** product gallery photos for affected SKUs
+4. Manual smoke: upload JPEG in admin gallery → preview visible → PDP shows photo
+5. Continue UX roadmap — admin design system / loading states

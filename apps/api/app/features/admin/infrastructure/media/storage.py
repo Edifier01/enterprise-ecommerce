@@ -22,6 +22,11 @@ _EXTENSION_BY_TYPE = {
     "image/webp": ".webp",
     "image/gif": ".gif",
 }
+_MEDIA_URL_PREFIX = "/media"
+
+
+class MediaStorageError(Exception):
+    """Raised when a file could not be written or verified on disk."""
 
 
 def validate_image_content_type(content_type: str) -> None:
@@ -32,6 +37,11 @@ def validate_image_content_type(content_type: str) -> None:
 def extension_for_content_type(content_type: str) -> str:
     validate_image_content_type(content_type)
     return _EXTENSION_BY_TYPE[content_type]
+
+
+def build_media_public_path(filename: str) -> str:
+    """Return a site-relative URL served by FastAPI StaticFiles at /media."""
+    return f"{_MEDIA_URL_PREFIX}/{filename}"
 
 
 class MediaStorageService:
@@ -45,5 +55,10 @@ class MediaStorageService:
         filename = f"{uuid.uuid4().hex}{extension}"
         destination = upload_root / filename
         destination.write_bytes(data)
-        base = settings.media_public_base_url.rstrip("/")
-        return f"{base}/{filename}"
+
+        if not destination.is_file() or destination.stat().st_size != len(data):
+            if destination.exists():
+                destination.unlink(missing_ok=True)
+            raise MediaStorageError("Uploaded file could not be verified on disk")
+
+        return build_media_public_path(filename)

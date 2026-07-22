@@ -32,7 +32,11 @@ export function resolveProductImageUrl(src?: string | null): string {
 }
 
 export function shouldUnoptimizeProductImage(src: string): boolean {
-  return src.startsWith("http://") || src.startsWith("https://");
+  return (
+    src.startsWith("http://") ||
+    src.startsWith("https://") ||
+    src.startsWith("/media/")
+  );
 }
 
 export function productImagePlaceholderProps(src: string): {

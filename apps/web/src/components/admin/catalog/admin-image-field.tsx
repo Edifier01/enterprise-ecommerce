@@ -20,6 +20,10 @@ export function AdminImageField({ inputId = "image_url", defaultValue = "" }: Ad
 
   function handleUpload(file: File) {
     setError(null);
+    if (file.type.startsWith("video/")) {
+      setError("Видео не поддерживается. Загружайте фото в формате JPEG, PNG, WebP или GIF.");
+      return;
+    }
     startTransition(async () => {
       const formData = new FormData();
       formData.append("file", file);

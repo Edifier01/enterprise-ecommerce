@@ -11,6 +11,9 @@ export function parseAdminApiError(body: unknown): AdminApiError {
   const detail = (body as { detail?: unknown }).detail;
 
   if (typeof detail === "string") {
+    if (detail === "Internal server error") {
+      return { message: "Ошибка сервера. Попробуйте позже." };
+    }
     return { message: detail };
   }
 

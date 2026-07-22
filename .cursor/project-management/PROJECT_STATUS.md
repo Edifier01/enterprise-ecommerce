@@ -46,13 +46,16 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
-- [ ] Verify `MEDIA_PUBLIC_BASE_URL` + schedule `media_uploads` volume backup
+- [ ] Deploy admin media upload fix to prod
+- [ ] Verify `media_uploads` volume + re-upload lost gallery photos
 - [ ] Admin design system / loading states polish (UX roadmap step 2)
 - [ ] Real product/category photography — BACKLOG
 - [ ] SMTP email delivery (production)
 - [ ] Final YooKassa payment integration
 
 ## Recently Completed
+
+- [x] **Admin media upload fix** — relative `/media/` URLs, video rejection, gallery preview, 18 pytest (2026-07-22)
 
 - [x] **Prod deploy Admin UX Waves 8–14** — GitHub Actions deploy #32; migrations through 020; build hotfix `bulk-jobs-shared.ts` (2026-07-22)
 - [x] **Admin UX Wave 14** — bulk background jobs for import queue assign/publish (2026-07-22)
@@ -113,10 +116,10 @@ None.
 
 ## Next Actions
 
-1. Admin design system primitives (`AdminPageHeader`, `AdminLoadingSection`, …)
-2. Verify prod admin UI manually (catalog stock column, Cmd+K, workflow board)
-3. Back up Docker volume `media_uploads` periodically
-4. Upload real product photos via admin gallery
+1. Deploy media upload fix; verify prod gallery upload smoke
+2. Confirm Docker volume `media_uploads` persists across deploys
+3. Admin design system primitives (`AdminPageHeader`, `AdminLoadingSection`, …)
+4. Back up Docker volume `media_uploads` periodically
 5. SMTP production delivery
 6. YooKassa provider integration (replace/refactor Stripe paths)
 
@@ -124,7 +127,7 @@ None.
 
 ## Last Updated
 
-2026-07-22 (prod deploy Waves 8–14)
+2026-07-22 (admin media upload fix)
 
 ---
 

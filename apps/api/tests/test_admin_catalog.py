@@ -593,7 +593,12 @@ async def test_admin_upload_media(admin_catalog_client: AsyncClient) -> None:
     assert response.status_code == 200
     data = response.json()
     assert "url" in data
+    assert data["url"].startswith("/media/")
     assert data["url"].endswith(".png")
+
+    served = await admin_catalog_client.get(data["url"])
+    assert served.status_code == 200
+    assert served.content.startswith(b"\x89PNG")
 
 
 @pytest.mark.asyncio
@@ -608,7 +613,22 @@ async def test_admin_upload_media_sniffs_png_when_mime_is_wrong(
         files={"file": ("photo.jpg", png_header, "image/jpeg")},
     )
     assert response.status_code == 200
-    assert response.json()["url"].endswith(".png")
+    url = response.json()["url"]
+    assert url.startswith("/media/")
+    assert url.endswith(".png")
+
+
+@pytest.mark.asyncio
+async def test_admin_upload_media_rejects_video(admin_catalog_client: AsyncClient) -> None:
+    token = await _token(admin_catalog_client)
+    mp4_header = b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 64
+    response = await admin_catalog_client.post(
+        "/api/v1/admin/media/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("clip.mp4", mp4_header, "video/mp4")},
+    )
+    assert response.status_code == 422
+    assert "Video files are not supported" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
