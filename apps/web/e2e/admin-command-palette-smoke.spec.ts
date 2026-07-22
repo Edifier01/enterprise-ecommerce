@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { loginAsAdmin } from "./test-helpers";
+import { loginAsAdmin, openAdminCommandPalette } from "./test-helpers";
 
 test.describe("Admin command palette", () => {
   test("opens with keyboard shortcut and navigates to inventory", async ({ page }) => {
@@ -8,7 +8,7 @@ test.describe("Admin command palette", () => {
     await page.goto("/admin");
     await expect(page.getByRole("main")).toBeVisible();
 
-    await page.keyboard.press("Control+K");
+    await openAdminCommandPalette(page);
     await expect(page.getByRole("dialog", { name: "Палитра команд" })).toBeVisible();
 
     await page.getByPlaceholder("Поиск страниц, представлений, SKU, заказов…").fill("низкий остаток");

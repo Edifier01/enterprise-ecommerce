@@ -82,7 +82,7 @@ export function cartCheckoutButton(page: Page, scope?: Locator) {
     .first();
 }
 
-export async function clickAdminCatalogEditLink(page: Page, slug: string) {
+export async function clickAdminCatalogEditLink(page: Page, rowMarker: string) {
   const editLinks = page.getByRole("link", { name: "Изменить" });
   const count = await editLinks.count();
 
@@ -91,13 +91,28 @@ export async function clickAdminCatalogEditLink(page: Page, slug: string) {
     const container = link.locator("xpath=ancestor::li[1] | ancestor::tr[1]");
     const text = await container.textContent();
 
-    if (text?.includes(slug) && (await link.isVisible())) {
+    if (text?.includes(rowMarker) && (await link.isVisible())) {
       await link.click();
       return;
     }
   }
 
-  throw new Error(`Visible edit link not found for slug: ${slug}`);
+  throw new Error(`Visible edit link not found for row marker: ${rowMarker}`);
+}
+
+/** Opens palette via DOM keydown — avoids Chromium stealing Ctrl+K for the address bar. */
+export async function openAdminCommandPalette(page: Page) {
+  await page.locator("body").click();
+  await page.evaluate(() => {
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "k",
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  });
 }
 
 export function primaryAddToCartButton(page: Page, scope?: Locator) {
