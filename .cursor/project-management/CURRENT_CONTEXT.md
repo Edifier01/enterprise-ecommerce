@@ -6,13 +6,13 @@
 
 ## Current Module
 
-Admin panel UX — implementation (Wave 14)
+Admin panel UX — post-deploy polish
 
 ---
 
 ## Current Feature
 
-**Bulk operations background jobs** (2026-07-22)
+**Admin design system / loading states** (next in UX roadmap)
 
 ---
 
@@ -24,16 +24,15 @@ Implementation Agent
 
 ## Current Milestone
 
-**Phase 24 — Internet Store Design** (~90% functional, ~80% production-ready)
+**Phase 24 — Internet Store Design** (~92% functional, ~85% production-ready)
 
 ---
 
 ## Current Blockers
 
 1. YooKassa payment integration (release gate)
-2. **Prod redeploy** + migration 020 for admin UX Waves 8–14
-3. SMTP production delivery
-4. `MEDIA_PUBLIC_BASE_URL` + media volume backup on prod
+2. SMTP production delivery
+3. `MEDIA_PUBLIC_BASE_URL` verify + media volume backup on prod (ops)
 
 ---
 
@@ -41,13 +40,13 @@ Implementation Agent
 
 | Area | Status |
 |------|--------|
-| Bulk jobs API + progress UI | ✅ |
-| Command palette Cmd+K | ✅ |
-| AdminDataTable (all lists) | ✅ |
+| Admin UX Waves 8–14 on prod | ✅ (deploy #32, 2026-07-22) |
+| Migration 020 (`admin_bulk_jobs`) | ✅ |
+| Command palette Cmd+K | ✅ prod |
 | YooKassa | ❌ |
 
 ---
 
 ## Last Updated
 
-2026-07-22 (bulk background jobs)
+2026-07-22 (prod deploy Waves 8–14)

@@ -31,7 +31,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 **Overall roadmap:** ~99% (25/26 phases)
 
-**Phase 24 (application):** ~89% functional / ~79% production-ready (admin UX Waves 8–13 local; YooKassa pending)
+**Phase 24 (application):** ~92% functional / ~85% production-ready (admin UX Waves 8–14 on prod; YooKassa pending)
 
 ---
 
@@ -46,15 +46,15 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
-- [ ] Deploy admin UX Waves 8–13 to production
-- [ ] Run migrations 018–019 on dev/prod DB
-- [ ] Set `MEDIA_PUBLIC_BASE_URL` in production `.env` and redeploy
+- [ ] Verify `MEDIA_PUBLIC_BASE_URL` + schedule `media_uploads` volume backup
+- [ ] Admin design system / loading states polish (UX roadmap step 2)
 - [ ] Real product/category photography — BACKLOG
 - [ ] SMTP email delivery (production)
 - [ ] Final YooKassa payment integration
 
 ## Recently Completed
 
+- [x] **Prod deploy Admin UX Waves 8–14** — GitHub Actions deploy #32; migrations through 020; build hotfix `bulk-jobs-shared.ts` (2026-07-22)
 - [x] **Admin UX Wave 14** — bulk background jobs for import queue assign/publish (2026-07-22)
 - [x] **Admin UX Wave 13** — command palette Cmd+K + AdminErrorState rollout (2026-07-22)
 - [x] **Admin UX Wave 12** — import queue + customers on AdminDataTable (2026-07-22)
@@ -113,8 +113,8 @@ None.
 
 ## Next Actions
 
-1. `alembic upgrade head` (migration 018 — drop MFA columns)
-2. Set `MEDIA_PUBLIC_BASE_URL=https://DOMAIN/media` in `.env.production` and deploy
+1. Admin design system primitives (`AdminPageHeader`, `AdminLoadingSection`, …)
+2. Verify prod admin UI manually (catalog stock column, Cmd+K, workflow board)
 3. Back up Docker volume `media_uploads` periodically
 4. Upload real product photos via admin gallery
 5. SMTP production delivery
@@ -124,7 +124,7 @@ None.
 
 ## Last Updated
 
-2026-07-22 (admin UX Wave 9)
+2026-07-22 (prod deploy Waves 8–14)
 
 ---
 

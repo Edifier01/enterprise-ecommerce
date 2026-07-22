@@ -874,7 +874,7 @@ The third duplicate Sprint E section was removed during full project review. All
 - [x] `AdminConfirmDialog` for category delete
 - [x] Toast severity tones (`success` / `warning` / `error` / `info`)
 
-**Ops:** prod deploy for MS stock column + Wave 8 UI
+**Ops:** prod deploy for MS stock column + Wave 8 UI — **COMPLETED 2026-07-22** (deploy #32, migrations through 020)
 
 #### Feature: Admin Catalog MS Stock Visibility — COMPLETED
 
@@ -1015,7 +1015,7 @@ The third duplicate Sprint E section was removed during full project review. All
 ### P0 — Release blockers
 
 - [ ] YooKassa payment integration (replace Stripe foundation per ADR-004)
-- [ ] Run migrations 018–019 on production DB
+- [x] Run migrations 018–020 on production DB (via deploy #32 entrypoint)
 - [x] Update checkout E2E to fill shipping form (migration 016)
 
 ### P1 — Security & architecture

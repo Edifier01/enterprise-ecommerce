@@ -6,34 +6,31 @@ Implementation Agent
 
 ## Completed Work
 
-**Admin UX Wave 14 — bulk background jobs (2026-07-22):**
+**Prod deploy Admin UX Waves 8–14 (2026-07-22):**
 
-1. **Migration 020** — `admin_bulk_jobs` table with progress counters, skip reasons, errors
-2. **API** — `POST /api/v1/admin/jobs/bulk` (202), `GET /api/v1/admin/jobs/bulk/{id}`; job types `assign_category`, `publish_products`
-3. **Runner** — asyncio background processing with per-item commits and live progress updates
-4. **Frontend** — `AdminBulkJobProgress` with polling; import queue bulk assign/publish use jobs instead of sequential server actions
-5. Pytest `test_admin_bulk_assign_category_job`; OpenAPI re-exported
-
-**Prior:** Wave 13 (command palette), Waves 8–12 (AdminDataTable, overview APIs).
-
-**Verification:** pytest bulk job green; `tsc --noEmit` clean
+1. Pre-deploy gate — 51 admin pytest green; `tsc --noEmit` clean
+2. Release commit `cf34f46` — Waves 8–14 + migration 020 + OpenAPI
+3. Deploy #31 failed — Next.js Docker build: client imported `server-only` from `bulk-jobs.ts`
+4. Hotfix `e3c7360` — split types to `bulk-jobs-shared.ts`; `npm run build` green
+5. Deploy #32 **success** (~6 min) — [Actions run](https://github.com/Edifier01/enterprise-ecommerce/actions/runs/29919250880)
+6. Post-deploy checks — `/health/ready` → `ready`; new admin APIs return 401 (not 404)
 
 ## Files Changed
 
 | Area | Paths |
 |------|-------|
-| Backend | `bulk_job_*.py`, `020_admin_bulk_jobs.py`, `bulk_job_router.py`, `bulk_job_runner.py` |
-| Frontend | `bulk-jobs.ts`, `admin-bulk-jobs.ts`, `admin-bulk-job-progress.tsx`, `moysklad-import-panel.tsx` |
-| Contract | `openapi.yaml` |
+| Release | 83 files (Waves 8–14 backend + frontend + migration 020) |
+| Hotfix | `bulk-jobs-shared.ts`, `bulk-jobs.ts`, `admin-bulk-job-progress.tsx`, `moysklad-import-panel.tsx` |
+| PM | `CURRENT_CONTEXT.md`, `PROJECT_STATUS.md`, `HANDOFF.md`, `TASKS.md` |
 
 ## Known Issues
 
-- Jobs run in-process (asyncio) — durable state in DB but no separate worker/Redis yet; restart loses pending queue
-- Prod deploy + migration 020 required
+- Bulk jobs in-process (asyncio) — API restart drops pending queue; OK for single-node VPS
 - Legacy sync bulk actions remain in `admin-moysklad.ts` (unused by import panel)
+- Manual prod UI smoke not run (no admin credentials in agent session)
 
 ## Next Recommended Action
 
-1. Ops: run migration 020 + deploy Waves 8–14
-2. Optional: extract bulk worker to ARQ/Celery for multi-node prod
-3. Admin design system / loading states polish
+1. **Manual check** on https://сухопут-кмв.рф/admin — catalog «Остаток (МС)», Cmd+K, `/admin/catalog/workflow`
+2. **Next UX roadmap item** — admin design system / loading states polish
+3. Optional — extract bulk worker to ARQ/Celery for multi-node prod
