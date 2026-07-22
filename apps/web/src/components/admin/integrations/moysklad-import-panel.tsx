@@ -28,7 +28,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminCategory, AdminProduct } from "@/lib/admin/catalog-shared";
 import { PRODUCT_STATUS_LABELS } from "@/lib/admin/catalog-shared";
 import { getMerchandisingChecklistItems } from "@/lib/admin/merchandising-readiness";
-import type { AdminBulkJob } from "@/lib/admin/bulk-jobs";
+import type { AdminBulkJob } from "@/lib/admin/bulk-jobs-shared";
 import { cn } from "@/lib/utils";
 
 type MoySkladImportPanelProps = {

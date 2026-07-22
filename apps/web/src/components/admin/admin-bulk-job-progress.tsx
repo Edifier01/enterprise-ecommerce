@@ -4,8 +4,8 @@ import { useEffect, useRef, useState, useTransition } from "react";
 
 import { getBulkJobAction } from "@/app/actions/admin-bulk-jobs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { AdminBulkJob } from "@/lib/admin/bulk-jobs";
-import { isAdminBulkJobFinished } from "@/lib/admin/bulk-jobs";
+import type { AdminBulkJob } from "@/lib/admin/bulk-jobs-shared";
+import { isAdminBulkJobFinished } from "@/lib/admin/bulk-jobs-shared";
 import { cn } from "@/lib/utils";
 
 type AdminBulkJobProgressProps = {
