@@ -287,7 +287,7 @@ async def test_admin_login_ip_allowlist_blocks_unknown_ip(
 ) -> None:
     from app.core.config import settings
 
-    monkeypatch.setattr(settings, "admin_login_allowed_ips", ["203.0.113.1"])
+    monkeypatch.setattr(settings, "admin_login_allowed_ips_env", "203.0.113.1")
     monkeypatch.setattr(settings, "trusted_proxy_hops", 1)
 
     response = await admin_client.post(
@@ -304,7 +304,7 @@ async def test_admin_login_ip_allowlist_ignores_spoofed_xff_without_trusted_prox
 ) -> None:
     from app.core.config import settings
 
-    monkeypatch.setattr(settings, "admin_login_allowed_ips", ["203.0.113.1"])
+    monkeypatch.setattr(settings, "admin_login_allowed_ips_env", "203.0.113.1")
     monkeypatch.setattr(settings, "trusted_proxy_hops", 0)
 
     response = await admin_client.post(
