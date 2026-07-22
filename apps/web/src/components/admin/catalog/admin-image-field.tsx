@@ -40,10 +40,13 @@ export function AdminImageField({ inputId = "image_url", defaultValue = "" }: Ad
       <input
         id={inputId}
         name="image_url"
-        type="url"
+        type="text"
+        inputMode="url"
+        autoComplete="off"
         value={url}
         onChange={(event) => setUrl(event.target.value)}
         className={inputClass}
+        placeholder="https://… или /images/…"
       />
       <div className="flex flex-wrap items-center gap-2">
         <input

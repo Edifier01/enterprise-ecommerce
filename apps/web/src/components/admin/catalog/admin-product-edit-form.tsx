@@ -221,6 +221,7 @@ export function AdminProductEditForm({
                 <select
                   id="status"
                   name="status"
+                  key={`${product.id}-${product.status}`}
                   defaultValue={product.status}
                   className={inputClass}
                 >
@@ -241,6 +242,7 @@ export function AdminProductEditForm({
               </div>
               <div className="sm:col-span-2">
                 <AdminImageField defaultValue={product.image_url ?? ""} />
+                <FieldError fieldErrors={state.fieldErrors} name="image_url" />
               </div>
               <div className="flex flex-col gap-2 sm:col-span-2">
                 <label htmlFor="description" className="text-sm font-medium">

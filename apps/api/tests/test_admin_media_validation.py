@@ -11,6 +11,21 @@ def test_validate_admin_media_url_accepts_https() -> None:
     assert url == "https://cdn.example.com/catalog/photo.jpg"
 
 
+def test_validate_admin_media_url_accepts_site_relative_path() -> None:
+    url = validate_admin_media_url("/images/product-placeholder.svg")
+    assert url == "/images/product-placeholder.svg"
+
+
+def test_validate_admin_media_url_rejects_protocol_relative_path() -> None:
+    with pytest.raises(ValueError, match="path"):
+        validate_admin_media_url("//evil.example/photo.jpg")
+
+
+def test_validate_admin_media_url_rejects_path_traversal() -> None:
+    with pytest.raises(ValueError, match="path"):
+        validate_admin_media_url("/images/../secret.png")
+
+
 def test_validate_admin_media_url_rejects_javascript_scheme() -> None:
     with pytest.raises(ValueError, match="scheme"):
         validate_admin_media_url("javascript:alert(1)")

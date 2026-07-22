@@ -7,11 +7,23 @@ from app.core.config import settings
 _BLOCKED_SCHEMES = frozenset({"javascript", "data", "vbscript", "file"})
 
 
+def _validate_site_relative_path(normalized: str) -> str:
+    """Allow same-origin asset paths (seed placeholders, static files)."""
+    if not normalized.startswith("/") or normalized.startswith("//"):
+        raise ValueError("invalid image URL path")
+    if ".." in normalized or "\0" in normalized:
+        raise ValueError("invalid image URL path")
+    return normalized
+
+
 def validate_admin_media_url(url: str) -> str:
-    """Ensure image URLs use a safe http(s) scheme with a host."""
+    """Ensure image URLs are safe site-relative paths or absolute http(s) URLs."""
     normalized = url.strip()
     if not normalized:
         raise ValueError("image URL is required")
+
+    if normalized.startswith("/"):
+        return _validate_site_relative_path(normalized)
 
     parsed = urlparse(normalized)
     scheme = parsed.scheme.lower()

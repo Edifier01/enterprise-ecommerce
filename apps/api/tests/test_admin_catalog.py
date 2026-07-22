@@ -210,6 +210,49 @@ async def test_admin_archive_product(admin_catalog_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_admin_archive_demo_product_with_relative_image_url(
+    admin_catalog_client: AsyncClient,
+) -> None:
+    token = await _token(admin_catalog_client)
+    demo_id = uuid.uuid4()
+
+    override = app.dependency_overrides[get_db_session]
+    async for session in override():
+        session.add(
+            ProductModel(
+                id=demo_id,
+                name="Classic White T-Shirt",
+                slug="classic-white-t-shirt",
+                price_cents=2999,
+                compare_at_price_cents=3999,
+                currency="RUB",
+                in_stock=True,
+                status="active",
+                sync_source="manual",
+                image_url="/images/product-placeholder.svg",
+            )
+        )
+        await session.commit()
+        break
+
+    response = await admin_catalog_client.patch(
+        f"/api/v1/admin/catalog/products/{demo_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "name": "Classic White T-Shirt",
+            "slug": "classic-white-t-shirt",
+            "price_cents": 2999,
+            "compare_at_price_cents": 3999,
+            "currency": "RUB",
+            "status": "archived",
+            "image_url": "/images/product-placeholder.svg",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "archived"
+
+
+@pytest.mark.asyncio
 async def test_admin_create_duplicate_slug_returns_403(admin_catalog_client: AsyncClient) -> None:
     token = await _token(admin_catalog_client)
     response = await admin_catalog_client.post(
