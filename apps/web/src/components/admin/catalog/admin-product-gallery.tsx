@@ -14,13 +14,14 @@ import { useToast } from "@/components/store/ui/toast-provider";
 import { Button } from "@/components/ui/button";
 import type { ProductImage } from "@/lib/admin/catalog-shared";
 import { getSwatchStyle } from "@/lib/store/color-swatch";
-import { productImageRenderProps } from "@/lib/store/product-image";
+import { erpImageProxyPath, productImageRenderProps, resolveProductGalleryImageSrc } from "@/lib/store/product-image";
 
 const selectClass =
   "h-8 w-full min-w-[10rem] rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 type AdminProductGalleryProps = {
   productId: string;
+  productSlug: string;
   images: ProductImage[];
   erpImageUrl?: string | null;
   colorOptions?: string[];
@@ -190,6 +191,7 @@ function ColorCoveragePanel({
 
 export function AdminProductGallery({
   productId,
+  productSlug,
   images,
   erpImageUrl,
   colorOptions = [],
@@ -200,6 +202,10 @@ export function AdminProductGallery({
   const [uploadColor, setUploadColor] = useState("");
   const [pending, startTransition] = useTransition();
   const { showToast } = useToast();
+
+  const erpPreviewImage = erpImageUrl
+    ? productImageRenderProps(erpImageProxyPath(productSlug))
+    : null;
 
   const sortedImages = useMemo(
     () => [...images].sort((a, b) => a.sort_order - b.sort_order),
@@ -372,7 +378,15 @@ export function AdminProductGallery({
       {erpImageUrl && coverageFromOptions.missing.length > 0 ? (
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed p-3">
           <div className="relative size-16 overflow-hidden rounded-md border bg-muted">
-            <Image src={erpImageUrl} alt="" fill className="object-cover" unoptimized />
+            {erpPreviewImage ? (
+              <Image
+                src={erpPreviewImage.src}
+                alt=""
+                fill
+                className="object-cover"
+                unoptimized={erpPreviewImage.unoptimized}
+              />
+            ) : null}
           </div>
           <div className="min-w-0 flex-1 space-y-1">
             <p className="text-sm font-medium">Placeholder из МойСклад</p>
@@ -395,7 +409,15 @@ export function AdminProductGallery({
       {erpImageUrl && !sortedImages.some((img) => img.url === erpImageUrl) ? (
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed p-3">
           <div className="relative size-16 overflow-hidden rounded-md border bg-muted">
-            <Image src={erpImageUrl} alt="" fill className="object-cover" unoptimized />
+            {erpPreviewImage ? (
+              <Image
+                src={erpPreviewImage.src}
+                alt=""
+                fill
+                className="object-cover"
+                unoptimized={erpPreviewImage.unoptimized}
+              />
+            ) : null}
           </div>
           <div className="min-w-0 flex-1 space-y-1">
             <p className="text-sm font-medium">Фото из МойСклад (placeholder)</p>
@@ -424,7 +446,7 @@ export function AdminProductGallery({
             >
               <div className="relative size-16 shrink-0 overflow-hidden rounded-md border bg-muted">
                 <Image
-                  {...productImageRenderProps(image.url)}
+                  {...productImageRenderProps(resolveProductGalleryImageSrc(productSlug, image.url))}
                   alt=""
                   fill
                   className="object-cover"

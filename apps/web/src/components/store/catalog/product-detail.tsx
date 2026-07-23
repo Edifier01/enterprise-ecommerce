@@ -9,7 +9,10 @@ import { ProductPurchasePanel } from "@/components/store/catalog/product-purchas
 import { ProductSpecsTable } from "@/components/store/catalog/product-specs-table";
 import type { Product, ProductImage } from "@/lib/api";
 import { siteConfig } from "@/lib/store/site-config";
-import { productImageRenderProps, resolveProductImageUrl } from "@/lib/store/product-image";
+import {
+  productImageRenderProps,
+  resolveProductGalleryImageSrc,
+} from "@/lib/store/product-image";
 import { pickDefaultSelection, usesStructuredSelector } from "@/lib/store/variant-options";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +27,7 @@ function buildGalleryImages(
   selectedColor: string | null,
 ): { src: string; alt: string }[] {
   const placeholder = siteConfig.images.productPlaceholder;
-  const fallback = resolveProductImageUrl(product.image_url ?? placeholder);
+  const fallback = resolveProductGalleryImageSrc(product.slug, product.image_url ?? placeholder);
 
   const tagged =
     selectedColor != null
@@ -44,7 +47,7 @@ function buildGalleryImages(
   }
 
   return ordered.map((image, index) => ({
-    src: resolveProductImageUrl(image.url),
+    src: resolveProductGalleryImageSrc(product.slug, image.url),
     alt: image.alt_text?.trim() || `${product.name} — фото ${index + 1}`,
   }));
 }

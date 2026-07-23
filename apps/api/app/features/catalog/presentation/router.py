@@ -1,6 +1,7 @@
 """Catalog HTTP routes."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
@@ -22,6 +23,7 @@ from app.features.catalog.presentation.schemas import (
     ProductSchema,
 )
 from app.features.catalog.presentation.serializers import product_to_schema
+from app.features.integrations.moysklad.infrastructure.http_client import build_moysklad_client
 
 router = APIRouter(prefix="/products", tags=["catalog"])
 
@@ -196,6 +198,35 @@ async def search_products(
         total=total,
         page=page,
         limit=limit,
+    )
+
+
+@router.get("/{slug}/erp-image", operation_id="getProductErpImage")
+async def get_product_erp_image(
+    slug: str,
+    repo: IProductRepository = Depends(get_product_repository),
+) -> Response:
+    """Proxy MoySklad product image for browser display (MS download URLs require auth)."""
+    use_case = GetProductUseCase(repo)
+    product = await use_case.execute(slug)
+    if product is None or not product.erp_image_url or not product.erp_image_url.strip():
+        raise HTTPException(status_code=404, detail="Product image not found")
+
+    client = build_moysklad_client()
+    if client is None:
+        raise HTTPException(status_code=503, detail="MoySklad integration is not configured")
+
+    try:
+        content, content_type = await client.download_binary(product.erp_image_url.strip())
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Failed to fetch product image") from exc
+    finally:
+        await client.close()
+
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=86400"},
     )
 
 

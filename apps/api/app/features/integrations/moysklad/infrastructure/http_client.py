@@ -373,6 +373,25 @@ class MoySkladApiClient(IMoySkladClient):
 
         return retail_cents, wholesale_cents
 
+    async def download_binary(self, url: str) -> tuple[bytes, str]:
+        """Download a MoySklad file URL (images) using integration credentials."""
+        if not url.strip():
+            raise ValueError("download url is required")
+
+        client = await self._get_client()
+        min_interval = settings.moysklad_api_min_request_interval_seconds
+        async with self._request_lock:
+            if min_interval > 0:
+                elapsed = asyncio.get_running_loop().time() - self._last_request_at
+                if elapsed < min_interval:
+                    await asyncio.sleep(min_interval - elapsed)
+            response = await client.get(url)
+            self._last_request_at = asyncio.get_running_loop().time()
+
+        response.raise_for_status()
+        content_type = response.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+        return response.content, content_type or "image/jpeg"
+
 
 def build_moysklad_client() -> MoySkladApiClient | None:
     token = settings.moysklad_api_token.get_secret_value()

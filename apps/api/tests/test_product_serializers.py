@@ -33,10 +33,28 @@ def test_product_to_schema_falls_back_to_erp_image_url() -> None:
         currency="RUB",
         in_stock=True,
         image_url=None,
-        erp_image_url="https://cdn.example.com/ms.jpg",
+        erp_image_url="https://api.moysklad.ru/api/remap/1.2/download/abc",
         variants=(),
     )
 
     schema = product_to_schema(product, show_wholesale=False)
 
-    assert schema.image_url == "https://cdn.example.com/ms.jpg"
+    assert schema.image_url == "/api/v1/products/test-product/erp-image"
+
+
+def test_product_to_schema_normalizes_moysklad_download_in_image_url() -> None:
+    product = Product(
+        id=uuid4(),
+        name="Test",
+        slug="test-product",
+        price_cents=1000,
+        currency="RUB",
+        in_stock=True,
+        image_url="https://api.moysklad.ru/api/remap/1.2/download/abc",
+        erp_image_url="https://api.moysklad.ru/api/remap/1.2/download/abc",
+        variants=(),
+    )
+
+    schema = product_to_schema(product, show_wholesale=False)
+
+    assert schema.image_url == "/api/v1/products/test-product/erp-image"

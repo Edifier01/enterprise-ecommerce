@@ -41,21 +41,37 @@ def _images_schema(images: list[ProductImageModel] | None) -> list[ProductImageP
     return [ProductImagePublicSchema.model_validate(image) for image in images]
 
 
+def erp_image_proxy_path(slug: str) -> str:
+    return f"/api/v1/products/{slug}/erp-image"
+
+
+def _is_moysklad_download_url(url: str) -> bool:
+    lowered = url.casefold()
+    return "api.moysklad.ru" in lowered and "/download/" in lowered
+
+
+def _normalize_public_image_url(product: Product, url: str) -> str:
+    trimmed = url.strip()
+    if _is_moysklad_download_url(trimmed):
+        return erp_image_proxy_path(product.slug)
+    return trimmed
+
+
 def _resolve_public_image_url(
     product: Product,
     images: list[ProductImageModel] | None = None,
 ) -> str | None:
-    """Site-owned image_url first, then gallery, then MS erp placeholder (ADR-010)."""
+    """Site-owned image_url first, then gallery, then proxied MS erp placeholder (ADR-010)."""
     if product.image_url and product.image_url.strip():
-        return product.image_url.strip()
+        return _normalize_public_image_url(product, product.image_url)
 
     if images:
         for image in sorted(images, key=lambda row: row.sort_order):
             if image.url and image.url.strip():
-                return image.url.strip()
+                return _normalize_public_image_url(product, image.url)
 
     if product.erp_image_url and product.erp_image_url.strip():
-        return product.erp_image_url.strip()
+        return erp_image_proxy_path(product.slug)
 
     return None
 

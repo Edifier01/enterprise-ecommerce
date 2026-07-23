@@ -21,8 +21,7 @@ import type { AdminCategory, AdminProduct } from "@/lib/admin/catalog-shared";
 import { formatPrice, getDefaultAdminVariant } from "@/lib/admin/catalog-shared";
 import { centsToRubles } from "@/lib/admin/money";
 import { isMoySkladSynced } from "@/lib/admin/moysklad";
-import { productImageRenderProps } from "@/lib/store/product-image";
-import { siteConfig } from "@/lib/store/site-config";
+import { catalogProductImageRenderProps, productImageRenderProps, resolveCatalogProductImageSrc } from "@/lib/store/product-image";
 import { getColorOptionsFromVariants } from "@/lib/store/variant-options";
 
 const inputClass =
@@ -78,7 +77,11 @@ export function AdminProductEditForm({
 
   const msSynced = isMoySkladSynced(product.sync_source);
   const defaultVariant = getDefaultAdminVariant(product);
-  const imageSrc = product.image_url ?? product.erp_image_url ?? siteConfig.images.productPlaceholder;
+  const imageSrc = resolveCatalogProductImageSrc({
+    slug: product.slug,
+    imageUrl: product.image_url,
+    erpImageUrl: product.erp_image_url,
+  });
   const previewImage = productImageRenderProps(imageSrc);
   const colorOptions = getColorOptionsFromVariants(
     product.variants.map((variant) => ({
@@ -298,6 +301,7 @@ export function AdminProductEditForm({
 
       <AdminProductGallery
         productId={product.id}
+        productSlug={product.slug}
         images={product.images ?? []}
         erpImageUrl={product.erp_image_url}
         colorOptions={colorOptions}

@@ -25,7 +25,7 @@ import {
   type AdminCatalogListParams,
 } from "@/lib/admin/catalog-list-url";
 import { isMoySkladSynced } from "@/lib/admin/moysklad";
-import { productImageRenderProps } from "@/lib/store/product-image";
+import { catalogProductImageRenderProps } from "@/lib/store/product-image";
 
 type AdminCatalogTableProps = {
   products: AdminProduct[];
@@ -45,7 +45,11 @@ function buildColumns(
       id: "photo",
       header: "Фото",
       cell: (product) => {
-        const image = productImageRenderProps(product.image_url);
+        const image = catalogProductImageRenderProps({
+          slug: product.slug,
+          imageUrl: product.image_url,
+          erpImageUrl: product.erp_image_url,
+        });
         return (
           <div className="relative size-10 overflow-hidden rounded-md border bg-muted">
             <Image
@@ -180,7 +184,11 @@ export function AdminCatalogTable({
         />
       }
       renderMobileCard={(product) => {
-        const image = productImageRenderProps(product.image_url);
+        const image = catalogProductImageRenderProps({
+          slug: product.slug,
+          imageUrl: product.image_url,
+          erpImageUrl: product.erp_image_url,
+        });
         return (
           <AdminMobileCard key={product.id}>
             <div className="flex gap-3">
