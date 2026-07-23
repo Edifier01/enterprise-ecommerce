@@ -140,6 +140,40 @@ async def admin_catalog_client() -> AsyncGenerator[AsyncClient, None]:
                     option_color="Multicam",
                 )
             )
+            ballistic_id = uuid.uuid4()
+            ballistic_variant_id = uuid.uuid4()
+            session.add(
+                ProductModel(
+                    id=ballistic_id,
+                    name="Ballistic Vest",
+                    slug="ballistic-vest",
+                    price_cents=345000,
+                    currency="RUB",
+                    in_stock=True,
+                    status="draft",
+                    sync_source="moysklad",
+                )
+            )
+            await session.flush()
+            session.add(
+                ProductVariantModel(
+                    id=ballistic_variant_id,
+                    product_id=ballistic_id,
+                    sku="BALLISTIC-1",
+                    name="Default",
+                    price_cents=345000,
+                    in_stock=True,
+                    is_default=True,
+                    sort_order=0,
+                )
+            )
+            session.add(
+                InventoryItemModel(
+                    variant_id=ballistic_variant_id,
+                    quantity_on_hand=4,
+                    quantity_reserved=0,
+                )
+            )
             ms_draft_id = uuid.uuid4()
             session.add(
                 ProductModel(
@@ -859,6 +893,21 @@ async def test_admin_list_products_includes_moysklad_stock_totals(
     assert variants["MC-MULTICAM-M"]["quantity_reserved"] == 2
     assert variants["MC-MULTICAM-M"]["available"] == 10
     assert variants["MC-COYOTE-M"]["available"] == 5
+
+
+@pytest.mark.asyncio
+async def test_admin_list_products_stock_total_is_per_product_not_page_sum(
+    admin_catalog_client: AsyncClient,
+) -> None:
+    token = await _token(admin_catalog_client)
+    response = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products?sync_source=moysklad&limit=20",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    by_slug = {item["slug"]: item for item in response.json()["items"]}
+    assert by_slug["multi-color-jacket"]["stock_available_total"] == 15
+    assert by_slug["ballistic-vest"]["stock_available_total"] == 4
 
 
 @pytest.mark.asyncio

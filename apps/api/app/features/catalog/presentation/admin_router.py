@@ -119,11 +119,14 @@ def _product_schema(
 ) -> AdminProductSchema:
     inventory = inventory or {}
     variant_schemas = [_variant_schema(variant, inventory) for variant in product.variants]
-    stock_available_total = sum(
-        snapshot.available for snapshot in inventory.values()
-    )
+    product_inventory = [
+        inventory[variant.id]
+        for variant in product.variants
+        if variant.id in inventory
+    ]
+    stock_available_total = sum(snapshot.available for snapshot in product_inventory)
     stock_quantity_on_hand_total = sum(
-        snapshot.quantity_on_hand for snapshot in inventory.values()
+        snapshot.quantity_on_hand for snapshot in product_inventory
     )
     low_stock_threshold = settings.admin_low_stock_threshold
 
