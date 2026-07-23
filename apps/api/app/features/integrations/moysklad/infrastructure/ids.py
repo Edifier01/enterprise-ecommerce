@@ -52,16 +52,16 @@ def quantity_for_store(row: dict[str, Any], store_id: str) -> float:
         if normalize_moysklad_entity_id(store_href) == normalized_store_id:
             return _read_quantity(store_row)
 
-    # When the report is filtered by store, MS may return one stockByStore row without store meta.
-    if len(stock_by_store) == 1:
-        store_row = stock_by_store[0]
-        store_href = (store_row.get("meta") or {}).get("href", "")
-        if not store_href:
-            store_obj = store_row.get("store")
-            if isinstance(store_obj, dict):
-                store_href = (store_obj.get("meta") or {}).get("href", "")
-        if not store_href or normalize_moysklad_entity_id(store_href) == normalized_store_id:
-            return _read_quantity(store_row)
+    if stock_by_store:
+        if len(stock_by_store) == 1:
+            store_row = stock_by_store[0]
+            store_href = (store_row.get("meta") or {}).get("href", "")
+            if not store_href:
+                store_obj = store_row.get("store")
+                if isinstance(store_obj, dict):
+                    store_href = (store_obj.get("meta") or {}).get("href", "")
+            if not store_href or normalize_moysklad_entity_id(store_href) == normalized_store_id:
+                return _read_quantity(store_row)
         return 0.0
 
     # /report/stock/all rows expose stock directly on the assortment row.

@@ -158,6 +158,36 @@ class _FakeClient:
             return {}, len(self._stock_map), 0
         return self._stock_map, len(self._stock_map), len(self._stock_map)
 
+    async def get_assortment_stock(self, assortment_id: str) -> int:
+        if assortment_id in self._stock_map:
+            return self._stock_map[assortment_id]
+        if assortment_id.startswith("product:"):
+            return self._stock_map.get(assortment_id.removeprefix("product:"), 0)
+        return 0
+
+
+class _FakeResult:
+    def __init__(self, rows: list[tuple[_FakeVariant, str | None]]) -> None:
+        self._rows = rows
+
+    def all(self) -> list[tuple[_FakeVariant, str | None]]:
+        return self._rows
+
+
+class _FakeSession:
+    def __init__(self) -> None:
+        self._rows = [
+            (_FakeVariant(id=uuid4(), moysklad_variant_id=_VARIANT_ID), _PRODUCT_ID),
+            (_FakeVariant(id=uuid4(), moysklad_variant_id="missing-in-ms"), _PRODUCT_ID),
+            (_FakeVariant(id=uuid4(), moysklad_variant_id=f"product:{_PRODUCT_ID}"), _PRODUCT_ID),
+        ]
+
+    async def execute(self, _stmt: object) -> _FakeResult:
+        return _FakeResult(self._rows)
+
+    async def flush(self) -> None:
+        return None
+
 
 class _FakeSyncRepo:
     async def get_state(self):
@@ -167,20 +197,8 @@ class _FakeSyncRepo:
         return None
 
 
-class _FakeSession:
-    async def scalars(self, _stmt: object):
-        return self
-
-    def all(self) -> list[_FakeVariant]:
-        return [
-            _FakeVariant(id=uuid4(), moysklad_variant_id=_VARIANT_ID),
-            _FakeVariant(id=uuid4(), moysklad_variant_id="missing-in-ms"),
-            _FakeVariant(id=uuid4(), moysklad_variant_id=f"product:{_PRODUCT_ID}"),
-        ]
-
-
 @pytest.mark.asyncio
-async def test_sync_stock_skips_variants_missing_from_ms_map() -> None:
+async def test_sync_stock_falls_back_to_direct_fetch_for_missing_bulk_keys() -> None:
     catalog = _FakeCatalogRepo()
     catalog._session = _FakeSession()
 
@@ -197,7 +215,8 @@ async def test_sync_stock_skips_variants_missing_from_ms_map() -> None:
 
     result = await use_case.execute()
 
-    assert result.rows_applied == 2
-    assert result.rows_skipped == 1
+    assert result.rows_applied == 3
+    assert result.rows_skipped == 0
     assert result.stock_map_size == 2
+    assert len(catalog.applied) == 3
     assert {quantity for _, quantity in catalog.applied} == {4, 9}

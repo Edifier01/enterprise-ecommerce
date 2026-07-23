@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.catalog.infrastructure.persistence.models import ProductVariantModel
+from app.features.catalog.infrastructure.persistence.models import ProductModel, ProductVariantModel
 from app.features.integrations.moysklad.domain.ports import IMoySkladClient
 from app.features.integrations.moysklad.infrastructure.persistence.catalog_sync_repository import (
     CatalogSyncRepository,
@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 class SyncStockResult:
     rows_applied: int = 0
     rows_skipped: int = 0
+    rows_fetched_direct: int = 0
     stock_map_size: int = 0
     errors: list[str] = field(default_factory=list)
 
@@ -45,27 +46,33 @@ class SyncMoySkladStockUseCase:
         stock_map = await self._load_stock_map()
         result.stock_map_size = len(stock_map)
         session = self._catalog._session
-        variants = (
-            await session.scalars(
-                select(ProductVariantModel).where(ProductVariantModel.moysklad_variant_id.is_not(None))
+
+        rows = (
+            await session.execute(
+                select(ProductVariantModel, ProductModel.moysklad_product_id).join(
+                    ProductModel, ProductVariantModel.product_id == ProductModel.id
+                ).where(ProductModel.sync_source == "moysklad")
             )
         ).all()
 
-        if not stock_map and variants:
+        if not stock_map and rows:
             logger.warning(
                 "moysklad_stock_sync_empty_map",
-                extra={"variant_count": len(variants)},
+                extra={"variant_count": len(rows)},
             )
 
-        for variant in variants:
+        for variant, product_ms_id in rows:
             try:
-                ms_id = variant.moysklad_variant_id or ""
-                quantity = stock_map.get(ms_id)
-                if quantity is None and ms_id.startswith("product:"):
-                    quantity = stock_map.get(ms_id.removeprefix("product:"))
-                if quantity is None:
+                ms_id = await self._ensure_ms_variant_id(variant, product_ms_id)
+                if not ms_id:
                     result.rows_skipped += 1
                     continue
+
+                quantity = self._lookup_quantity(stock_map, ms_id, product_ms_id)
+                if quantity is None:
+                    quantity = await self._client.get_assortment_stock(ms_id)
+                    result.rows_fetched_direct += 1
+
                 await self._catalog.apply_stock(variant, quantity)
                 result.rows_applied += 1
             except Exception as exc:
@@ -78,6 +85,7 @@ class SyncMoySkladStockUseCase:
             extra={
                 "rows_applied": result.rows_applied,
                 "rows_skipped": result.rows_skipped,
+                "rows_fetched_direct": result.rows_fetched_direct,
                 "stock_map_size": result.stock_map_size,
                 "errors": len(result.errors),
             },
@@ -85,15 +93,53 @@ class SyncMoySkladStockUseCase:
 
         state = await self._sync.get_state()
         state.last_incremental_sync_at = datetime.now(tz=UTC)
-        state.last_error = result.errors[0] if result.errors else None
+        if result.errors:
+            state.last_error = result.errors[0]
+        elif result.rows_applied == 0 and rows:
+            state.last_error = (
+                f"stock sync applied 0 rows (map={result.stock_map_size}, "
+                f"skipped={result.rows_skipped}, variants={len(rows)})"
+            )
+        else:
+            state.last_error = None
         await self._sync.log_event(
             direction="inbound",
             entity_type="stock_sync",
             entity_id=None,
             status="success" if not result.errors else "partial",
-            error_message="; ".join(result.errors[:3]) if result.errors else None,
+            error_message=state.last_error,
         )
         return result
+
+    async def _ensure_ms_variant_id(
+        self,
+        variant: ProductVariantModel,
+        product_ms_id: str | None,
+    ) -> str | None:
+        if variant.moysklad_variant_id:
+            return variant.moysklad_variant_id
+        if not product_ms_id:
+            return None
+        pseudo_id = f"product:{product_ms_id}"
+        variant.moysklad_variant_id = pseudo_id
+        await self._catalog._session.flush()
+        return pseudo_id
+
+    @staticmethod
+    def _lookup_quantity(
+        stock_map: dict[str, int],
+        ms_variant_id: str,
+        product_ms_id: str | None,
+    ) -> int | None:
+        if ms_variant_id in stock_map:
+            return stock_map[ms_variant_id]
+        if ms_variant_id.startswith("product:"):
+            product_id = ms_variant_id.removeprefix("product:")
+            if product_id in stock_map:
+                return stock_map[product_id]
+        if product_ms_id and product_ms_id in stock_map:
+            return stock_map[product_ms_id]
+        return None
 
     async def _load_stock_map(self) -> dict[str, int]:
         stock: dict[str, int] = {}

@@ -16,6 +16,7 @@ from app.features.integrations.moysklad.infrastructure.ids import (
     extract_moysklad_id,
     normalize_moysklad_entity_id,
     parse_stock_report_rows,
+    quantity_for_store,
 )
 
 logger = logging.getLogger(__name__)
@@ -128,14 +129,37 @@ class MoySkladApiClient(IMoySkladClient):
         return variants
 
     async def get_assortment_stock(self, assortment_id: str) -> int:
-        offset = 0
-        while True:
-            batch, total, rows_returned = await self.list_stock_by_store(offset=offset, limit=1000)
-            if assortment_id in batch:
-                return batch[assortment_id]
-            offset += rows_returned
-            if offset >= total or rows_returned == 0:
-                break
+        store_id = normalize_moysklad_entity_id(settings.moysklad_store_id)
+        if not store_id:
+            return 0
+
+        if assortment_id.startswith("product:"):
+            entity_id = assortment_id.removeprefix("product:")
+            filter_candidates = [f"product={self._base_url}/entity/product/{entity_id}"]
+        else:
+            entity_id = assortment_id
+            filter_candidates = [
+                f"variant={self._base_url}/entity/variant/{assortment_id}",
+                f"product={self._base_url}/entity/product/{assortment_id}",
+            ]
+
+        for filter_expr in filter_candidates:
+            for path in ("/report/stock/all", "/report/stock/bystore"):
+                try:
+                    payload = await self._request(
+                        "GET",
+                        path,
+                        params={"limit": 1, "offset": 0, "groupBy": "variant", "filter": filter_expr},
+                    )
+                except httpx.HTTPStatusError:
+                    continue
+                rows = payload.get("rows", [])
+                if not rows:
+                    continue
+                parsed = parse_stock_report_rows(rows, store_id)
+                if entity_id in parsed:
+                    return parsed[entity_id]
+                return int(quantity_for_store(rows[0], store_id))
         return 0
 
     async def get_customer_order(self, order_id: str) -> dict[str, str | bool | None] | None:
@@ -191,24 +215,23 @@ class MoySkladApiClient(IMoySkladClient):
         if not store_id:
             return {}, 0, 0
 
-        store_href = f"{self._base_url}/entity/store/{store_id}"
-        params = {
-            "limit": limit,
-            "offset": offset,
-            "groupBy": "variant",
-            "filter": f"store={store_href}",
-        }
+        params = {"limit": limit, "offset": offset, "groupBy": "variant"}
 
-        # Prefer /report/stock/all — returns flat stock on rows when filtered by store.
-        payload = await self._request("GET", "/report/stock/all", params=params)
+        # Do not filter by store in the API query — MS filter=store=href often returns 0 rows.
+        payload = await self._request("GET", "/report/stock/bystore", params=params)
         rows = payload.get("rows", [])
         if not rows and offset == 0:
-            logger.info("moysklad_stock_all_empty_fallback_to_bystore")
-            payload = await self._request("GET", "/report/stock/bystore", params=params)
+            logger.info("moysklad_stock_bystore_empty_fallback_to_stock_all")
+            payload = await self._request("GET", "/report/stock/all", params=params)
             rows = payload.get("rows", [])
 
         total = int(payload.get("meta", {}).get("size", len(rows)))
         stock = parse_stock_report_rows(rows, store_id)
+        if offset == 0:
+            logger.info(
+                "moysklad_stock_report_loaded",
+                extra={"rows": len(rows), "stock_map_size": len(stock), "total": total},
+            )
         return stock, total, len(rows)
 
     async def get_variant_stock(self, variant_external_id: str) -> int:
