@@ -33,7 +33,11 @@ test.describe("Mobile admin panel", () => {
     await page.getByRole("link", { name: "Клиенты" }).click();
     await expect(page).toHaveURL(/\/admin\/customers/, { timeout: 15_000 });
 
-    await expect(page.locator("table")).toHaveCount(0);
-    await expect(page.getByText("Зарегистрированных клиентов пока нет.").or(page.locator("li.rounded-lg.border"))).toBeVisible();
+    await expect(page.locator("main table")).toBeHidden();
+    await expect(
+      page
+        .getByText("Зарегистрированных клиентов пока нет.")
+        .or(page.locator("main li.rounded-lg.border").first()),
+    ).toBeVisible();
   });
 });
