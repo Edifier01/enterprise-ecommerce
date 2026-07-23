@@ -42,7 +42,16 @@ log "Pulling latest code..."
 git pull --ff-only origin master
 
 log "Building images (BuildKit + layer cache)..."
-"${COMPOSE[@]}" build --progress=plain --parallel
+GIT_COMMIT="$(git rev-parse HEAD)"
+export GIT_COMMIT
+BUILD_ARGS=(--progress=plain --parallel --build-arg "GIT_COMMIT=${GIT_COMMIT}")
+if [[ "${NO_CACHE:-}" == "1" ]]; then
+  log "NO_CACHE=1 — rebuilding api without layer cache"
+  BUILD_ARGS+=(--no-cache api)
+  "${COMPOSE[@]}" build "${BUILD_ARGS[@]}" web
+else
+  "${COMPOSE[@]}" build "${BUILD_ARGS[@]}"
+fi
 
 log "Tagging images for next deploy cache..."
 docker image inspect "${PROJECT_NAME}-api:latest" >/dev/null 2>&1 \

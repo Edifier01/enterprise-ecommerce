@@ -16,7 +16,6 @@ from app.features.integrations.moysklad.infrastructure.ids import (
     extract_moysklad_id,
     normalize_moysklad_entity_id,
     parse_stock_report_rows,
-    parse_store_filtered_stock_rows,
     quantity_for_store,
 )
 
@@ -228,28 +227,24 @@ class MoySkladApiClient(IMoySkladClient):
             return {}, 0, 0
 
         base_params = {"limit": limit, "offset": offset, "groupBy": "variant"}
-        store_filter = f"storeId={store_id}"
 
-        # Primary: stock/all + storeId filter returns flat stock per assortment for one warehouse.
+        # Use stock/all WITHOUT storeId filter — same row shape as working per-product fetch.
+        # storeId filter returns rows that parse as all-zero on some MS accounts.
         try:
-            payload = await self._request(
-                "GET",
-                "/report/stock/all",
-                params={**base_params, "filter": store_filter},
-            )
+            payload = await self._request("GET", "/report/stock/all", params=base_params)
         except httpx.HTTPStatusError:
             payload = {"rows": []}
 
         rows = payload.get("rows", [])
         if rows:
             total = int(payload.get("meta", {}).get("size", len(rows)))
-            stock = parse_store_filtered_stock_rows(rows, store_id)
+            stock = parse_stock_report_rows(rows, store_id)
             if offset == 0:
                 non_zero = sum(1 for qty in stock.values() if qty > 0)
                 logger.info(
                     "moysklad_stock_report_loaded",
                     extra={
-                        "source": "stock_all_store_id",
+                        "source": "stock_all",
                         "rows": len(rows),
                         "stock_map_size": len(stock),
                         "non_zero": non_zero,
@@ -258,7 +253,7 @@ class MoySkladApiClient(IMoySkladClient):
                 )
             return stock, total, len(rows)
 
-        # Fallback: legacy bystore report — pick configured store from stockByStore in code.
+        # Fallback: bystore report.
         payload = await self._request("GET", "/report/stock/bystore", params=base_params)
         rows = payload.get("rows", [])
         total = int(payload.get("meta", {}).get("size", len(rows)))

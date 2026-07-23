@@ -204,11 +204,16 @@ class SyncMoySkladStockUseCase:
         stock: dict[str, int] = {}
         delay = settings.moysklad_stock_sync_request_delay_seconds
 
-        for product_id in sorted(product_ids):
+        for index, product_id in enumerate(sorted(product_ids), start=1):
             quantity = await self._client.get_assortment_stock(f"product:{product_id}")
             stock[product_id] = quantity
             stock[f"product:{product_id}"] = quantity
             result.rows_fetched_direct += 1
+            if index % 25 == 0 or index == len(product_ids):
+                logger.info(
+                    "moysklad_stock_sync_direct_progress",
+                    extra={"products_done": index, "products_total": len(product_ids)},
+                )
             if delay > 0:
                 await asyncio.sleep(delay)
 

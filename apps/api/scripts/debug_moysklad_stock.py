@@ -38,6 +38,11 @@ async def _main(search: str | None, apply: bool, probe: bool) -> int:
 
     store_id = settings.moysklad_store_id
     print(f"store_id={store_id!r}")
+    try:
+        with open("/app/.git-commit") as commit_file:
+            print(f"api_git_commit={commit_file.read().strip()!r}")
+    except OSError:
+        print("api_git_commit=(unknown — rebuild api image)")
 
     try:
         stock_map, total = await _load_full_stock_map(client)
