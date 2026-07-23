@@ -46,6 +46,12 @@ class CheckoutRateLimitMiddleware(BaseHTTPMiddleware):
     PAYMENT_INTENT_LIMIT = 10
     ADMIN_LOGIN_LIMIT = 10
     ADMIN_MEDIA_UPLOAD_LIMIT = 20
+    AUTH_LOGIN_LIMIT = 5
+    AUTH_REGISTER_LIMIT = 3
+    AUTH_FORGOT_PASSWORD_LIMIT = 3
+    AUTH_RESEND_VERIFICATION_LIMIT = 3
+    AUTH_RESET_PASSWORD_LIMIT = 5
+    AUTH_VERIFY_EMAIL_LIMIT = 10
     MUTATING_METHODS = {"POST", "PATCH", "DELETE"}
 
     def __init__(self, app) -> None:
@@ -70,6 +76,18 @@ class CheckoutRateLimitMiddleware(BaseHTTPMiddleware):
             return self.ADMIN_LOGIN_LIMIT
         if path == "/api/v1/admin/media/upload" and request.method == "POST":
             return settings.admin_media_upload_limit_per_minute
+        if path == "/api/v1/auth/login" and request.method == "POST":
+            return self.AUTH_LOGIN_LIMIT
+        if path in ("/api/v1/auth/register", "/api/v1/auth/register/wholesaler") and request.method == "POST":
+            return self.AUTH_REGISTER_LIMIT
+        if path == "/api/v1/auth/forgot-password" and request.method == "POST":
+            return self.AUTH_FORGOT_PASSWORD_LIMIT
+        if path == "/api/v1/auth/resend-verification" and request.method == "POST":
+            return self.AUTH_RESEND_VERIFICATION_LIMIT
+        if path == "/api/v1/auth/reset-password" and request.method == "POST":
+            return self.AUTH_RESET_PASSWORD_LIMIT
+        if path == "/api/v1/auth/verify-email" and request.method == "POST":
+            return self.AUTH_VERIFY_EMAIL_LIMIT
         return None
 
     @staticmethod

@@ -666,6 +666,28 @@ async def test_admin_upload_media_rejects_video(admin_catalog_client: AsyncClien
 
 
 @pytest.mark.asyncio
+async def test_admin_upload_media_does_not_leak_internal_error(
+    admin_catalog_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.features.admin.infrastructure.media.storage import MediaStorageError, MediaStorageService
+
+    def _raise_internal(_self, _data: bytes, _content_type: str) -> str:
+        raise MediaStorageError("disk full at /secret/path/uploads")
+
+    monkeypatch.setattr(MediaStorageService, "store_bytes", _raise_internal)
+    token = await _token(admin_catalog_client)
+    png_header = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+    response = await admin_catalog_client.post(
+        "/api/v1/admin/media/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("photo.png", png_header, "image/png")},
+    )
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Media upload failed"
+    assert "/secret/" not in response.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_admin_list_products_filter_by_category(admin_catalog_client: AsyncClient) -> None:
     token = await _token(admin_catalog_client)
 

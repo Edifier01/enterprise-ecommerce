@@ -439,3 +439,31 @@ async def test_register_wholesaler_invalid_inn_returns_422(auth_client: AsyncCli
         json=wholesaler_register_payload("wholesale-bad@example.com", inn="12345"),
     )
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_auth_login_rate_limit_returns_429(
+    auth_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.config import settings
+    from app.core.middleware import CheckoutRateLimitMiddleware
+
+    monkeypatch.setattr(settings, "environment", "development")
+    monkeypatch.setattr(CheckoutRateLimitMiddleware, "AUTH_LOGIN_LIMIT", 2)
+    headers = {"X-Forwarded-For": "203.0.113.99"}
+
+    for _ in range(2):
+        response = await auth_client.post(
+            "/api/v1/auth/login",
+            json={"email": "missing@example.com", "password": "wrong-password"},
+            headers=headers,
+        )
+        assert response.status_code == 401
+
+    blocked = await auth_client.post(
+        "/api/v1/auth/login",
+        json={"email": "missing@example.com", "password": "wrong-password"},
+        headers=headers,
+    )
+    assert blocked.status_code == 429
+    assert blocked.headers.get("Retry-After") is not None

@@ -1008,9 +1008,50 @@ The third duplicate Sprint E section was removed during full project review. All
 
 ---
 
+## Epic: Comprehensive Audit 2026-07-23
+
+**Status:** COMPLETED
+
+### Feature: Multi-Agent Store Audit + Unified Roadmap
+
+**Status:** COMPLETED (2026-07-23)
+
+- [x] Round 1 — 10 parallel specialist audits (architecture, backend, frontend, catalog, checkout, database, security, QA, devops, API)
+- [x] Round 2 — Synthesis: themes, contradictions, deduplicated P0/P1, Waves 0–4 roadmap
+- [x] Round 3 — Verifier PASSED WITH NOTES
+- [x] Deliverable: `docs/reviews/COMPREHENSIVE-AUDIT-2026-07-23.md`
+- [x] PM state updated
+
+**Follow-up execution (from roadmap):**
+- [ ] Wave 0 — Immediate ops (deploy, MS stock verify, media volume, CI deploy gate)
+  - [x] 0.6 Gate deploy on CI success (`deploy.yml` workflow_run + concurrency)
+  - [x] 0.7 Customer auth rate limits (`CheckoutRateLimitMiddleware`)
+  - [x] 0.8 Media 500 leak fix + remove duplicate `SyncProtectedFieldError`
+  - [x] deploy.sh preflight (TRUSTED_PROXY_HOPS warn, MEDIA https) + post-deploy smoke + media volume check
+  - [ ] 0.1 Prod deploy pending fixes (push master → CI → deploy)
+  - [ ] 0.2 Verify MOYSKLAD_STORE_ID + «Обновить остатки»
+  - [ ] 0.3 Verify media_uploads volume on prod (automated in deploy.sh)
+  - [ ] 0.4 Re-upload 404 gallery URLs
+  - [ ] 0.5 Confirm TRUSTED_PROXY_HOPS=1 + MEDIA_PUBLIC_BASE_URL on prod server
+- [ ] Wave 1 — Release gate (YooKassa, SMTP, fulfillment gaps)
+- [ ] Wave 2 — Domain hardening (stock truth, catalog boundaries, backups)
+- [ ] Wave 3 — Growth & quality (SEO, design system, OpenAPI maturity)
+- [ ] Wave 4 — Scale preparation (backlog)
+
+---
+
 ## Epic: Full Project Review Follow-ups
 
-**Status:** BACKLOG (from review 2026-07-21)
+**Status:** BACKLOG (from review 2026-07-21; superseded in part by COMPREHENSIVE-AUDIT-2026-07-23)
+
+### QA Audit (2026-07-23) — BACKLOG
+
+- [ ] YooKassa test-mode E2E + notification webhook pytest (release gate)
+- [ ] Post-deploy prod smoke workflow (GitHub Actions or deploy.sh hook)
+- [ ] CI: pytest subset on PostgreSQL service (parity with E2E)
+- [ ] CI: pytest-cov threshold on domain/application layers
+- [ ] E2E: auth register/verify, out-of-stock checkout, MS order export button
+- [ ] Remove or replace conditional `test.skip` in admin MS smokes (stable seed)
 
 ### P0 — Release blockers
 
@@ -1049,7 +1090,8 @@ The third duplicate Sprint E section was removed during full project review. All
 - [x] Cart badge on header + mobile nav; refresh via `cart:updated` event
 - [x] Hide SKU row on PDP characteristics + purchase panel
 - [x] Product image fallback (`image_url` → gallery → `erp_image_url`); `/media/` URL resolution
-- [x] Pytest: `test_product_serializers.py` (2 tests)
+- [x] PLP/search API batch-load gallery for `image_url` resolution (list/search routes)
+- [x] Pytest: `test_product_serializers.py` (5 tests)
 - [ ] Deploy to prod
 
 ---

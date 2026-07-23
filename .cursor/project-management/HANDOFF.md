@@ -2,37 +2,35 @@
 
 ## Current Agent
 
-Implementation Agent
+Implementation Agent (Wave 0)
 
 ## Completed Work
 
-**Storefront UX fixes (2026-07-23):**
+**Wave 0 — code/CI items (2026-07-23):**
 
-Three user-reported issues on homepage and PDP:
-
-1. **Cart quantity not visible** — badge on header cart icon (all breakpoints); mobile bottom nav badge; `cart:updated` event refreshes count after add/update/remove.
-2. **SKU hidden on PDP** — removed SKU row from characteristics table; removed variant SKU line above purchase panel.
-3. **Product photos missing** — public API `image_url` fallback chain: site `image_url` → gallery → `erp_image_url`; `/media/` paths resolve via API/CDN base; PLP uses gallery fallback.
-
-**Tests:** `tests/test_product_serializers.py` (+2 unit tests, green).
+1. **0.6 CI deploy gate** — `deploy.yml` triggers only after successful CI on push to master (`workflow_run`); `workflow_dispatch` kept for emergency; `concurrency` group added.
+2. **0.7 Customer auth rate limits** — `/auth/login` (5/min), register (3/min), forgot-password, resend-verification, reset-password, verify-email.
+3. **0.8 Security fixes** — media upload 500 no longer leaks internal paths; removed dead `SyncProtectedFieldError` from `admin_ports.py`.
+4. **deploy.sh** — TRUSTED_PROXY_HOPS warning, MEDIA https validation, media volume check, post-deploy curl smoke, Wave 0 ops checklist output.
+5. **Tests** — `test_auth_login_rate_limit_returns_429`, `test_admin_upload_media_does_not_leak_internal_error` (2/2 green).
 
 ## Files Changed
 
 | Area | Paths |
 |------|-------|
-| Backend | `serializers.py`, `repository.py` |
-| Frontend | `cart-header-summary.tsx`, `mobile-bottom-nav.tsx`, `cart-client.tsx`, `add-to-cart-button.tsx`, `product-specs-table.tsx`, `product-purchase-panel.tsx`, `product-image.ts`, `product-grid.ts` |
-| New | `cart-events.ts`, `use-cart-summary.ts` |
-| Tests | `tests/test_product_serializers.py` |
+| CI/CD | `.github/workflows/deploy.yml` |
+| Backend | `apps/api/app/core/middleware.py`, `admin/presentation/media_router.py`, `catalog/domain/admin_ports.py` |
+| DevOps | `scripts/deploy.sh` |
+| Tests | `tests/test_auth.py`, `tests/test_admin_catalog.py` |
 
 ## Known Issues
 
-- Prod gallery 404s from prior media upload bug still require re-upload (ops)
-- MoySklad stock sync + admin product save fixes still pending prod deploy
+- Wave 0 ops items 0.1–0.5 require prod server access (deploy, MS stock pull, gallery re-upload)
+- Auto-deploy only fires after green CI push to `master` on repo `Edifier01/enterprise-ecommerce`
 
 ## Next Recommended Action
 
-1. **Deploy** storefront UX fixes to prod (`./scripts/deploy.sh`)
-2. Verify cart badge updates after «Купить» on homepage/PDP
-3. Confirm PDP shows MS placeholder or gallery photo for MS-synced products
-4. Continue pending admin/MS deploy items if not yet on prod
+1. **Commit + push to master** → CI green → auto-deploy (or `workflow_dispatch` Deploy)
+2. On prod: run MS «Обновить остатки»; re-upload 404 galleries
+3. Verify storefront PLP photos + admin MS product save
+4. Then start **Wave 1** (YooKassa sprint planning)

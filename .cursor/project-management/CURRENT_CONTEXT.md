@@ -6,13 +6,13 @@
 
 ## Current Module
 
-Storefront UX fixes (cart badge, SKU hide, product photos)
+Release planning (post comprehensive audit)
 
 ---
 
 ## Current Feature
 
-**Storefront UX** — cart quantity badge, hide SKU on PDP, product image fallback
+**Wave 0 — Immediate Ops** (code items done; prod deploy pending)
 
 ---
 
@@ -24,7 +24,7 @@ Implementation Agent
 
 ## Current Milestone
 
-**Phase 24 — Internet Store Design** (~92% functional, ~85% production-ready)
+**Phase 24 — Internet Store Design** (~92% functional, ~60% business release-ready)
 
 ---
 
@@ -32,7 +32,7 @@ Implementation Agent
 
 1. YooKassa payment integration (release gate)
 2. SMTP production delivery
-3. Prod: deploy stock sync fix + admin product save fix
+3. Prod: deploy pending fixes (stock sync, media upload, admin save, PLP photos)
 
 ---
 
@@ -40,6 +40,7 @@ Implementation Agent
 
 | Area | Status |
 |------|--------|
+| Comprehensive audit + roadmap | ✅ `docs/reviews/COMPREHENSIVE-AUDIT-2026-07-23.md` |
 | MS stock sync fix (code) | ✅ ready to deploy |
 | Admin media upload fix (code) | ✅ ready to deploy |
 | Admin UX Waves 8–14 on prod | ✅ (deploy #32, 2026-07-22) |
@@ -49,4 +50,4 @@ Implementation Agent
 
 ## Last Updated
 
-2026-07-23 (Storefront UX: cart badge, SKU hide, product photos)
+2026-07-23 (Wave 0: CI gate, auth rate limits, deploy smoke)

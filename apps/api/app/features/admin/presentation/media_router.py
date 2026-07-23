@@ -31,7 +31,7 @@ async def admin_upload_media(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except MediaStorageError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail="Media upload failed") from exc
     except OSError as exc:
         raise HTTPException(status_code=500, detail="Media upload failed") from exc
     return {"url": url}

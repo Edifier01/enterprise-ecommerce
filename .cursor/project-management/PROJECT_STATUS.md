@@ -31,7 +31,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 **Overall roadmap:** ~99% (25/26 phases)
 
-**Phase 24 (application):** ~92% functional / ~85% production-ready (admin UX Waves 8–14 on prod; YooKassa pending)
+**Phase 24 (application):** ~92% functional / ~60% business release-ready (comprehensive audit 2026-07-23; YooKassa + ops gaps)
 
 ---
 
@@ -46,9 +46,9 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
-- [ ] Deploy storefront UX fixes + MoySklad stock sync + admin product save + media upload fix to prod
-- [ ] Prod: verify MOYSKLAD_STORE_ID + run «Обновить остатки»
-- [ ] Verify `media_uploads` volume + re-upload lost gallery photos
+- [ ] Wave 0 ops: prod deploy pending fixes (push master → CI → deploy)
+- [ ] Wave 0 ops: MS stock verify + gallery re-upload on prod
+- [x] Wave 0 code: CI deploy gate, auth rate limits, media 500 fix, deploy.sh smoke
 - [ ] Admin design system / loading states polish (UX roadmap step 2)
 - [ ] Real product/category photography — BACKLOG
 - [ ] SMTP email delivery (production)
@@ -56,7 +56,9 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Recently Completed
 
-- [x] **Storefront UX fixes** — cart badge, hide SKU, product image fallback, 2 pytest (2026-07-23)
+- [x] **Comprehensive audit synthesis** — 10 specialist agents, unified roadmap Waves 0–4 (`docs/reviews/COMPREHENSIVE-AUDIT-2026-07-23.md`) (2026-07-23)
+- [x] **Storefront PLP photos** — list/search API gallery fallback + product-grid resolver, 5 pytest (2026-07-23)
+- [x] **Storefront UX fixes** — cart badge, hide SKU, PDP image fallback (2026-07-23)
 - [x] **Admin MS product save fix** — SyncProtectedFieldError import + omit currency in PATCH, 2 pytest (2026-07-23)
 - [x] **MoySklad stock sync fix** — store_id normalization, variant report, skip-missing guard, 7 pytest (2026-07-23)
 - [x] **Admin media upload fix** — relative `/media/` URLs, video rejection, gallery preview, 18 pytest (2026-07-22)
@@ -131,10 +133,10 @@ None.
 
 ## Last Updated
 
-2026-07-23 (Storefront UX fixes)
+2026-07-23 (Comprehensive audit synthesis)
 
 ---
 
 ## Last Agent
 
-Implementation Agent (full project review)
+Orchestrator (10-agent audit + roadmap synthesis)

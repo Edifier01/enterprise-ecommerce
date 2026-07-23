@@ -38,6 +38,15 @@ if [[ -z "${MEDIA_PUBLIC_BASE_URL:-}" ]]; then
   log "MEDIA_PUBLIC_BASE_URL not set; defaulting to https://${DOMAIN}/media"
 fi
 
+if [[ "${TRUSTED_PROXY_HOPS:-0}" != "1" ]]; then
+  log "WARN: TRUSTED_PROXY_HOPS should be 1 behind Caddy (rate limits / admin IP allowlist)"
+fi
+
+if [[ "${MEDIA_PUBLIC_BASE_URL}" != https://* ]]; then
+  echo "ERROR: MEDIA_PUBLIC_BASE_URL must use https in production (got: ${MEDIA_PUBLIC_BASE_URL})"
+  exit 1
+fi
+
 log "Syncing to origin/master..."
 git fetch origin master
 git reset --hard origin/master
@@ -94,6 +103,33 @@ fi
 log "Container status:"
 "${COMPOSE[@]}" ps
 
+log "Verifying media_uploads volume mount..."
+if ! "${COMPOSE[@]}" exec -T api test -d /app/uploads; then
+  echo "ERROR: /app/uploads missing in API container — check media_uploads volume"
+  exit 1
+fi
+
+log "Post-deploy smoke checks..."
+smoke_fail=0
+for url in "https://${DOMAIN}/health/ready" "https://${DOMAIN}/health"; do
+  if curl -fsS --max-time 30 "$url" >/dev/null; then
+    log "OK $url"
+  else
+    log "FAIL $url"
+    smoke_fail=1
+  fi
+done
+
+if [[ "$smoke_fail" -ne 0 ]]; then
+  echo "ERROR: Post-deploy smoke checks failed"
+  exit 1
+fi
+
 log "Deployment complete."
 echo "Site: https://${DOMAIN}"
 echo "API health: https://${DOMAIN}/health"
+echo ""
+echo "Wave 0 ops follow-up (manual):"
+echo "  1. Admin → MoySklad → «Обновить остатки» (verify MOYSKLAD_STORE_ID)"
+echo "  2. Re-upload gallery photos that returned 404"
+echo "  3. Smoke: catalog cards show gallery images; admin product save for MS items"

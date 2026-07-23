@@ -37,10 +37,6 @@ class CategoryHasChildrenError(Exception):
     """Raised when deleting a category that still has subcategories."""
 
 
-class SyncProtectedFieldError(Exception):
-    """Raised when admin attempts to edit MoySklad-owned fields."""
-
-
 @dataclass(frozen=True, slots=True)
 class CreateProductData:
     name: str

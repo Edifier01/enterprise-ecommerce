@@ -6,10 +6,7 @@ import { redirect } from "next/navigation";
 import { ADMIN_ACCESS_TOKEN_COOKIE } from "@/lib/admin/constants";
 import { sanitizeAdminRedirect } from "@/lib/admin/redirect";
 import { buildAdminAuthCookieOptions } from "@/lib/admin/session";
-
 import { getApiBase } from "@/lib/api-base";
-
-const API_BASE = getApiBase();
 
 export type AdminAuthActionState = {
   error?: string;
@@ -26,11 +23,16 @@ export async function adminLoginAction(
     return { error: "Некорректные данные формы." };
   }
 
-  const res = await fetch(`${API_BASE}/api/v1/admin/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${getApiBase()}/api/v1/admin/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    return { error: "Не удалось связаться с API. Проверьте, что backend запущен." };
+  }
 
   if (!res.ok) {
     if (res.status === 429) {
@@ -43,6 +45,11 @@ export async function adminLoginAction(
     }
     if (res.status === 401) {
       return { error: "Неверный email или пароль." };
+    }
+    if (res.status === 503) {
+      return {
+        error: "База данных временно недоступна. Попробуйте через несколько минут.",
+      };
     }
     if (res.status >= 500) {
       return { error: "Сервер временно недоступен. Попробуйте позже." };
