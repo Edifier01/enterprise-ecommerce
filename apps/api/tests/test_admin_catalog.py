@@ -790,6 +790,58 @@ async def test_admin_list_products_needs_color_photos_filter(
 
 
 @pytest.mark.asyncio
+async def test_admin_update_moysklad_product_allows_display_fields(
+    admin_catalog_client: AsyncClient,
+) -> None:
+    token = await _token(admin_catalog_client)
+
+    listing = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products?q=multi-color-jacket",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert listing.status_code == 200
+    product_id = listing.json()["items"][0]["id"]
+
+    response = await admin_catalog_client.patch(
+        f"/api/v1/admin/catalog/products/{product_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "name": "Multi Color Jacket Updated",
+            "slug": "multi-color-jacket",
+            "meta_title": "Updated meta title",
+            "meta_description": "Updated meta description",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["name"] == "Multi Color Jacket Updated"
+    assert payload["meta_title"] == "Updated meta title"
+    assert payload["meta_description"] == "Updated meta description"
+
+
+@pytest.mark.asyncio
+async def test_admin_update_moysklad_product_blocks_currency_with_422(
+    admin_catalog_client: AsyncClient,
+) -> None:
+    token = await _token(admin_catalog_client)
+
+    listing = await admin_catalog_client.get(
+        "/api/v1/admin/catalog/products?q=multi-color-jacket",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert listing.status_code == 200
+    product_id = listing.json()["items"][0]["id"]
+
+    response = await admin_catalog_client.patch(
+        f"/api/v1/admin/catalog/products/{product_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"currency": "RUB"},
+    )
+    assert response.status_code == 422
+    assert "МойСклад" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_admin_publish_moysklad_product_requires_merchandising(
     admin_catalog_client: AsyncClient,
 ) -> None:

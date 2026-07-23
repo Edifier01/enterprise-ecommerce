@@ -19,7 +19,6 @@ from app.features.catalog.domain.admin_ports import (
     DuplicateSlugError,
     IAdminCatalogRepository,
     ProductNotFoundError,
-    SyncProtectedFieldError,
     UpdateCategoryData,
     UpdateProductData,
     UpdateVariantData,
@@ -27,6 +26,7 @@ from app.features.catalog.domain.admin_ports import (
     VariantNotFoundError,
 )
 from app.features.catalog.domain.entities import Product, ProductVariant
+from app.features.integrations.moysklad.domain.sync_guard import SyncProtectedFieldError
 from app.features.catalog.domain.merchandising_readiness import (
     format_publish_blockers_ru,
     get_moysklad_publish_blockers,

@@ -90,7 +90,6 @@ function buildProductBody(
   const body: Record<string, unknown> = {
     name,
     slug,
-    currency: siteConfig.defaultCurrency,
     status,
     category_id: typeof categoryId === "string" && categoryId ? categoryId : null,
     description: readOptionalString(formData, "description"),
@@ -100,6 +99,7 @@ function buildProductBody(
   };
 
   if (!options?.omitPrice) {
+    body.currency = siteConfig.defaultCurrency;
     let priceCents: number;
     let compareAtCents: number | undefined;
     let wholesaleCents: number | undefined;
