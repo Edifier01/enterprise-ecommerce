@@ -6,36 +6,39 @@ Implementation Agent
 
 ## Completed Work
 
-**MoySklad stock sync fix — везде 0 шт. (2026-07-23):**
+**MoySklad stock sync — direct fetch fallback (2026-07-23):**
 
-1. `MOYSKLAD_STORE_ID` нормализуется из URL/href → UUID (validator в config)
-2. Запрос остатков: `groupBy=variant` + `filter=store=…` для нужного склада
-3. Парсинг отчёта: product + variant rows, fallback `assortment.meta`
-4. Sync не затирает остаток нулём, если вариант отсутствует в отчёте МС
-5. Исправлена пагинация (offset по числу строк API, не по размеру map)
-6. API «Обновить остатки» возвращает `stock_rows_skipped`, `stock_map_size`
-7. Tests: 7 новых pytest в `test_moysklad_stock_sync.py`
+Prod confirmed bulk `/report/stock/all?filter=storeId=…` returns 3197 rows but **all quantity=0**, while per-product `get_assortment_stock(filter=product=…)` returns correct values (4, 5, 22, etc.).
 
-**Root cause:** неверный формат `MOYSKLAD_STORE_ID` и/или отсутствие variant-level строк в отчёте → все варианты получали 0 при sync.
+**Fix:** `SyncMoySkladStockUseCase` now:
+1. Tries bulk report first (fast path when `non_zero > 0`)
+2. If bulk is all zeros → falls back to **catalog-scoped direct fetch** per unique `moysklad_product_id` + real variant IDs
+3. Throttled via `MOYSKLAD_STOCK_SYNC_REQUEST_DELAY_SECONDS` (default 0.2s)
+4. Logs `stock_non_zero`, `rows_fetched_direct`; sets `last_error` when sync finds 0 non-zero quantities
 
 ## Files Changed
 
 | Area | Paths |
 |------|-------|
-| Backend | `moysklad/infrastructure/ids.py`, `http_client.py`, `sync_stock.py`, `config.py`, `admin_router.py`, `ports.py` |
-| Tests | `tests/test_moysklad_stock_sync.py` |
-| PM | `CURRENT_CONTEXT.md`, `PROJECT_STATUS.md`, `TASKS.md`, `HANDOFF.md` |
+| Backend | `sync_stock.py`, `config.py` |
+| Tests | `test_moysklad_stock_sync.py` (+ fallback test) |
+| Ops | `scripts/debug_moysklad_stock.py` (shows `non_zero`, `direct_fetches`) |
+| Config | `.env.example` |
 
 ## Known Issues
 
-- После деплоя нужен ручной «Обновить остатки» или full resync на prod
-- Cron остатков по умолчанию выключен (`MOYSKLAD_SYNC_CRON_ENABLED=false`)
-- Existing prod gallery 404 URLs — re-upload still pending (media fix)
+- Direct fetch ~0.2s × N products → full sync may take 1–3 min for ~400 products (within 600s cron interval)
+- Admin still shows 0 until `--apply` or «Обновить остатки» after deploy
+- Docker cache import warnings on deploy are harmless (local `:previous` tags)
 
 ## Next Recommended Action
 
-1. **Deploy** stock sync fix to prod
-2. Проверить `MOYSKLAD_STORE_ID` в `.env.production` — UUID нужного склада (не URL)
-3. Админка → МойСклад → **«Обновить остатки»** — проверить колонку «Остаток (МС)»
-4. При успехе: включить `MOYSKLAD_SYNC_CRON_ENABLED=true` для авто-sync
-5. Deploy media upload fix (parallel track)
+1. **Commit + deploy** to prod (`./scripts/deploy.sh`)
+2. Run debug with apply:
+   ```bash
+   docker compose --env-file .env.production -f docker-compose.prod.yml exec api \
+     python -m scripts.debug_moysklad_stock "Баллистика" --apply
+   ```
+3. Expect: `non_zero > 0`, `direct_fetches > 0`, Баллистика Лист=4, Сухопут=5
+4. Verify admin «Остаток (МС)» column
+5. Enable `MOYSKLAD_SYNC_CRON_ENABLED=true` once verified

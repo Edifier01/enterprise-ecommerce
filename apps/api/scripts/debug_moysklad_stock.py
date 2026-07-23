@@ -88,6 +88,8 @@ async def _main(search: str | None, apply: bool) -> int:
                     f"applied={result.rows_applied}",
                     f"skipped={result.rows_skipped}",
                     f"map={result.stock_map_size}",
+                    f"non_zero={result.stock_non_zero}",
+                    f"direct_fetches={result.rows_fetched_direct}",
                 )
                 if result.errors:
                     print("errors:", result.errors[:5])

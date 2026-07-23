@@ -163,8 +163,14 @@ class _FakeCatalogRepo:
 
 
 class _FakeClient:
-    def __init__(self, stock_map: dict[str, int]) -> None:
+    def __init__(
+        self,
+        stock_map: dict[str, int],
+        *,
+        direct_map: dict[str, int] | None = None,
+    ) -> None:
         self._stock_map = stock_map
+        self._direct_map = direct_map if direct_map is not None else stock_map
 
     async def list_stock_by_store(
         self, *, offset: int = 0, limit: int = 1000
@@ -174,10 +180,10 @@ class _FakeClient:
         return self._stock_map, len(self._stock_map), len(self._stock_map)
 
     async def get_assortment_stock(self, assortment_id: str) -> int:
-        if assortment_id in self._stock_map:
-            return self._stock_map[assortment_id]
+        if assortment_id in self._direct_map:
+            return self._direct_map[assortment_id]
         if assortment_id.startswith("product:"):
-            return self._stock_map.get(assortment_id.removeprefix("product:"), 0)
+            return self._direct_map.get(assortment_id.removeprefix("product:"), 0)
         return 0
 
 
@@ -234,3 +240,35 @@ async def test_sync_stock_skips_variants_missing_from_bulk_map() -> None:
     assert result.rows_skipped == 1
     assert result.stock_map_size == 2
     assert {quantity for _, quantity in catalog.applied} == {4, 9}
+
+
+@pytest.mark.asyncio
+async def test_sync_stock_falls_back_to_direct_when_bulk_all_zero() -> None:
+    catalog = _FakeCatalogRepo()
+    catalog._session = _FakeSession()
+
+    async def apply_stock(variant: _FakeVariant, quantity: int) -> None:
+        catalog.applied.append((variant, quantity))
+
+    catalog.apply_stock = apply_stock  # type: ignore[method-assign]
+
+    use_case = SyncMoySkladStockUseCase(
+        client=_FakeClient(
+            {_VARIANT_ID: 0, _PRODUCT_ID: 0},
+            direct_map={
+                _VARIANT_ID: 4,
+                _PRODUCT_ID: 9,
+                f"product:{_PRODUCT_ID}": 9,
+            },
+        ),
+        catalog_repo=catalog,
+        sync_repo=_FakeSyncRepo(),
+    )
+
+    result = await use_case.execute()
+
+    assert result.rows_applied == 3
+    assert result.rows_skipped == 0
+    assert result.rows_fetched_direct >= 1
+    assert result.stock_non_zero >= 1
+    assert {quantity for _, quantity in catalog.applied} == {0, 4, 9}

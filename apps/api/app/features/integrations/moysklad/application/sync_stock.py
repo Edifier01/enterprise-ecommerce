@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.features.catalog.infrastructure.persistence.models import ProductModel, ProductVariantModel
 from app.features.integrations.moysklad.domain.ports import IMoySkladClient
 from app.features.integrations.moysklad.infrastructure.persistence.catalog_sync_repository import (
@@ -26,6 +27,7 @@ class SyncStockResult:
     rows_skipped: int = 0
     rows_fetched_direct: int = 0
     stock_map_size: int = 0
+    stock_non_zero: int = 0
     errors: list[str] = field(default_factory=list)
 
 
@@ -44,8 +46,6 @@ class SyncMoySkladStockUseCase:
 
     async def execute(self) -> SyncStockResult:
         result = SyncStockResult()
-        stock_map = await self._load_stock_map()
-        result.stock_map_size = len(stock_map)
         session = self._catalog._session
 
         rows = (
@@ -56,10 +56,23 @@ class SyncMoySkladStockUseCase:
             )
         ).all()
 
-        if not stock_map and rows:
+        product_ids: set[str] = set()
+        variant_ids: set[str] = set()
+        for variant, product_ms_id in rows:
+            if product_ms_id:
+                product_ids.add(product_ms_id)
+            ms_id = variant.moysklad_variant_id
+            if ms_id and not ms_id.startswith("product:"):
+                variant_ids.add(ms_id)
+
+        stock_map = await self._load_stock_map(product_ids, variant_ids, result)
+        result.stock_map_size = len(stock_map)
+        result.stock_non_zero = sum(1 for quantity in stock_map.values() if quantity > 0)
+
+        if result.stock_non_zero == 0 and rows:
             logger.warning(
-                "moysklad_stock_sync_empty_map",
-                extra={"variant_count": len(rows)},
+                "moysklad_stock_sync_no_non_zero_quantities",
+                extra={"variant_count": len(rows), "stock_map_size": result.stock_map_size},
             )
 
         for variant, product_ms_id in rows:
@@ -88,6 +101,7 @@ class SyncMoySkladStockUseCase:
                 "rows_skipped": result.rows_skipped,
                 "rows_fetched_direct": result.rows_fetched_direct,
                 "stock_map_size": result.stock_map_size,
+                "stock_non_zero": result.stock_non_zero,
                 "errors": len(result.errors),
             },
         )
@@ -96,10 +110,10 @@ class SyncMoySkladStockUseCase:
         state.last_incremental_sync_at = datetime.now(tz=UTC)
         if result.errors:
             state.last_error = result.errors[0]
-        elif result.rows_applied == 0 and rows:
+        elif result.stock_non_zero == 0 and rows:
             state.last_error = (
-                f"stock sync applied 0 rows (map={result.stock_map_size}, "
-                f"skipped={result.rows_skipped}, variants={len(rows)})"
+                f"stock sync found 0 non-zero quantities (map={result.stock_map_size}, "
+                f"variants={len(rows)})"
             )
         else:
             state.last_error = None
@@ -142,7 +156,32 @@ class SyncMoySkladStockUseCase:
             return stock_map[product_ms_id]
         return None
 
-    async def _load_stock_map(self) -> dict[str, int]:
+    async def _load_stock_map(
+        self,
+        product_ids: set[str],
+        variant_ids: set[str],
+        result: SyncStockResult,
+    ) -> dict[str, int]:
+        bulk = await self._load_bulk_stock_map()
+        bulk_non_zero = sum(1 for quantity in bulk.values() if quantity > 0)
+        if bulk_non_zero > 0:
+            logger.info(
+                "moysklad_stock_sync_using_bulk_report",
+                extra={"stock_map_size": len(bulk), "non_zero": bulk_non_zero},
+            )
+            return bulk
+
+        logger.warning(
+            "moysklad_stock_sync_bulk_unusable_using_direct_product_fetch",
+            extra={
+                "bulk_size": len(bulk),
+                "products": len(product_ids),
+                "variants": len(variant_ids),
+            },
+        )
+        return await self._load_direct_stock_map(product_ids, variant_ids, result)
+
+    async def _load_bulk_stock_map(self) -> dict[str, int]:
         stock: dict[str, int] = {}
         offset = 0
         while True:
@@ -154,6 +193,32 @@ class SyncMoySkladStockUseCase:
             if offset >= total or rows_returned == 0:
                 break
             await asyncio.sleep(0.25)
+        return stock
+
+    async def _load_direct_stock_map(
+        self,
+        product_ids: set[str],
+        variant_ids: set[str],
+        result: SyncStockResult,
+    ) -> dict[str, int]:
+        stock: dict[str, int] = {}
+        delay = settings.moysklad_stock_sync_request_delay_seconds
+
+        for product_id in sorted(product_ids):
+            quantity = await self._client.get_assortment_stock(f"product:{product_id}")
+            stock[product_id] = quantity
+            stock[f"product:{product_id}"] = quantity
+            result.rows_fetched_direct += 1
+            if delay > 0:
+                await asyncio.sleep(delay)
+
+        for variant_id in sorted(variant_ids):
+            quantity = await self._client.get_assortment_stock(variant_id)
+            stock[variant_id] = quantity
+            result.rows_fetched_direct += 1
+            if delay > 0:
+                await asyncio.sleep(delay)
+
         return stock
 
 
