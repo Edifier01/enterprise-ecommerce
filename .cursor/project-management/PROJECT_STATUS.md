@@ -46,7 +46,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
-- [ ] Deploy MoySklad stock sync fix + media upload fix to prod
+- [ ] Deploy storefront UX fixes + MoySklad stock sync + admin product save + media upload fix to prod
 - [ ] Prod: verify MOYSKLAD_STORE_ID + run «Обновить остатки»
 - [ ] Verify `media_uploads` volume + re-upload lost gallery photos
 - [ ] Admin design system / loading states polish (UX roadmap step 2)
@@ -56,6 +56,8 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Recently Completed
 
+- [x] **Storefront UX fixes** — cart badge, hide SKU, product image fallback, 2 pytest (2026-07-23)
+- [x] **Admin MS product save fix** — SyncProtectedFieldError import + omit currency in PATCH, 2 pytest (2026-07-23)
 - [x] **MoySklad stock sync fix** — store_id normalization, variant report, skip-missing guard, 7 pytest (2026-07-23)
 - [x] **Admin media upload fix** — relative `/media/` URLs, video rejection, gallery preview, 18 pytest (2026-07-22)
 
@@ -129,7 +131,7 @@ None.
 
 ## Last Updated
 
-2026-07-23 (MoySklad stock sync fix)
+2026-07-23 (Storefront UX fixes)
 
 ---
 

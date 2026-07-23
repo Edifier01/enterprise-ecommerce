@@ -6,39 +6,33 @@ Implementation Agent
 
 ## Completed Work
 
-**MoySklad stock sync — direct fetch fallback (2026-07-23):**
+**Storefront UX fixes (2026-07-23):**
 
-Prod confirmed bulk `/report/stock/all?filter=storeId=…` returns 3197 rows but **all quantity=0**, while per-product `get_assortment_stock(filter=product=…)` returns correct values (4, 5, 22, etc.).
+Three user-reported issues on homepage and PDP:
 
-**Fix:** `SyncMoySkladStockUseCase` now:
-1. Tries bulk report first (fast path when `non_zero > 0`)
-2. If bulk is all zeros → falls back to **catalog-scoped direct fetch** per unique `moysklad_product_id` + real variant IDs
-3. Throttled via `MOYSKLAD_STOCK_SYNC_REQUEST_DELAY_SECONDS` (default 0.2s)
-4. Logs `stock_non_zero`, `rows_fetched_direct`; sets `last_error` when sync finds 0 non-zero quantities
+1. **Cart quantity not visible** — badge on header cart icon (all breakpoints); mobile bottom nav badge; `cart:updated` event refreshes count after add/update/remove.
+2. **SKU hidden on PDP** — removed SKU row from characteristics table; removed variant SKU line above purchase panel.
+3. **Product photos missing** — public API `image_url` fallback chain: site `image_url` → gallery → `erp_image_url`; `/media/` paths resolve via API/CDN base; PLP uses gallery fallback.
+
+**Tests:** `tests/test_product_serializers.py` (+2 unit tests, green).
 
 ## Files Changed
 
 | Area | Paths |
 |------|-------|
-| Backend | `sync_stock.py`, `config.py` |
-| Tests | `test_moysklad_stock_sync.py` (+ fallback test) |
-| Ops | `scripts/debug_moysklad_stock.py` (shows `non_zero`, `direct_fetches`) |
-| Config | `.env.example` |
+| Backend | `serializers.py`, `repository.py` |
+| Frontend | `cart-header-summary.tsx`, `mobile-bottom-nav.tsx`, `cart-client.tsx`, `add-to-cart-button.tsx`, `product-specs-table.tsx`, `product-purchase-panel.tsx`, `product-image.ts`, `product-grid.ts` |
+| New | `cart-events.ts`, `use-cart-summary.ts` |
+| Tests | `tests/test_product_serializers.py` |
 
 ## Known Issues
 
-- Direct fetch ~0.2s × N products → full sync may take 1–3 min for ~400 products (within 600s cron interval)
-- Admin still shows 0 until `--apply` or «Обновить остатки» after deploy
-- Docker cache import warnings on deploy are harmless (local `:previous` tags)
+- Prod gallery 404s from prior media upload bug still require re-upload (ops)
+- MoySklad stock sync + admin product save fixes still pending prod deploy
 
 ## Next Recommended Action
 
-1. **Commit + deploy** to prod (`./scripts/deploy.sh`)
-2. Run debug with apply:
-   ```bash
-   docker compose --env-file .env.production -f docker-compose.prod.yml exec api \
-     python -m scripts.debug_moysklad_stock "Баллистика" --apply
-   ```
-3. Expect: `non_zero > 0`, `direct_fetches > 0`, Баллистика Лист=4, Сухопут=5
-4. Verify admin «Остаток (МС)» column
-5. Enable `MOYSKLAD_SYNC_CRON_ENABLED=true` once verified
+1. **Deploy** storefront UX fixes to prod (`./scripts/deploy.sh`)
+2. Verify cart badge updates after «Купить» on homepage/PDP
+3. Confirm PDP shows MS placeholder or gallery photo for MS-synced products
+4. Continue pending admin/MS deploy items if not yet on prod

@@ -1,3 +1,4 @@
+import { getApiBase } from "@/lib/api-base";
 import { siteConfig } from "@/lib/store/site-config";
 
 /** Tiny neutral blur used while product photos load (reduces CLS). */
@@ -9,9 +10,20 @@ function readMediaBaseUrl(): string | null {
   return raw.length > 0 ? raw.replace(/\/$/, "") : null;
 }
 
+function resolveMediaPath(path: string): string {
+  const mediaBase = readMediaBaseUrl();
+  if (mediaBase) {
+    const relativePath = path.replace(/^\/media\/?/, "");
+    return `${mediaBase}/${relativePath}`;
+  }
+
+  const apiBase = getApiBase().replace(/\/$/, "");
+  return `${apiBase}${path}`;
+}
+
 /**
  * Resolve product image URLs for storefront/admin display.
- * Absolute URLs and site-relative paths (/media/...) are returned as-is.
+ * Absolute URLs pass through; /media/ paths resolve via CDN base or API origin.
  */
 export function resolveProductImageUrl(src?: string | null): string {
   if (!src || src.trim().length === 0) {
@@ -19,7 +31,15 @@ export function resolveProductImageUrl(src?: string | null): string {
   }
 
   const trimmed = src.trim();
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) {
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith("/media/")) {
+    return resolveMediaPath(trimmed);
+  }
+
+  if (trimmed.startsWith("/")) {
     return trimmed;
   }
 

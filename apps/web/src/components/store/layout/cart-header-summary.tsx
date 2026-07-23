@@ -2,38 +2,12 @@
 
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
-import { useEffect, useState } from "react";
 
-import { getCart } from "@/lib/checkout/api";
-import { formatPrice } from "@/lib/store/format";
+import { useCartSummary } from "@/lib/checkout/use-cart-summary";
+import { cn } from "@/lib/utils";
 
 export function CartHeaderSummary() {
-  const [itemCount, setItemCount] = useState(0);
-  const [totalLabel, setTotalLabel] = useState("0 ₽");
-
-  useEffect(() => {
-    let mounted = true;
-
-    getCart()
-      .then((cart) => {
-        if (!mounted) return;
-
-        const count = cart.lines.reduce((sum, line) => sum + line.quantity, 0);
-        const currency = cart.currency ?? cart.lines[0]?.currency ?? "RUB";
-        setItemCount(count);
-        setTotalLabel(formatPrice(cart.total_cents, currency));
-      })
-      .catch(() => {
-        if (mounted) {
-          setItemCount(0);
-          setTotalLabel(formatPrice(0, "RUB"));
-        }
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const { itemCount, totalLabel } = useCartSummary();
 
   return (
     <Link
@@ -41,8 +15,19 @@ export function CartHeaderSummary() {
       className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-foreground transition-colors hover:text-primary sm:text-sm"
       aria-label={`Корзина: ${itemCount} товаров, ${totalLabel}`}
     >
-      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+      <span className="relative inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
         <ShoppingCart className="size-4" aria-hidden />
+        {itemCount > 0 ? (
+          <span
+            className={cn(
+              "absolute -right-1 -top-1 flex min-w-5 items-center justify-center rounded-full",
+              "bg-destructive px-1 text-[10px] font-bold leading-5 text-destructive-foreground",
+            )}
+            aria-hidden
+          >
+            {itemCount > 99 ? "99+" : itemCount}
+          </span>
+        ) : null}
       </span>
       <span className="hidden sm:inline">
         Товаров {itemCount} ({totalLabel})

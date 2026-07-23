@@ -41,6 +41,25 @@ def _images_schema(images: list[ProductImageModel] | None) -> list[ProductImageP
     return [ProductImagePublicSchema.model_validate(image) for image in images]
 
 
+def _resolve_public_image_url(
+    product: Product,
+    images: list[ProductImageModel] | None = None,
+) -> str | None:
+    """Site-owned image_url first, then gallery, then MS erp placeholder (ADR-010)."""
+    if product.image_url and product.image_url.strip():
+        return product.image_url.strip()
+
+    if images:
+        for image in sorted(images, key=lambda row: row.sort_order):
+            if image.url and image.url.strip():
+                return image.url.strip()
+
+    if product.erp_image_url and product.erp_image_url.strip():
+        return product.erp_image_url.strip()
+
+    return None
+
+
 def product_to_schema(
     product: Product,
     *,
@@ -57,7 +76,7 @@ def product_to_schema(
         in_stock=product.in_stock,
         category_id=product.category_id,
         description=product.description,
-        image_url=product.image_url,
+        image_url=_resolve_public_image_url(product, images),
         meta_title=product.meta_title,
         meta_description=product.meta_description,
         option_groups=_option_groups_schema(product),

@@ -6,13 +6,13 @@
 
 ## Current Module
 
-MoySklad stock sync fix (остатки 0 шт.)
+Storefront UX fixes (cart badge, SKU hide, product photos)
 
 ---
 
 ## Current Feature
 
-**MS stock sync reliability** — store_id normalization, variant-level report, skip-missing guard
+**Storefront UX** — cart quantity badge, hide SKU on PDP, product image fallback
 
 ---
 
@@ -32,7 +32,7 @@ Implementation Agent
 
 1. YooKassa payment integration (release gate)
 2. SMTP production delivery
-3. Prod: deploy stock sync fix + run «Обновить остатки» after verifying MOYSKLAD_STORE_ID
+3. Prod: deploy stock sync fix + admin product save fix
 
 ---
 
@@ -49,4 +49,4 @@ Implementation Agent
 
 ## Last Updated
 
-2026-07-23 (MoySklad stock sync fix)
+2026-07-23 (Storefront UX: cart badge, SKU hide, product photos)

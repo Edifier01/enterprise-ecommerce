@@ -1042,6 +1042,29 @@ The third duplicate Sprint E section was removed during full project review. All
 
 ## Bugs
 
+### BUG: Storefront — корзина, SKU, фото товара
+
+**Status:** COMPLETED (code fix 2026-07-23; prod deploy pending)
+
+- [x] Cart badge on header + mobile nav; refresh via `cart:updated` event
+- [x] Hide SKU row on PDP characteristics + purchase panel
+- [x] Product image fallback (`image_url` → gallery → `erp_image_url`); `/media/` URL resolution
+- [x] Pytest: `test_product_serializers.py` (2 tests)
+- [ ] Deploy to prod
+
+---
+
+### BUG: Admin product save — «Ошибка сервера» для товаров МойСклад
+
+**Status:** COMPLETED (code fix 2026-07-23; prod deploy pending)
+
+- [x] Fix `SyncProtectedFieldError` import in catalog admin_router (sync_guard)
+- [x] Omit `currency` from PATCH for `sync_source=moysklad` in frontend
+- [x] Pytest: display fields save → 200; currency → 422
+- [ ] Deploy to prod
+
+---
+
 ### BUG: MoySklad stock sync — везде 0 шт. в админке
 
 **Status:** COMPLETED (code fix 2026-07-23; prod deploy + stock pull pending)

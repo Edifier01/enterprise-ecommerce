@@ -14,6 +14,7 @@ import {
   type Cart,
   updateCartLine,
 } from "@/lib/checkout/api";
+import { dispatchCartUpdated } from "@/lib/checkout/cart-events";
 import { formatPrice } from "@/lib/store/format";
 
 export function CartClient() {
@@ -43,6 +44,7 @@ export function CartClient() {
     startTransition(async () => {
       try {
         setCart(await action());
+        dispatchCartUpdated();
       } catch (err) {
         setError(getCheckoutErrorMessage(err, "Не удалось обновить корзину"));
       }

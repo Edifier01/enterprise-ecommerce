@@ -35,7 +35,9 @@ export function toProductGridItems(
       currency: product.currency,
       in_stock: product.in_stock,
       compareAtCents: product.compare_at_price_cents ?? undefined,
-      imageSrc: resolveProductImageUrl(product.image_url),
+      imageSrc: resolveProductImageUrl(
+        product.image_url ?? product.images[0]?.url,
+      ),
       isWholesaler: wholesalePriceCents != null,
       wholesalePriceCents,
       defaultVariantId: canQuickAdd ? variant?.id : undefined,

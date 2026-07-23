@@ -43,10 +43,6 @@ export function buildProductSpecRows(product: Product): SpecRow[] {
   const rows: SpecRow[] = [
     { label: "Артикул", value: product.slug },
     {
-      label: "SKU",
-      value: product.variants.map((variant) => variant.sku).join(", "),
-    },
-    {
       label: "Наличие",
       value: product.in_stock ? "В наличии" : "Нет в наличии",
     },

@@ -109,10 +109,6 @@ export function ProductPurchasePanel({
           )}
         </div>
 
-        {selected?.sku ? (
-          <p className="text-sm text-muted-foreground">Артикул: {selected.sku}</p>
-        ) : null}
-
         {inStock ? (
           <span className="inline-flex w-fit items-center rounded-full bg-store-success px-2.5 py-1 text-sm font-medium text-store-success-foreground">
             В наличии

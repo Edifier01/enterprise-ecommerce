@@ -4,6 +4,7 @@ import { useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/store/ui/toast-provider";
+import { dispatchCartUpdated } from "@/lib/checkout/cart-events";
 import { addCartLine } from "@/lib/checkout/api";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ export function AddToCartButton({
     startTransition(async () => {
       try {
         await addCartLine(variantId, 1);
+        dispatchCartUpdated();
         showToast(`«${productName}» добавлен в корзину`, {
           label: "Перейти в корзину",
           href: "/cart",
