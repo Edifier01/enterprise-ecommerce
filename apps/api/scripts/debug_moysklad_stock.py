@@ -30,7 +30,7 @@ async def _load_full_stock_map(client) -> tuple[dict[str, int], int]:
     return stock, total
 
 
-async def _main(search: str | None, apply: bool) -> int:
+async def _main(search: str | None, apply: bool, probe: bool) -> int:
     client = build_moysklad_client()
     if client is None:
         print("MOYSKLAD_API_TOKEN is not configured", file=sys.stderr)
@@ -70,10 +70,10 @@ async def _main(search: str | None, apply: bool) -> int:
                         bulk_qty = stock_map.get(ms_id)
                         if bulk_qty is None and ms_id.startswith("product:"):
                             bulk_qty = stock_map.get(ms_id.removeprefix("product:"))
-                        if apply:
+                        if probe:
                             direct_qty = await client.get_assortment_stock(ms_id)
                         else:
-                            direct_qty = "(skipped — pass --apply to probe direct API)"
+                            direct_qty = "(pass --probe to compare direct API)"
                         print(
                             f"  variant sku={variant.sku!r} ms_id={ms_id!r} "
                             f"bulk={bulk_qty} direct={direct_qty}"
@@ -107,10 +107,15 @@ def main() -> None:
     parser.add_argument(
         "--apply",
         action="store_true",
-        help="Run stock sync and optional direct API probes (slow; may rate-limit)",
+        help="Run stock sync (writes inventory from MoySklad)",
+    )
+    parser.add_argument(
+        "--probe",
+        action="store_true",
+        help="Compare bulk vs direct API for search results (slow; may rate-limit)",
     )
     args = parser.parse_args()
-    raise SystemExit(asyncio.run(_main(args.search, args.apply)))
+    raise SystemExit(asyncio.run(_main(args.search, args.apply, args.probe)))
 
 
 if __name__ == "__main__":

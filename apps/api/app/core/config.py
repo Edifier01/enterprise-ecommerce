@@ -100,7 +100,8 @@ class Settings(BaseSettings):
     moysklad_webhook_secret: SecretStr = SecretStr("")
     moysklad_sync_cron_enabled: bool = False
     moysklad_sync_cron_interval_seconds: int = 600
-    moysklad_stock_sync_request_delay_seconds: float = 0.2
+    moysklad_stock_sync_request_delay_seconds: float = 0.5
+    moysklad_api_min_request_interval_seconds: float = 0.15
     moysklad_organization_id: str = ""
     moysklad_order_export_enabled: bool = True
 

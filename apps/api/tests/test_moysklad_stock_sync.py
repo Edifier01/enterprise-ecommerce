@@ -100,6 +100,27 @@ def test_parse_store_filtered_stock_rows_flat_stock() -> None:
     assert parse_store_filtered_stock_rows(rows)[_PRODUCT_ID] == 4
 
 
+def test_parse_store_filtered_stock_rows_reads_stock_by_store_when_store_id_given() -> None:
+    rows = [
+        {
+            "meta": {
+                "href": f"https://api.moysklad.ru/api/remap/1.2/entity/product/{_PRODUCT_ID}",
+                "type": "product",
+            },
+            "stockByStore": [
+                {
+                    "meta": {"href": _STORE_HREF},
+                    "stock": 4,
+                }
+            ],
+        }
+    ]
+    from app.features.integrations.moysklad.infrastructure.ids import parse_store_filtered_stock_rows
+
+    assert parse_store_filtered_stock_rows(rows)[_PRODUCT_ID] == 0
+    assert parse_store_filtered_stock_rows(rows, _STORE_ID)[_PRODUCT_ID] == 4
+
+
 def test_parse_stock_bystore_rows_zero_when_store_not_matched() -> None:
     rows = [
         {

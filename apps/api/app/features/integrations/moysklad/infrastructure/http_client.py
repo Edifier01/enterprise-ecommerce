@@ -36,6 +36,8 @@ class MoySkladApiClient(IMoySkladClient):
         self._token = token
         self._base_url = base_url.rstrip("/")
         self._client: httpx.AsyncClient | None = None
+        self._request_lock = asyncio.Lock()
+        self._last_request_at: float = 0.0
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
@@ -59,11 +61,22 @@ class MoySkladApiClient(IMoySkladClient):
         if method.upper() != "GET":
             raise RuntimeError("MoySklad integration is read-only; mutating requests are forbidden")
         client = await self._get_client()
-        for attempt in range(6):
-            response = await client.request(method, path, **kwargs)
+        min_interval = settings.moysklad_api_min_request_interval_seconds
+        for attempt in range(8):
+            async with self._request_lock:
+                if min_interval > 0:
+                    elapsed = asyncio.get_running_loop().time() - self._last_request_at
+                    if elapsed < min_interval:
+                        await asyncio.sleep(min_interval - elapsed)
+                response = await client.request(method, path, **kwargs)
+                self._last_request_at = asyncio.get_running_loop().time()
             if response.status_code == 429:
-                wait = min(60, 2 ** attempt * 2)
-                logger.warning("moysklad_rate_limited", extra={"wait_seconds": wait})
+                retry_after = response.headers.get("Retry-After")
+                if retry_after and retry_after.isdigit():
+                    wait = min(120, int(retry_after))
+                else:
+                    wait = min(60, 2**attempt * 3)
+                logger.warning("moysklad_rate_limited", extra={"wait_seconds": wait, "attempt": attempt})
                 await asyncio.sleep(wait)
                 continue
             response.raise_for_status()
@@ -136,32 +149,30 @@ class MoySkladApiClient(IMoySkladClient):
 
         if assortment_id.startswith("product:"):
             entity_id = assortment_id.removeprefix("product:")
-            filter_candidates = [f"product={self._base_url}/entity/product/{entity_id}"]
+            filter_expr = f"product={self._base_url}/entity/product/{entity_id}"
         else:
             entity_id = assortment_id
-            filter_candidates = [
-                f"variant={self._base_url}/entity/variant/{assortment_id}",
-                f"product={self._base_url}/entity/product/{assortment_id}",
-            ]
+            filter_expr = f"variant={self._base_url}/entity/variant/{assortment_id}"
 
-        for filter_expr in filter_candidates:
-            for path in ("/report/stock/all", "/report/stock/bystore"):
-                try:
-                    payload = await self._request(
-                        "GET",
-                        path,
-                        params={"limit": 1, "offset": 0, "groupBy": "variant", "filter": filter_expr},
-                    )
-                except httpx.HTTPStatusError:
-                    continue
-                rows = payload.get("rows", [])
-                if not rows:
-                    continue
-                parsed = parse_stock_report_rows(rows, store_id)
-                if entity_id in parsed:
-                    return parsed[entity_id]
-                return int(quantity_for_store(rows[0], store_id))
-        return 0
+        try:
+            payload = await self._request(
+                "GET",
+                "/report/stock/all",
+                params={"limit": 100, "offset": 0, "groupBy": "variant", "filter": filter_expr},
+            )
+        except httpx.HTTPStatusError:
+            return 0
+
+        rows = payload.get("rows", [])
+        if not rows:
+            return 0
+
+        parsed = parse_stock_report_rows(rows, store_id)
+        if entity_id in parsed:
+            return parsed[entity_id]
+        if assortment_id in parsed:
+            return parsed[assortment_id]
+        return int(quantity_for_store(rows[0], store_id))
 
     async def get_customer_order(self, order_id: str) -> dict[str, str | bool | None] | None:
         try:
@@ -232,7 +243,7 @@ class MoySkladApiClient(IMoySkladClient):
         rows = payload.get("rows", [])
         if rows:
             total = int(payload.get("meta", {}).get("size", len(rows)))
-            stock = parse_store_filtered_stock_rows(rows)
+            stock = parse_store_filtered_stock_rows(rows, store_id)
             if offset == 0:
                 non_zero = sum(1 for qty in stock.values() if qty > 0)
                 logger.info(

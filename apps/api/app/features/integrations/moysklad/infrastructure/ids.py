@@ -82,8 +82,17 @@ def _read_quantity(source: dict[str, Any]) -> float:
     return 0.0
 
 
-def parse_store_filtered_stock_rows(rows: list[dict[str, Any]]) -> dict[str, int]:
-    """Parse /report/stock/all rows already filtered by storeId (flat stock field)."""
+def parse_store_filtered_stock_rows(
+    rows: list[dict[str, Any]],
+    store_id: str = "",
+) -> dict[str, int]:
+    """Parse /report/stock/all rows filtered by storeId.
+
+    MoySklad often returns stock only inside stockByStore[], not as a flat field.
+    When store_id is provided, delegate to parse_stock_report_rows.
+    """
+    if store_id:
+        return parse_stock_report_rows(rows, store_id)
     stock: dict[str, int] = {}
     for row in rows:
         assortment_id = extract_assortment_id(row)
