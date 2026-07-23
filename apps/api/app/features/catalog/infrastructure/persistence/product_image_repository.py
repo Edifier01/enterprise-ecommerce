@@ -17,12 +17,30 @@ class ProductImageRepository:
         self._session = session
 
     async def list_for_product(self, product_id: uuid.UUID) -> list[ProductImageModel]:
+        grouped = await self.list_for_products([product_id])
+        return grouped.get(product_id, [])
+
+    async def list_for_products(
+        self,
+        product_ids: list[uuid.UUID],
+    ) -> dict[uuid.UUID, list[ProductImageModel]]:
+        if not product_ids:
+            return {}
+
         stmt = (
             select(ProductImageModel)
-            .where(ProductImageModel.product_id == product_id)
-            .order_by(ProductImageModel.sort_order.asc(), ProductImageModel.created_at.asc())
+            .where(ProductImageModel.product_id.in_(product_ids))
+            .order_by(
+                ProductImageModel.product_id.asc(),
+                ProductImageModel.sort_order.asc(),
+                ProductImageModel.created_at.asc(),
+            )
         )
-        return list((await self._session.scalars(stmt)).all())
+        rows = list((await self._session.scalars(stmt)).all())
+        grouped: dict[uuid.UUID, list[ProductImageModel]] = {}
+        for row in rows:
+            grouped.setdefault(row.product_id, []).append(row)
+        return grouped
 
     async def create(
         self,

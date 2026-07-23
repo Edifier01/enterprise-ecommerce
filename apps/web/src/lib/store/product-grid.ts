@@ -1,6 +1,6 @@
 import type { Product } from "@/lib/api";
 import type { ProductGridItem } from "@/components/store/catalog/product-grid";
-import { resolveProductImageUrl } from "@/lib/store/product-image";
+import { resolveCatalogProductImageSrc } from "@/lib/store/product-image";
 import {
   extractColorOptions,
   getColorOptionsFromVariants,
@@ -35,7 +35,11 @@ export function toProductGridItems(
       currency: product.currency,
       in_stock: product.in_stock,
       compareAtCents: product.compare_at_price_cents ?? undefined,
-      imageSrc: resolveProductImageUrl(product.image_url),
+      imageSrc: resolveCatalogProductImageSrc({
+        slug: product.slug,
+        imageUrl: product.image_url,
+        galleryUrl: product.images[0]?.url,
+      }),
       isWholesaler: wholesalePriceCents != null,
       wholesalePriceCents,
       defaultVariantId: canQuickAdd ? variant?.id : undefined,

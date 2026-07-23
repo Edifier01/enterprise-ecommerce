@@ -36,7 +36,8 @@ def _option_groups_schema(product: Product) -> list[ProductOptionGroupSchema]:
     ]
 
 
-def erp_image_proxy_path(slug: str) -> str:    return f"/api/v1/products/{slug}/erp-image"
+def erp_image_proxy_path(slug: str) -> str:
+    return f"/api/v1/products/{slug}/erp-image"
 
 
 def _is_moysklad_download_url(url: str) -> bool:
@@ -107,6 +108,7 @@ def product_to_schema(
     *,
     show_wholesale: bool,
     images: list[ProductImageModel] | None = None,
+    include_images: bool = True,
 ) -> ProductSchema:
     return ProductSchema(
         id=product.id,
@@ -122,7 +124,7 @@ def product_to_schema(
         meta_title=product.meta_title,
         meta_description=product.meta_description,
         option_groups=_option_groups_schema(product),
-        images=_images_schema(product, images),
+        images=_images_schema(product, images) if include_images else [],
         variants=[
             variant_to_schema(variant, show_wholesale=show_wholesale)
             for variant in product.variants

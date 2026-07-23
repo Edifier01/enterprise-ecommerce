@@ -13,6 +13,7 @@ from app.features.catalog.application.use_cases.get_product import GetProductUse
 from app.features.catalog.application.use_cases.get_product_facets import GetProductFacetsUseCase
 from app.features.catalog.application.use_cases.list_products import ListProductsUseCase
 from app.features.catalog.application.use_cases.search_products import SearchProductsUseCase
+from app.features.catalog.domain.entities import Product
 from app.features.catalog.domain.product_list_filters import ProductListFilters, ProductSortOption
 from app.features.catalog.domain.ports import IProductRepository
 from app.features.catalog.infrastructure.persistence.product_image_repository import (
@@ -55,6 +56,28 @@ def get_product_image_repository(
 
 def _show_wholesale(user: User | None) -> bool:
     return user is not None and user.is_wholesaler
+
+
+async def _products_to_schemas(
+    products: list[Product],
+    *,
+    show_wholesale: bool,
+    image_repo: ProductImageRepository,
+    include_images: bool,
+) -> list[ProductSchema]:
+    if not products:
+        return []
+
+    images_by_product = await image_repo.list_for_products([product.id for product in products])
+    return [
+        product_to_schema(
+            product,
+            show_wholesale=show_wholesale,
+            images=images_by_product.get(product.id),
+            include_images=include_images,
+        )
+        for product in products
+    ]
 
 
 def _build_filters(
@@ -146,6 +169,7 @@ async def list_products(
         description="Sort order (popular = best sellers by quantity in last 90 days)",
     ),
     repo: IProductRepository = Depends(get_product_repository),
+    image_repo: ProductImageRepository = Depends(get_product_image_repository),
     user: User | None = Depends(get_optional_current_user),
 ) -> ProductListResponse:
     filters = _build_filters(
@@ -161,8 +185,14 @@ async def list_products(
     use_case = ListProductsUseCase(repo)
     products, total = await use_case.execute(page=page, limit=limit, filters=filters)
     show_wholesale = _show_wholesale(user)
+    items = await _products_to_schemas(
+        products,
+        show_wholesale=show_wholesale,
+        image_repo=image_repo,
+        include_images=False,
+    )
     return ProductListResponse(
-        items=[product_to_schema(p, show_wholesale=show_wholesale) for p in products],
+        items=items,
         total=total,
         page=page,
         limit=limit,
@@ -182,6 +212,7 @@ async def search_products(
     price_max: int | None = Query(default=None, ge=0, description="Maximum price in cents"),
     sort: str = Query(default="default", description="Sort order (default = relevance)"),
     repo: IProductRepository = Depends(get_product_repository),
+    image_repo: ProductImageRepository = Depends(get_product_image_repository),
     user: User | None = Depends(get_optional_current_user),
 ) -> ProductListResponse:
     filters = _build_filters(
@@ -197,8 +228,14 @@ async def search_products(
     use_case = SearchProductsUseCase(repo)
     products, total = await use_case.execute(query=q, page=page, limit=limit, filters=filters)
     show_wholesale = _show_wholesale(user)
+    items = await _products_to_schemas(
+        products,
+        show_wholesale=show_wholesale,
+        image_repo=image_repo,
+        include_images=False,
+    )
     return ProductListResponse(
-        items=[product_to_schema(p, show_wholesale=show_wholesale) for p in products],
+        items=items,
         total=total,
         page=page,
         limit=limit,
