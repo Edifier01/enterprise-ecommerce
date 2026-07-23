@@ -64,6 +64,8 @@ class MoySkladStockPullResponse(BaseModel):
     status: str
     direction: str = "inbound"
     stock_rows_applied: int
+    stock_rows_skipped: int = 0
+    stock_map_size: int = 0
     errors: list[str] = Field(default_factory=list)
 
 
@@ -215,6 +217,8 @@ async def admin_moysklad_pull_stock(
     return MoySkladStockPullResponse(
         status="partial" if result.errors else "success",
         stock_rows_applied=result.rows_applied,
+        stock_rows_skipped=result.rows_skipped,
+        stock_map_size=result.stock_map_size,
         errors=result.errors[:20],
     )
 

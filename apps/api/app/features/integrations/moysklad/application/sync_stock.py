@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 @dataclass(slots=True)
 class SyncStockResult:
     rows_applied: int = 0
+    rows_skipped: int = 0
+    stock_map_size: int = 0
     errors: list[str] = field(default_factory=list)
 
 
@@ -41,6 +43,7 @@ class SyncMoySkladStockUseCase:
     async def execute(self) -> SyncStockResult:
         result = SyncStockResult()
         stock_map = await self._load_stock_map()
+        result.stock_map_size = len(stock_map)
         session = self._catalog._session
         variants = (
             await session.scalars(
@@ -48,20 +51,37 @@ class SyncMoySkladStockUseCase:
             )
         ).all()
 
+        if not stock_map and variants:
+            logger.warning(
+                "moysklad_stock_sync_empty_map",
+                extra={"variant_count": len(variants)},
+            )
+
         for variant in variants:
             try:
                 ms_id = variant.moysklad_variant_id or ""
                 quantity = stock_map.get(ms_id)
                 if quantity is None and ms_id.startswith("product:"):
-                    quantity = stock_map.get(ms_id.removeprefix("product:"), 0)
+                    quantity = stock_map.get(ms_id.removeprefix("product:"))
                 if quantity is None:
-                    quantity = 0
+                    result.rows_skipped += 1
+                    continue
                 await self._catalog.apply_stock(variant, quantity)
                 result.rows_applied += 1
             except Exception as exc:
                 message = f"variant {variant.id}: {exc}"
                 logger.exception("moysklad_stock_sync_failed")
                 result.errors.append(message)
+
+        logger.info(
+            "moysklad_stock_sync_complete",
+            extra={
+                "rows_applied": result.rows_applied,
+                "rows_skipped": result.rows_skipped,
+                "stock_map_size": result.stock_map_size,
+                "errors": len(result.errors),
+            },
+        )
 
         state = await self._sync.get_state()
         state.last_incremental_sync_at = datetime.now(tz=UTC)
@@ -79,10 +99,12 @@ class SyncMoySkladStockUseCase:
         stock: dict[str, int] = {}
         offset = 0
         while True:
-            batch, total = await self._client.list_stock_by_store(offset=offset, limit=1000)
+            batch, total, rows_returned = await self._client.list_stock_by_store(
+                offset=offset, limit=1000
+            )
             stock.update(batch)
-            offset += len(batch)
-            if offset >= total or not batch:
+            offset += rows_returned
+            if offset >= total or rows_returned == 0:
                 break
         return stock
 

@@ -46,7 +46,8 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
-- [ ] Deploy admin media upload fix to prod
+- [ ] Deploy MoySklad stock sync fix + media upload fix to prod
+- [ ] Prod: verify MOYSKLAD_STORE_ID + run «Обновить остатки»
 - [ ] Verify `media_uploads` volume + re-upload lost gallery photos
 - [ ] Admin design system / loading states polish (UX roadmap step 2)
 - [ ] Real product/category photography — BACKLOG
@@ -55,6 +56,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Recently Completed
 
+- [x] **MoySklad stock sync fix** — store_id normalization, variant report, skip-missing guard, 7 pytest (2026-07-23)
 - [x] **Admin media upload fix** — relative `/media/` URLs, video rejection, gallery preview, 18 pytest (2026-07-22)
 
 - [x] **Prod deploy Admin UX Waves 8–14** — GitHub Actions deploy #32; migrations through 020; build hotfix `bulk-jobs-shared.ts` (2026-07-22)
@@ -127,7 +129,7 @@ None.
 
 ## Last Updated
 
-2026-07-22 (admin media upload fix)
+2026-07-23 (MoySklad stock sync fix)
 
 ---
 

@@ -55,8 +55,8 @@ class IMoySkladClient(ABC):
     @abstractmethod
     async def list_stock_by_store(
         self, *, offset: int = 0, limit: int = 1000
-    ) -> tuple[dict[str, int], int]:
-        """Return map of assortment id (product or variant UUID) -> stock quantity."""
+    ) -> tuple[dict[str, int], int, int]:
+        """Return map of assortment id -> stock, total report size, rows in this page."""
         ...
 
     @abstractmethod

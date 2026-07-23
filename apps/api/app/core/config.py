@@ -3,6 +3,8 @@
 from pathlib import Path
 
 from pydantic import Field, SecretStr, field_validator, model_validator
+
+from app.features.integrations.moysklad.infrastructure.ids import normalize_moysklad_entity_id
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _JWT_DEV_DEFAULT = "dev-secret-change-in-production"
@@ -100,6 +102,13 @@ class Settings(BaseSettings):
     moysklad_sync_cron_interval_seconds: int = 600
     moysklad_organization_id: str = ""
     moysklad_order_export_enabled: bool = True
+
+    @field_validator("moysklad_store_id", mode="before")
+    @classmethod
+    def _normalize_moysklad_store_id(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        return normalize_moysklad_entity_id(value)
 
     @field_validator("database_url", mode="before")
     @classmethod

@@ -1042,6 +1042,21 @@ The third duplicate Sprint E section was removed during full project review. All
 
 ## Bugs
 
+### BUG: MoySklad stock sync — везде 0 шт. в админке
+
+**Status:** COMPLETED (code fix 2026-07-23; prod deploy + stock pull pending)
+
+- [x] Normalize MOYSKLAD_STORE_ID (UUID from URL)
+- [x] Stock report: groupBy=variant + store filter
+- [x] Robust assortment ID parsing (meta + assortment.meta)
+- [x] Skip variants missing from MS map (no destructive zero)
+- [x] Fix pagination offset in stock sync
+- [x] Pytest: `test_moysklad_stock_sync.py` (7 tests)
+- [ ] Deploy to prod
+- [ ] Ops: verify MOYSKLAD_STORE_ID + run «Обновить остатки»
+
+---
+
 ### BUG: Admin media upload — video error + photos not displayed on prod
 
 **Status:** COMPLETED (code fix 2026-07-22; prod deploy + re-upload pending)

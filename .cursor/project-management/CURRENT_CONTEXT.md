@@ -6,13 +6,13 @@
 
 ## Current Module
 
-Admin media upload & gallery display fix
+MoySklad stock sync fix (остатки 0 шт.)
 
 ---
 
 ## Current Feature
 
-**Media upload reliability** — relative `/media/` URLs, video rejection, preview fix
+**MS stock sync reliability** — store_id normalization, variant-level report, skip-missing guard
 
 ---
 
@@ -32,7 +32,7 @@ Implementation Agent
 
 1. YooKassa payment integration (release gate)
 2. SMTP production delivery
-3. Prod: re-upload gallery photos lost before volume fix; verify `media_uploads` volume after deploy
+3. Prod: deploy stock sync fix + run «Обновить остатки» after verifying MOYSKLAD_STORE_ID
 
 ---
 
@@ -40,13 +40,13 @@ Implementation Agent
 
 | Area | Status |
 |------|--------|
+| MS stock sync fix (code) | ✅ ready to deploy |
 | Admin media upload fix (code) | ✅ ready to deploy |
 | Admin UX Waves 8–14 on prod | ✅ (deploy #32, 2026-07-22) |
-| Command palette Cmd+K | ✅ prod |
 | YooKassa | ❌ |
 
 ---
 
 ## Last Updated
 
-2026-07-22 (admin media upload fix)
+2026-07-23 (MoySklad stock sync fix)

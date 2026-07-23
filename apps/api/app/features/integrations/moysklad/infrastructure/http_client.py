@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-import re
 from typing import Any
 
 import httpx
@@ -13,19 +12,19 @@ from app.features.integrations.moysklad.domain.ports import (
     MoySkladProduct,
     MoySkladVariant,
 )
+from app.features.integrations.moysklad.infrastructure.ids import (
+    extract_moysklad_id,
+    normalize_moysklad_entity_id,
+    parse_stock_bystore_rows,
+)
 
 logger = logging.getLogger(__name__)
 
 _MS_BASE = "https://api.moysklad.ru/api/remap/1.2"
-_HREF_ID_RE = re.compile(r"/([0-9a-f-]{36})$", re.IGNORECASE)
 
 
 def _extract_id(href: str | None) -> str | None:
-    if not href:
-        return None
-    path = href.split("?", 1)[0]
-    match = _HREF_ID_RE.search(path)
-    return match.group(1) if match else None
+    return extract_moysklad_id(href)
 
 
 class MoySkladApiClient(IMoySkladClient):
@@ -131,11 +130,11 @@ class MoySkladApiClient(IMoySkladClient):
     async def get_assortment_stock(self, assortment_id: str) -> int:
         offset = 0
         while True:
-            batch, total = await self.list_stock_by_store(offset=offset, limit=1000)
+            batch, total, rows_returned = await self.list_stock_by_store(offset=offset, limit=1000)
             if assortment_id in batch:
                 return batch[assortment_id]
-            offset += len(batch)
-            if offset >= total or not batch:
+            offset += rows_returned
+            if offset >= total or rows_returned == 0:
                 break
         return 0
 
@@ -187,34 +186,29 @@ class MoySkladApiClient(IMoySkladClient):
 
     async def list_stock_by_store(
         self, *, offset: int = 0, limit: int = 1000
-    ) -> tuple[dict[str, int], int]:
-        store_id = settings.moysklad_store_id
+    ) -> tuple[dict[str, int], int, int]:
+        store_id = normalize_moysklad_entity_id(settings.moysklad_store_id)
         if not store_id:
-            return {}, 0
+            return {}, 0, 0
 
+        store_href = f"{self._base_url}/entity/store/{store_id}"
         payload = await self._request(
             "GET",
             "/report/stock/bystore",
-            params={"limit": limit, "offset": offset},
+            params={
+                "limit": limit,
+                "offset": offset,
+                "groupBy": "variant",
+                "filter": f"store={store_href}",
+            },
         )
         rows = payload.get("rows", [])
         total = int(payload.get("meta", {}).get("size", len(rows)))
-        stock: dict[str, int] = {}
-        for row in rows:
-            assortment_id = _extract_id((row.get("meta") or {}).get("href", ""))
-            if not assortment_id:
-                continue
-            quantity = 0.0
-            for store_row in row.get("stockByStore") or []:
-                store_href = (store_row.get("meta") or {}).get("href", "")
-                if _extract_id(store_href) == store_id:
-                    quantity = float(store_row.get("stock") or 0)
-                    break
-            stock[assortment_id] = int(quantity)
-        return stock, total
+        stock = parse_stock_bystore_rows(rows, store_id)
+        return stock, total, len(rows)
 
     async def get_variant_stock(self, variant_external_id: str) -> int:
-        stock, _ = await self.list_stock_by_store(offset=0, limit=1000)
+        stock, _, _ = await self.list_stock_by_store(offset=0, limit=1000)
         return stock.get(variant_external_id, 0)
 
     def _map_product(self, row: dict[str, Any]) -> MoySkladProduct:
