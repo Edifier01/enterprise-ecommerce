@@ -28,7 +28,7 @@ function resolveApiPath(path: string): string {
 
 function isMoySkladDownloadUrl(src: string): boolean {
   const lowered = src.toLowerCase();
-  return lowered.includes("api.moysklad.ru") && lowered.includes("/download/");
+  return lowered.includes("moysklad.ru") && lowered.includes("/download/");
 }
 
 export function erpImageProxyPath(slug: string): string {

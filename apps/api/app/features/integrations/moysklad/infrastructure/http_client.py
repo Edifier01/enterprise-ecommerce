@@ -378,14 +378,23 @@ class MoySkladApiClient(IMoySkladClient):
         if not url.strip():
             raise ValueError("download url is required")
 
-        client = await self._get_client()
         min_interval = settings.moysklad_api_min_request_interval_seconds
         async with self._request_lock:
             if min_interval > 0:
                 elapsed = asyncio.get_running_loop().time() - self._last_request_at
                 if elapsed < min_interval:
                     await asyncio.sleep(min_interval - elapsed)
-            response = await client.get(url)
+            # Separate client: JSON Content-Type breaks MoySklad binary downloads.
+            async with httpx.AsyncClient(
+                headers={
+                    "Authorization": f"Bearer {self._token}",
+                    "Accept": "*/*",
+                    "Accept-Encoding": "gzip",
+                },
+                timeout=httpx.Timeout(30.0),
+                follow_redirects=True,
+            ) as download_client:
+                response = await download_client.get(url)
             self._last_request_at = asyncio.get_running_loop().time()
 
         response.raise_for_status()

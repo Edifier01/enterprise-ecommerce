@@ -1,5 +1,6 @@
 """Map catalog domain entities to public API schemas (ADR-008 visibility rules)."""
 
+from app.features.admin.infrastructure.media.storage import media_public_path_exists
 from app.features.catalog.domain.entities import Product, ProductVariant
 from app.features.catalog.domain.variant_options import build_option_groups
 from app.features.catalog.presentation.schemas import (
@@ -35,19 +36,12 @@ def _option_groups_schema(product: Product) -> list[ProductOptionGroupSchema]:
     ]
 
 
-def _images_schema(images: list[ProductImageModel] | None) -> list[ProductImagePublicSchema]:
-    if not images:
-        return []
-    return [ProductImagePublicSchema.model_validate(image) for image in images]
-
-
-def erp_image_proxy_path(slug: str) -> str:
-    return f"/api/v1/products/{slug}/erp-image"
+def erp_image_proxy_path(slug: str) -> str:    return f"/api/v1/products/{slug}/erp-image"
 
 
 def _is_moysklad_download_url(url: str) -> bool:
     lowered = url.casefold()
-    return "api.moysklad.ru" in lowered and "/download/" in lowered
+    return "moysklad.ru" in lowered and "/download/" in lowered
 
 
 def _normalize_public_image_url(product: Product, url: str) -> str:
@@ -57,23 +51,55 @@ def _normalize_public_image_url(product: Product, url: str) -> str:
     return trimmed
 
 
+def _usable_public_image_url(product: Product, url: str | None) -> str | None:
+    if not url or not url.strip():
+        return None
+
+    trimmed = url.strip()
+    if trimmed.startswith("/media/") and not media_public_path_exists(trimmed):
+        return None
+
+    return _normalize_public_image_url(product, trimmed)
+
+
 def _resolve_public_image_url(
     product: Product,
     images: list[ProductImageModel] | None = None,
 ) -> str | None:
     """Site-owned image_url first, then gallery, then proxied MS erp placeholder (ADR-010)."""
-    if product.image_url and product.image_url.strip():
-        return _normalize_public_image_url(product, product.image_url)
+    primary = _usable_public_image_url(product, product.image_url)
+    if primary:
+        return primary
 
     if images:
         for image in sorted(images, key=lambda row: row.sort_order):
-            if image.url and image.url.strip():
-                return _normalize_public_image_url(product, image.url)
+            candidate = _usable_public_image_url(product, image.url)
+            if candidate:
+                return candidate
 
     if product.erp_image_url and product.erp_image_url.strip():
         return erp_image_proxy_path(product.slug)
 
     return None
+
+
+def _images_schema(
+    product: Product,
+    images: list[ProductImageModel] | None,
+) -> list[ProductImagePublicSchema]:
+    if not images:
+        return []
+
+    normalized: list[ProductImagePublicSchema] = []
+    for image in images:
+        schema = ProductImagePublicSchema.model_validate(image)
+        candidate = _usable_public_image_url(product, schema.url)
+        if not candidate:
+            continue
+        if candidate != schema.url:
+            schema = schema.model_copy(update={"url": candidate})
+        normalized.append(schema)
+    return normalized
 
 
 def product_to_schema(
@@ -96,7 +122,7 @@ def product_to_schema(
         meta_title=product.meta_title,
         meta_description=product.meta_description,
         option_groups=_option_groups_schema(product),
-        images=_images_schema(images),
+        images=_images_schema(product, images),
         variants=[
             variant_to_schema(variant, show_wholesale=show_wholesale)
             for variant in product.variants

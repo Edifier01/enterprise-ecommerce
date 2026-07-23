@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 
 import { AdminDataTable, type AdminDataTableColumn } from "@/components/admin/admin-data-table";
@@ -25,7 +24,7 @@ import {
   type AdminCatalogListParams,
 } from "@/lib/admin/catalog-list-url";
 import { isMoySkladSynced } from "@/lib/admin/moysklad";
-import { catalogProductImageRenderProps } from "@/lib/store/product-image";
+import { ProductThumbnail } from "@/components/store/catalog/product-thumbnail";
 
 type AdminCatalogTableProps = {
   products: AdminProduct[];
@@ -45,21 +44,15 @@ function buildColumns(
       id: "photo",
       header: "Фото",
       cell: (product) => {
-        const image = catalogProductImageRenderProps({
-          slug: product.slug,
-          imageUrl: product.image_url,
-          erpImageUrl: product.erp_image_url,
-        });
         return (
           <div className="relative size-10 overflow-hidden rounded-md border bg-muted">
-            <Image
-              src={image.src}
+            <ProductThumbnail
+              src={product.image_url}
+              productSlug={product.slug}
+              erpImageUrl={product.erp_image_url}
               alt={product.name}
               fill
               className="object-cover"
-              unoptimized={image.unoptimized}
-              placeholder={image.placeholder}
-              blurDataURL={image.blurDataURL}
             />
           </div>
         );
@@ -184,23 +177,17 @@ export function AdminCatalogTable({
         />
       }
       renderMobileCard={(product) => {
-        const image = catalogProductImageRenderProps({
-          slug: product.slug,
-          imageUrl: product.image_url,
-          erpImageUrl: product.erp_image_url,
-        });
         return (
           <AdminMobileCard key={product.id}>
             <div className="flex gap-3">
               <div className="relative size-16 shrink-0 overflow-hidden rounded-md border bg-muted">
-                <Image
-                  src={image.src}
+                <ProductThumbnail
+                  src={product.image_url}
+                  productSlug={product.slug}
+                  erpImageUrl={product.erp_image_url}
                   alt={product.name}
                   fill
                   className="object-cover"
-                  unoptimized={image.unoptimized}
-                  placeholder={image.placeholder}
-                  blurDataURL={image.blurDataURL}
                 />
               </div>
               <div className="min-w-0 flex-1 space-y-2">

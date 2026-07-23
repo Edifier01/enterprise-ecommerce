@@ -7,6 +7,7 @@ import { Breadcrumbs } from "@/components/store/catalog/breadcrumbs";
 import type { BreadcrumbItem } from "@/components/store/catalog/breadcrumbs";
 import { ProductPurchasePanel } from "@/components/store/catalog/product-purchase-panel";
 import { ProductSpecsTable } from "@/components/store/catalog/product-specs-table";
+import { ProductThumbnail } from "@/components/store/catalog/product-thumbnail";
 import type { Product, ProductImage } from "@/lib/api";
 import { siteConfig } from "@/lib/store/site-config";
 import {
@@ -96,16 +97,14 @@ export function ProductDetail({
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
         <div className="space-y-3">
           <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted ring-1 ring-foreground/5">
-            <Image
+            <ProductThumbnail
               src={image.src}
+              productSlug={product.slug}
               alt={activeImage.alt}
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 50vw"
               className="object-cover"
-              unoptimized={image.unoptimized}
-              placeholder={image.placeholder}
-              blurDataURL={image.blurDataURL}
             />
           </div>
 

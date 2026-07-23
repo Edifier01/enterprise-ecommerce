@@ -44,6 +44,19 @@ def build_media_public_path(filename: str) -> str:
     return f"{_MEDIA_URL_PREFIX}/{filename}"
 
 
+def media_public_path_exists(public_path: str) -> bool:
+    """Return True when a /media/... path points to an existing uploaded file."""
+    trimmed = public_path.strip()
+    if not trimmed.startswith(f"{_MEDIA_URL_PREFIX}/"):
+        return True
+
+    relative = trimmed.removeprefix(f"{_MEDIA_URL_PREFIX}/").lstrip("/")
+    if not relative or ".." in relative or relative.startswith("/"):
+        return False
+
+    return (Path(settings.media_upload_dir) / relative).is_file()
+
+
 class MediaStorageService:
     """Stores admin catalog images on local disk."""
 

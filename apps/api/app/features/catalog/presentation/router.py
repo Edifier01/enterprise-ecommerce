@@ -1,5 +1,7 @@
 """Catalog HTTP routes."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +26,8 @@ from app.features.catalog.presentation.schemas import (
 )
 from app.features.catalog.presentation.serializers import product_to_schema
 from app.features.integrations.moysklad.infrastructure.http_client import build_moysklad_client
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/products", tags=["catalog"])
 
@@ -219,6 +223,10 @@ async def get_product_erp_image(
     try:
         content, content_type = await client.download_binary(product.erp_image_url.strip())
     except Exception as exc:
+        logger.exception(
+            "erp_image_download_failed",
+            extra={"slug": slug, "product_id": str(product.id)},
+        )
         raise HTTPException(status_code=502, detail="Failed to fetch product image") from exc
     finally:
         await client.close()
