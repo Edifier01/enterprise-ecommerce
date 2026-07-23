@@ -244,12 +244,12 @@ async def test_admin_catalog_overview(admin_catalog_client: AsyncClient) -> None
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["total"] == 2
-    assert data["uncategorized"] == 2
-    assert data["needs_styling"] == 1
+    assert data["total"] == 3
+    assert data["uncategorized"] == 3
+    assert data["needs_styling"] == 2
     assert data["needs_color_photos"] == 1
     assert data["ready_to_publish"] == 0
-    assert data["draft"] == 1
+    assert data["draft"] == 2
     assert data["active"] == 1
     assert data["archived"] == 0
 
