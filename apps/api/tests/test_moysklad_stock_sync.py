@@ -85,6 +85,21 @@ def test_parse_stock_bystore_rows_uses_assortment_meta_when_row_meta_missing() -
     assert parse_stock_bystore_rows(rows, _STORE_ID)[_VARIANT_ID] == 7
 
 
+def test_parse_store_filtered_stock_rows_flat_stock() -> None:
+    rows = [
+        {
+            "meta": {
+                "href": f"https://api.moysklad.ru/api/remap/1.2/entity/product/{_PRODUCT_ID}",
+                "type": "product",
+            },
+            "stock": 4,
+        }
+    ]
+    from app.features.integrations.moysklad.infrastructure.ids import parse_store_filtered_stock_rows
+
+    assert parse_store_filtered_stock_rows(rows)[_PRODUCT_ID] == 4
+
+
 def test_parse_stock_bystore_rows_zero_when_store_not_matched() -> None:
     rows = [
         {
@@ -178,7 +193,7 @@ class _FakeSession:
     def __init__(self) -> None:
         self._rows = [
             (_FakeVariant(id=uuid4(), moysklad_variant_id=_VARIANT_ID), _PRODUCT_ID),
-            (_FakeVariant(id=uuid4(), moysklad_variant_id="missing-in-ms"), _PRODUCT_ID),
+            (_FakeVariant(id=uuid4(), moysklad_variant_id="missing-in-ms"), "other-product-id"),
             (_FakeVariant(id=uuid4(), moysklad_variant_id=f"product:{_PRODUCT_ID}"), _PRODUCT_ID),
         ]
 
@@ -198,7 +213,7 @@ class _FakeSyncRepo:
 
 
 @pytest.mark.asyncio
-async def test_sync_stock_falls_back_to_direct_fetch_for_missing_bulk_keys() -> None:
+async def test_sync_stock_skips_variants_missing_from_bulk_map() -> None:
     catalog = _FakeCatalogRepo()
     catalog._session = _FakeSession()
 
@@ -215,8 +230,7 @@ async def test_sync_stock_falls_back_to_direct_fetch_for_missing_bulk_keys() -> 
 
     result = await use_case.execute()
 
-    assert result.rows_applied == 3
-    assert result.rows_skipped == 0
+    assert result.rows_applied == 2
+    assert result.rows_skipped == 1
     assert result.stock_map_size == 2
-    assert len(catalog.applied) == 3
     assert {quantity for _, quantity in catalog.applied} == {4, 9}

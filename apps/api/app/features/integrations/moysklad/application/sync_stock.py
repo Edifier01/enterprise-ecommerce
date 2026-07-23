@@ -1,5 +1,6 @@
 """Sync stock quantities from MoySklad (read-only pull)."""
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -70,8 +71,8 @@ class SyncMoySkladStockUseCase:
 
                 quantity = self._lookup_quantity(stock_map, ms_id, product_ms_id)
                 if quantity is None:
-                    quantity = await self._client.get_assortment_stock(ms_id)
-                    result.rows_fetched_direct += 1
+                    result.rows_skipped += 1
+                    continue
 
                 await self._catalog.apply_stock(variant, quantity)
                 result.rows_applied += 1
@@ -152,6 +153,7 @@ class SyncMoySkladStockUseCase:
             offset += rows_returned
             if offset >= total or rows_returned == 0:
                 break
+            await asyncio.sleep(0.25)
         return stock
 
 
