@@ -15,7 +15,7 @@ from app.features.integrations.moysklad.domain.ports import (
 from app.features.integrations.moysklad.infrastructure.ids import (
     extract_moysklad_id,
     normalize_moysklad_entity_id,
-    parse_stock_bystore_rows,
+    parse_stock_report_rows,
 )
 
 logger = logging.getLogger(__name__)
@@ -192,19 +192,23 @@ class MoySkladApiClient(IMoySkladClient):
             return {}, 0, 0
 
         store_href = f"{self._base_url}/entity/store/{store_id}"
-        payload = await self._request(
-            "GET",
-            "/report/stock/bystore",
-            params={
-                "limit": limit,
-                "offset": offset,
-                "groupBy": "variant",
-                "filter": f"store={store_href}",
-            },
-        )
+        params = {
+            "limit": limit,
+            "offset": offset,
+            "groupBy": "variant",
+            "filter": f"store={store_href}",
+        }
+
+        # Prefer /report/stock/all — returns flat stock on rows when filtered by store.
+        payload = await self._request("GET", "/report/stock/all", params=params)
         rows = payload.get("rows", [])
+        if not rows and offset == 0:
+            logger.info("moysklad_stock_all_empty_fallback_to_bystore")
+            payload = await self._request("GET", "/report/stock/bystore", params=params)
+            rows = payload.get("rows", [])
+
         total = int(payload.get("meta", {}).get("size", len(rows)))
-        stock = parse_stock_bystore_rows(rows, store_id)
+        stock = parse_stock_report_rows(rows, store_id)
         return stock, total, len(rows)
 
     async def get_variant_stock(self, variant_external_id: str) -> int:

@@ -106,6 +106,35 @@ def test_parse_stock_bystore_rows_zero_when_store_not_matched() -> None:
     assert parse_stock_bystore_rows(rows, _STORE_ID)[_VARIANT_ID] == 0
 
 
+def test_parse_stock_report_rows_flat_stock_all_response() -> None:
+    rows = [
+        {
+            "meta": {
+                "href": f"https://api.moysklad.ru/api/remap/1.2/entity/product/{_PRODUCT_ID}",
+                "type": "product",
+            },
+            "stock": 4,
+            "quantity": 4,
+        }
+    ]
+
+    assert parse_stock_bystore_rows(rows, _STORE_ID)[_PRODUCT_ID] == 4
+
+
+def test_parse_stock_report_rows_single_store_filter_row() -> None:
+    rows = [
+        {
+            "meta": {
+                "href": f"https://api.moysklad.ru/api/remap/1.2/entity/product/{_PRODUCT_ID}",
+                "type": "product",
+            },
+            "stockByStore": [{"stock": 5}],
+        }
+    ]
+
+    assert parse_stock_bystore_rows(rows, _STORE_ID)[_PRODUCT_ID] == 5
+
+
 @dataclass
 class _FakeVariant:
     id: object
