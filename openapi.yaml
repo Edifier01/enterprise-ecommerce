@@ -395,6 +395,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/products/{slug}/erp-image:
+    get:
+      tags:
+      - catalog
+      summary: Get Product Erp Image
+      description: Proxy MoySklad product image for browser display (MS download URLs require auth).
+      operationId: getProductErpImage
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Slug
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/products/{slug}:
     get:
       tags:
