@@ -25,6 +25,7 @@ jobs:
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
             cd enterprise-ecommerce
-            git pull --ff-only origin master
+            git fetch origin master
+            git reset --hard origin/master
             chmod +x scripts/deploy.sh
             bash scripts/deploy.sh

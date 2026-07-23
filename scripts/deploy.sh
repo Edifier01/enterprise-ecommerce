@@ -38,8 +38,9 @@ if [[ -z "${MEDIA_PUBLIC_BASE_URL:-}" ]]; then
   log "MEDIA_PUBLIC_BASE_URL not set; defaulting to https://${DOMAIN}/media"
 fi
 
-log "Pulling latest code..."
-git pull --ff-only origin master
+log "Syncing to origin/master..."
+git fetch origin master
+git reset --hard origin/master
 
 log "Building images (BuildKit + layer cache)..."
 GIT_COMMIT="$(git rev-parse HEAD)"
