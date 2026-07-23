@@ -4061,6 +4061,14 @@ components:
         stock_rows_applied:
           type: integer
           title: Stock Rows Applied
+        stock_rows_skipped:
+          type: integer
+          title: Stock Rows Skipped
+          default: 0
+        stock_map_size:
+          type: integer
+          title: Stock Map Size
+          default: 0
         errors:
           items:
             type: string
