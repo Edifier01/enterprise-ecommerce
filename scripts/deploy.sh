@@ -63,8 +63,11 @@ docker image inspect "${PROJECT_NAME}-web:latest" >/dev/null 2>&1 \
   && docker tag "${PROJECT_NAME}-web:latest" "${PROJECT_NAME}-web:previous" || true
 docker tag "${PROJECT_NAME}-web" "${PROJECT_NAME}-web:latest" 2>/dev/null || true
 
+log "Recycling containers (remove stale partial-deploy orphans)..."
+"${COMPOSE[@]}" down --remove-orphans || true
+
 log "Starting containers..."
-"${COMPOSE[@]}" up -d
+"${COMPOSE[@]}" up -d --remove-orphans --force-recreate
 
 log "Waiting for API readiness (migrations may take a few minutes)..."
 ready=0
