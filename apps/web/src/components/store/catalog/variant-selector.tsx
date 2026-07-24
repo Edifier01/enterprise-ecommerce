@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import type { ProductOptionGroup, ProductVariant } from "@/lib/api";
 import {
   getValueState,
-  resolveVariant,
   usesStructuredSelector,
   type VariantSelection,
 } from "@/lib/store/variant-options";
@@ -202,13 +201,6 @@ export function FlatVariantSelector({
       </div>
     </fieldset>
   );
-}
-
-export function selectionToVariant(
-  variants: ProductVariant[],
-  selection: VariantSelection,
-): ProductVariant | null {
-  return resolveVariant(variants, selection);
 }
 
 export function isSelectionComplete(

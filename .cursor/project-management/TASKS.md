@@ -48,6 +48,22 @@
 
 **Status:** IN_PROGRESS
 
+### Feature: stich.su UX Parity Without Redesign
+
+**Status:** IN_PROGRESS (P0/P1 code done 2026-07-24; deploy + optional E2E pending)
+
+**Gap doc:** `docs/reviews/STICH-SU-PARITY-GAP-ANALYSIS-2026-07-24.md`  
+**ADR:** none required (extends ADR-002/003/005/010/011)
+
+- [x] Stage 1 — analyze stich.su catalog/PDP/cart/checkout/account
+- [x] PDP gallery loupe + lightbox (`product-gallery.tsx`)
+- [x] Mini-cart dropdown on existing cart API
+- [x] Checkout shipping Zod validation
+- [x] Filter pending opacity polish; remove unused `categorySlug` prop
+- [x] Verifier PASSED WITH NOTES
+- [ ] Commit + prod deploy smoke
+- [ ] Optional Playwright smoke (mini-cart / invalid shipping)
+
 ### Feature: Monorepo Scaffold
 
 **Status:** COMPLETED
@@ -1074,7 +1090,7 @@ The third duplicate Sprint E section was removed during full project review. All
 ### P2 — Polish
 
 - [ ] Shipping fields in public `OrderDetailSchema`
-- [ ] Zod validation on checkout shipping form
+- [x] Zod validation on checkout shipping form (stich parity 2026-07-24)
 - [ ] Global security headers (CSP/X-Frame-Options beyond checkout)
 - [ ] Media backup runbook for `media_uploads` volume
 - [ ] SMTP production delivery

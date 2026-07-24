@@ -34,3 +34,7 @@ Compare them.
 Recommend the best long-term solution.
 
 Always explain important architectural decisions.
+
+## Browser Verification
+
+When opening the site to verify UI or flows, use the production URLs from `.cursor/VERIFICATION.md` (`https://сухопут-кмв.рф`). Do not default to `localhost`.

@@ -9,7 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StripePaymentForm } from "@/components/store/checkout/checkout-stripe-payment-form";
 import {
   CheckoutShippingForm,
+  parseCheckoutShipping,
   readCheckoutShippingFromForm,
+  type CheckoutShippingFieldErrors,
 } from "@/components/store/checkout/checkout-shipping-form";
 import {
   createCheckoutSession,
@@ -42,6 +44,7 @@ export function CheckoutPaymentClient() {
   const [payment, setPayment] = useState<PaymentState | null>(null);
   const shippingFormId = "checkout-shipping-form";
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<CheckoutShippingFieldErrors>({});
   const [isPending, startTransition] = useTransition();
   const [stripeModule, setStripeModule] = useState<{
     loadStripe: typeof import("@stripe/stripe-js").loadStripe;
@@ -84,10 +87,17 @@ export function CheckoutPaymentClient() {
 
   function preparePayment(form: HTMLFormElement) {
     setError(null);
+    const rawShipping = readCheckoutShippingFromForm(form);
+    const parsed = parseCheckoutShipping(rawShipping);
+    if (!parsed.success) {
+      setFieldErrors(parsed.fieldErrors);
+      setError(parsed.formError);
+      return;
+    }
+    setFieldErrors({});
     startTransition(async () => {
       try {
-        const shipping = readCheckoutShippingFromForm(form);
-        const session = await createCheckoutSession(shipping);
+        const session = await createCheckoutSession(parsed.data);
         const intent = await createPaymentIntent(session.id);
         setPayment({
           sessionId: session.id,
@@ -168,7 +178,10 @@ export function CheckoutPaymentClient() {
               preparePayment(event.currentTarget);
             }}
           >
-            <CheckoutShippingForm disabled={Boolean(payment) || isPending} />
+            <CheckoutShippingForm
+              disabled={Boolean(payment) || isPending}
+              fieldErrors={fieldErrors}
+            />
             {!payment ? (
               <div className="space-y-4 border-t pt-4">
                 <p className="text-sm text-muted-foreground">

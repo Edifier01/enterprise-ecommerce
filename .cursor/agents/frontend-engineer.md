@@ -13,6 +13,7 @@ When invoked:
 3. Use shadcn, nextjs-app-router-patterns, zod-validation-expert, zustand-store-ts skills
 4. Prefer Server Components; client components only when needed
 5. Match existing UI patterns; use shadcn MCP
+6. UI verification via Playwright MCP: `https://сухопут-кмв.рф` (see `.cursor/VERIFICATION.md`), not localhost
 
 Allowed Skills: shadcn, nextjs-app-router-patterns, nextjs-best-practices, react-nextjs-development, zod-validation-expert, zustand-store-ts
 Allowed MCP: shadcn, Playwright, Context7

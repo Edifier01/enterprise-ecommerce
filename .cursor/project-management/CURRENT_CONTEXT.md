@@ -6,13 +6,13 @@
 
 ## Current Module
 
-Release planning (post comprehensive audit)
+Storefront UX parity (stich.su mechanisms, design preserved)
 
 ---
 
 ## Current Feature
 
-**Wave 0 — Immediate Ops** (code items done; prod deploy pending)
+**stich.su UX Parity Without Redesign** — Stage 1 analysis + P0/P1 implementation done (local code; prod deploy pending)
 
 ---
 
@@ -28,11 +28,17 @@ Implementation Agent
 
 ---
 
+## Verification URL
+
+Browser checks (Playwright MCP, smoke tests): **`https://сухопут-кмв.рф`** — not localhost. See `.cursor/VERIFICATION.md`.
+
+---
+
 ## Current Blockers
 
 1. YooKassa payment integration (release gate)
 2. SMTP production delivery
-3. Prod: deploy pending fixes (stock sync, media upload, admin save, PLP photos)
+3. Prod: deploy pending fixes (stock sync, media upload, admin save, PLP photos) + new parity UI
 
 ---
 
@@ -40,14 +46,15 @@ Implementation Agent
 
 | Area | Status |
 |------|--------|
-| Comprehensive audit + roadmap | ✅ `docs/reviews/COMPREHENSIVE-AUDIT-2026-07-23.md` |
-| MS stock sync fix (code) | ✅ ready to deploy |
-| Admin media upload fix (code) | ✅ ready to deploy |
-| Admin UX Waves 8–14 on prod | ✅ (deploy #32, 2026-07-22) |
-| YooKassa | ❌ |
+| stich.su gap analysis | ✅ `docs/reviews/STICH-SU-PARITY-GAP-ANALYSIS-2026-07-24.md` |
+| PDP gallery zoom/lightbox | ✅ local |
+| Mini-cart dropdown | ✅ local |
+| Checkout Zod shipping | ✅ local |
+| ADR for parity | ❌ not required |
+| Wave 0 ops / YooKassa | pending |
 
 ---
 
 ## Last Updated
 
-2026-07-23 (Wave 0: CI gate, auth rate limits, deploy smoke)
+2026-07-24 (stich.su UX parity P0/P1)

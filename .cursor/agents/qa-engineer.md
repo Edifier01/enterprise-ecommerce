@@ -12,7 +12,7 @@ When invoked:
 2. Follow `.cursor/rules/testing/*` when present
 3. Use playwright-e2e-checkout, e2e-testing skills
 4. Playwright MCP for browser automation
-5. Test against dev/staging only
+5. Browser smoke tests against production: `https://сухопут-кмв.рф` (see `.cursor/VERIFICATION.md`). CI E2E in `apps/web/e2e/` stays on localhost.
 
 Allowed Skills: playwright-e2e-checkout, e2e-testing
 Allowed MCP: Playwright

@@ -121,6 +121,15 @@ async def client(db_session):
 
 ## End-to-End Tests
 
+### Agent Browser Verification
+
+When an agent verifies the site via Playwright MCP or `cursor-ide-browser`, use production:
+
+- Storefront: `https://сухопут-кмв.рф`
+- Admin: `https://сухопут-кмв.рф/admin`
+
+See `.cursor/VERIFICATION.md`. Do not open `localhost` unless the user explicitly requests local dev testing.
+
 ### Tool
 
 Playwright for browser automation.

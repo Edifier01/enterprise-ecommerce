@@ -705,6 +705,27 @@ Remove admin MFA entirely. Login returns JWT after email+password. Migration 018
 
 ---
 
+## PM-002
+
+| Field | Value |
+|-------|-------|
+| **Decision ID** | PM-002 |
+| **Date** | 2026-07-24 |
+| **Status** | Approved |
+| **Full ADR** | N/A — no new ADR |
+
+**Context:**
+
+stich.su UX parity asked whether AJAX catalog/cart UI needed a new architecture decision.
+
+**Decision:**
+
+No new ADR. Implement gallery zoom, mini-cart dropdown, and Zod shipping validation as extensions of ADR-002/003/005/010/011. Keep URL-synced soft navigation for filters (already exceeds stich full-page reload). Out of scope: YooKassa, redesign, wishlist/bonuses, promocodes.
+
+**Related:** `docs/reviews/STICH-SU-PARITY-GAP-ANALYSIS-2026-07-24.md`
+
+---
+
 ## Decision Log Template
 
 Use when recording new decisions:

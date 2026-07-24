@@ -6,7 +6,6 @@ import type { CatalogFilterFacets } from "@/lib/store/catalog-filters";
 import type { CatalogListQuery } from "@/lib/store/catalog-query";
 
 export interface CategoryProductListProps {
-  categorySlug: string;
   products: ProductGridItem[];
   total: number;
   facets: CatalogFilterFacets;

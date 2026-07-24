@@ -62,24 +62,3 @@ export function SortToolbar({
     </div>
   );
 }
-
-/** Client-side sort helper for catalog listing pages. */
-export function sortProducts<T extends { name: string; price_cents: number }>(
-  products: T[],
-  sort: SortOptionValue
-): T[] {
-  const sorted = [...products];
-
-  switch (sort) {
-    case "price-asc":
-      return sorted.sort((a, b) => a.price_cents - b.price_cents);
-    case "price-desc":
-      return sorted.sort((a, b) => b.price_cents - a.price_cents);
-    case "name-asc":
-      return sorted.sort((a, b) => a.name.localeCompare(b.name, "ru"));
-    case "name-desc":
-      return sorted.sort((a, b) => b.name.localeCompare(a.name, "ru"));
-    default:
-      return sorted;
-  }
-}

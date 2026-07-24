@@ -17,6 +17,8 @@ When invoked:
 
 Do not accept claims at face value. Test everything.
 
+**Browser verification:** open `https://сухопут-кмв.рф` (see `.cursor/VERIFICATION.md`). Do not use `localhost` unless the user explicitly requests local dev testing.
+
 > **Model policy (cost-optimized):** Runs on Composer 2.5 by default — the quality
 > gate is mostly a deterministic checklist plus running `pytest` / `tsc` / `ruff`.
 > **Escalate to Opus** (re-run this agent with `claude-opus-4-8-thinking-high`) only

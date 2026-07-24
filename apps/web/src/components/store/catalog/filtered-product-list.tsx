@@ -127,7 +127,9 @@ export function FilteredProductList({
           <p className="text-sm text-muted-foreground">Обновляем результаты...</p>
         ) : null}
 
-        <ProductGrid products={products} emptyMessage={emptyMessage} />
+        <div className={isPending ? "opacity-60 transition-opacity" : "transition-opacity"}>
+          <ProductGrid products={products} emptyMessage={emptyMessage} />
+        </div>
 
         <CatalogPagination
           page={query.page}

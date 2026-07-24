@@ -12,9 +12,9 @@ description: Run Playwright E2E tests for checkout, cart, and authentication flo
 
 ## Prerequisites
 
-- Dev servers running: `apps/web` (Next.js), `apps/api` (FastAPI)
-- Test Stripe keys in environment
 - Playwright MCP enabled in Cursor
+- For agent browser checks: production site at `https://сухопут-кмв.рф` (see `.cursor/VERIFICATION.md`)
+- For CI E2E in `apps/web/e2e/`: local dev servers + test Stripe keys
 
 ## Workflow
 
@@ -36,8 +36,8 @@ description: Run Playwright E2E tests for checkout, cart, and authentication flo
 ## Rules
 
 - Tests live in `apps/web/e2e/` or `tests/e2e/`
-- No production URLs
-- Use test payment methods only (Stripe test cards)
+- Agent/MCP browser verification: `https://сухопут-кмв.рф` (not localhost)
+- CI E2E: localhost only; use test payment methods (Stripe test cards)
 - Idempotent test data cleanup
 
 ## Integration

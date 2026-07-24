@@ -2,35 +2,48 @@
 
 ## Current Agent
 
-Implementation Agent (Wave 0)
+Implementation Agent (stich.su UX parity)
 
 ## Completed Work
 
-**Wave 0 — code/CI items (2026-07-23):**
+**stich.su UX Parity — Stage 1 + P0/P1 (2026-07-24):**
 
-1. **0.6 CI deploy gate** — `deploy.yml` triggers only after successful CI on push to master (`workflow_run`); `workflow_dispatch` kept for emergency; `concurrency` group added.
-2. **0.7 Customer auth rate limits** — `/auth/login` (5/min), register (3/min), forgot-password, resend-verification, reset-password, verify-email.
-3. **0.8 Security fixes** — media upload 500 no longer leaks internal paths; removed dead `SyncProtectedFieldError` from `admin_ports.py`.
-4. **deploy.sh** — TRUSTED_PROXY_HOPS warning, MEDIA https validation, media volume check, post-deploy curl smoke, Wave 0 ops checklist output.
-5. **Tests** — `test_auth_login_rate_limit_returns_429`, `test_admin_upload_media_does_not_leak_internal_error` (2/2 green).
+1. **Stage 1 analysis** — browser study of stich.su catalog/PDP/cart/checkout/account; findings in `docs/reviews/STICH-SU-PARITY-GAP-ANALYSIS-2026-07-24.md`.
+2. **Key finding:** stich PLP sort/filter uses **full page reload** (`location = this.value`); our URL soft-nav already exceeds reference. Add-to-cart is AJAX. Mini-cart dropdown on stich is weak (header summary + cart page).
+3. **ADR:** no new ADR — extends ADR-002/003/005/010/011.
+4. **P0 PDP gallery** — `product-gallery.tsx`: desktop loupe + lightbox (existing classes only).
+5. **P0 mini-cart** — header dropdown with lines, qty ±, remove via existing cart API.
+6. **P1 checkout Zod** — `checkoutShippingSchema` + field errors before payment session.
+7. **P2 polish** — filter pending opacity; removed unused `categorySlug` prop from `CategoryProductList`.
+8. **Stage 3 cleanup** — deleted unused `checkout-stub-payment-form.tsx`; removed dead `sortProducts` / `selectionToVariant` exports.
+9. **Quality gate:** verifier **PASSED WITH NOTES** (`tsc` already green locally in parent session).
+10. **ADR confirmation:** [enterprise-architect](6dc4dfad-e320-4a65-a24e-70d248529d48) confirmed **NO** new ADR (PM-002).
 
 ## Files Changed
 
 | Area | Paths |
 |------|-------|
-| CI/CD | `.github/workflows/deploy.yml` |
-| Backend | `apps/api/app/core/middleware.py`, `admin/presentation/media_router.py`, `catalog/domain/admin_ports.py` |
-| DevOps | `scripts/deploy.sh` |
-| Tests | `tests/test_auth.py`, `tests/test_admin_catalog.py` |
+| Docs | `docs/reviews/STICH-SU-PARITY-GAP-ANALYSIS-2026-07-24.md` |
+| PDP | `product-gallery.tsx` (new), `product-detail.tsx` |
+| Cart header | `cart-header-summary.tsx`, `use-cart-summary.ts` |
+| Checkout | `checkout-shipping-form.tsx`, `checkout-payment-client.tsx`; deleted `checkout-stub-payment-form.tsx` |
+| Catalog | `filtered-product-list.tsx`, `category-product-list.tsx`, `catalog/[slug]/page.tsx`, `sort-toolbar.tsx`, `variant-selector.tsx` |
 
 ## Known Issues
 
-- Wave 0 ops items 0.1–0.5 require prod server access (deploy, MS stock pull, gallery re-upload)
-- Auto-deploy only fires after green CI push to `master` on repo `Edifier01/enterprise-ecommerce`
+- Changes not committed / not on prod yet — prod cart header still plain link until deploy
+- No dedicated Playwright smoke yet for mini-cart / gallery / Zod reject path
+- Wave 0 ops (prod deploy of earlier MS/media fixes) still pending
+- YooKassa remains separate release gate
 
 ## Next Recommended Action
 
-1. **Commit + push to master** → CI green → auto-deploy (or `workflow_dispatch` Deploy)
-2. On prod: run MS «Обновить остатки»; re-upload 404 galleries
-3. Verify storefront PLP photos + admin MS product save
-4. Then start **Wave 1** (YooKassa sprint planning)
+1. Commit parity changes when user requests
+2. Optional: Playwright smoke for mini-cart open + invalid shipping blocked
+3. Deploy + verify on `https://сухопут-кмв.рф`
+4. Resume Wave 0 ops / Wave 1 YooKassa planning
+
+## Session Note
+
+- stich.su login credentials were used only for live analysis; do not store in repo
+- Do not redesign storefront; preserve existing CSS classes / design system

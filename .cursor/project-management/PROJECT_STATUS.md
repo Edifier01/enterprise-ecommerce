@@ -46,6 +46,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
+- [x] **stich.su UX parity P0/P1** — gallery zoom, mini-cart, Zod shipping (2026-07-24; deploy pending)
 - [ ] Wave 0 ops: prod deploy pending fixes (push master → CI → deploy)
 - [ ] Wave 0 ops: MS stock verify + gallery re-upload on prod
 - [x] Wave 0 code: CI deploy gate, auth rate limits, media 500 fix, deploy.sh smoke
@@ -56,6 +57,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Recently Completed
 
+- [x] **stich.su UX parity** — gap analysis + gallery loupe/lightbox + mini-cart + Zod shipping; verifier PASSED WITH NOTES (2026-07-24)
 - [x] **Comprehensive audit synthesis** — 10 specialist agents, unified roadmap Waves 0–4 (`docs/reviews/COMPREHENSIVE-AUDIT-2026-07-23.md`) (2026-07-23)
 - [x] **Storefront PLP photos** — list/search API gallery fallback + product-grid resolver, 5 pytest (2026-07-23)
 - [x] **Storefront UX fixes** — cart badge, hide SKU, PDP image fallback (2026-07-23)
@@ -133,10 +135,10 @@ None.
 
 ## Last Updated
 
-2026-07-23 (Comprehensive audit synthesis)
+2026-07-24 (stich.su UX parity P0/P1)
 
 ---
 
 ## Last Agent
 
-Orchestrator (10-agent audit + roadmap synthesis)
+Implementation Agent (stich.su UX parity)

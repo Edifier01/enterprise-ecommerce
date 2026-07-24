@@ -196,7 +196,6 @@ export default async function CategoryPage({
         </h2>
         <p className="text-xs text-muted-foreground">{siteConfig.catalogDisclaimer}</p>
         <CategoryProductList
-          categorySlug={slug}
           products={categoryProducts}
           total={products?.total ?? 0}
           facets={catalogFacets}
