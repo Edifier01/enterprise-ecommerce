@@ -41,7 +41,6 @@ function collectVariantSpecs(variants: ProductVariant[]): SpecRow[] {
 
 export function buildProductSpecRows(product: Product): SpecRow[] {
   const rows: SpecRow[] = [
-    { label: "Артикул", value: product.slug },
     {
       label: "Наличие",
       value: product.in_stock ? "В наличии" : "Нет в наличии",

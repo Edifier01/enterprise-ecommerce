@@ -1,14 +1,13 @@
-import Image from "next/image";
 import Link from "next/link";
 
 import { AddToCartButton } from "@/components/store/catalog/add-to-cart-button";
+import { ProductThumbnail } from "@/components/store/catalog/product-thumbnail";
 import type { Product } from "@/lib/api";
 import {
   formatCompareAtPrice,
   formatPrice,
   getDiscountPercent,
 } from "@/lib/store/format";
-import { productImageRenderProps } from "@/lib/store/product-image";
 import { getSwatchStyle } from "@/lib/store/color-swatch";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +45,6 @@ export function ProductCard({
     ? getDiscountPercent(product.price_cents, compareAtCents)
     : null;
   const onSale = discount !== null && discount > 0;
-  const image = productImageRenderProps(imageSrc);
   const visibleColors = colorOptions.slice(0, 4);
   const hiddenColorCount = Math.max(colorOptions.length - visibleColors.length, 0);
 
@@ -61,15 +59,13 @@ export function ProductCard({
         href={`/products/${product.slug}`}
         className="relative block aspect-square overflow-hidden bg-muted"
       >
-        <Image
-          src={image.src}
+        <ProductThumbnail
+          src={imageSrc}
+          productSlug={product.slug}
           alt={product.name}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-          unoptimized={image.unoptimized}
-          placeholder={image.placeholder}
-          blurDataURL={image.blurDataURL}
+          className="object-contain transition-transform duration-300 group-hover:scale-[1.02]"
         />
         {onSale ? (
           <span className="absolute left-2 top-2 inline-flex items-center rounded-full bg-store-sale px-2 py-0.5 text-xs font-medium text-store-sale-foreground">

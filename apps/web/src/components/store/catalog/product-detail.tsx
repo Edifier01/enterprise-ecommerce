@@ -6,7 +6,6 @@ import { Breadcrumbs } from "@/components/store/catalog/breadcrumbs";
 import type { BreadcrumbItem } from "@/components/store/catalog/breadcrumbs";
 import { ProductGallery } from "@/components/store/catalog/product-gallery";
 import { ProductPurchasePanel } from "@/components/store/catalog/product-purchase-panel";
-import { ProductSpecsTable } from "@/components/store/catalog/product-specs-table";
 import type { Product, ProductImage } from "@/lib/api";
 import { siteConfig } from "@/lib/store/site-config";
 import { resolveProductGalleryImageSrc } from "@/lib/store/product-image";
@@ -101,11 +100,6 @@ export function ProductDetail({
               setSelectedColor(color);
             }}
           />
-
-          <div className="space-y-3 border-t pt-5">
-            <h2 className="text-sm font-semibold text-foreground">Характеристики</h2>
-            <ProductSpecsTable product={product} />
-          </div>
 
           <div className="space-y-2 border-t pt-5">
             <h2 className="text-sm font-semibold text-foreground">Описание</h2>

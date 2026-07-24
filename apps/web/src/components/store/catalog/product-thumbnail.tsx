@@ -19,14 +19,13 @@ export function ProductThumbnail({
   src,
   alt,
   productSlug,
-  erpImageUrl,
+  erpImageUrl: _erpImageUrl,
   ...props
 }: ProductThumbnailProps) {
   const primary = productImageRenderProps(src);
-  const erpFallback =
-    productSlug && erpImageUrl
-      ? productImageRenderProps(erpImageProxyPath(productSlug))
-      : null;
+  const erpFallback = productSlug
+    ? productImageRenderProps(erpImageProxyPath(productSlug))
+    : null;
   const [current, setCurrent] = useState(primary);
 
   useEffect(() => {
