@@ -53,7 +53,7 @@ test.describe("Homepage", () => {
     await expect(page.getByLabel("Поиск по каталогу")).toBeVisible();
     await expect(page.getByRole("button", { name: "ПОИСК" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Личный кабинет" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Корзина:/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Корзина:/ })).toBeVisible();
 
     const categoryNav = page.getByRole("navigation", {
       name: "Категории каталога",

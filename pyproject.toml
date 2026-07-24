@@ -1,0 +1,11 @@
+[tool.ruff]
+target-version = "py313"
+src = ["apps/api/app", "apps/api/tests"]
+
+[tool.ruff.lint]
+# FastAPI Depends()/Query() in defaults is the framework pattern (B008).
+# Readiness probe uses a broad except intentionally (BLE001).
+ignore = ["B008", "BLE001"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
