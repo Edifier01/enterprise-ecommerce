@@ -23,8 +23,12 @@ test.describe("Admin MoySklad smoke", () => {
     ).toBeVisible();
 
     await expect(page.locator("#price_rub")).toHaveCount(0);
-    await expect(page.getByText("Розница, ₽ (из МойСклад)")).toBeVisible();
-    await expect(page.getByText("Опт, ₽ (из МойСклад)")).toBeVisible();
+
+    const msDataSection = page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { name: "Данные из МойСклад", level: 2 }) });
+    await expect(msDataSection.getByText("Розница, ₽", { exact: true })).toBeVisible();
+    await expect(msDataSection.getByText("Опт, ₽", { exact: true })).toBeVisible();
 
     await expect(page.locator('input[name="sku"]')).toHaveCount(0);
     await expect(page.getByText("E2E-MS-SKU-001")).toBeVisible();

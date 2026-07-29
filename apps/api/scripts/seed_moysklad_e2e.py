@@ -51,6 +51,7 @@ async def seed_moysklad_e2e_product(session: AsyncSession) -> None:
                 status="active",
                 category_id=category_id,
                 description="E2E fixture — synced from MoySklad.",
+                image_url="/images/product-placeholder.svg",
                 sync_source="moysklad",
                 moysklad_product_id=_MS_PRODUCT_ID,
                 erp_name="Куртка тактическая (MS)",
@@ -63,6 +64,7 @@ async def seed_moysklad_e2e_product(session: AsyncSession) -> None:
         existing.moysklad_product_id = _MS_PRODUCT_ID
         existing.erp_name = "Куртка тактическая (MS)"
         existing.status = "active"
+        existing.image_url = "/images/product-placeholder.svg"
 
     variant = await session.scalar(
         select(ProductVariantModel).where(ProductVariantModel.sku == _E2E_SKU)
