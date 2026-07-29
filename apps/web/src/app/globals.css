@@ -211,4 +211,17 @@
   .store-price-compare {
     @apply text-sm tabular-nums text-muted-foreground line-through;
   }
+
+  /* Admin panel shell — neutral slate; does not affect storefront tokens */
+  .admin-shell {
+    @apply text-foreground;
+  }
+
+  .admin-nav-primary {
+    @apply text-[0.9375rem] font-semibold text-sidebar-foreground;
+  }
+
+  .admin-nav-secondary {
+    @apply text-xs font-medium text-muted-foreground;
+  }
 }

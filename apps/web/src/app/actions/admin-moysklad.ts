@@ -277,7 +277,128 @@ export async function hideProductAction(productId: string): Promise<IntegrationA
     return result;
   }
 
+  revalidatePath(`/admin/catalog/${productId}/edit`);
   return { success: true, message: "Товар скрыт с витрины." };
+}
+
+export async function showProductAction(productId: string): Promise<IntegrationActionState> {
+  const auth = await requireAdminPermission("catalog:write");
+  if (!auth.ok) {
+    return { error: auth.error };
+  }
+
+  const token = await getAdminAccessToken();
+  if (!token) {
+    return { error: "Требуется вход в админ-панель." };
+  }
+
+  const detailRes = await fetch(`${API_BASE}/api/v1/admin/catalog/products/${productId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!detailRes.ok) {
+    return { error: "Не удалось загрузить товар." };
+  }
+
+  const product = (await detailRes.json()) as AdminProduct;
+  if (!isReadyToPublish(product)) {
+    const skipSummary = summarizePublishSkips(
+      getPublishBlockers(product).reduce<Partial<Record<PublishBlocker, number>>>((counts, blocker) => {
+        counts[blocker] = (counts[blocker] ?? 0) + 1;
+        return counts;
+      }, {}),
+    );
+    return {
+      error: `Нельзя показать на витрине: ${skipSummary}. Добавьте категорию, фото и фото по цветам.`,
+    };
+  }
+
+  const result = await patchProduct(productId, { status: "active" });
+  if (result.error) {
+    return result;
+  }
+
+  revalidatePath(`/admin/catalog/${productId}/edit`);
+  return { success: true, message: "Товар показан на витрине." };
+}
+
+export async function bulkHideProductsAction(
+  productIds: string[],
+): Promise<IntegrationActionState> {
+  if (productIds.length === 0) {
+    return { error: "Выберите хотя бы один товар." };
+  }
+
+  let hidden = 0;
+  let lastError: string | undefined;
+
+  for (const productId of productIds) {
+    const result = await hideProductAction(productId);
+    if (result.error) {
+      lastError = result.error;
+    } else {
+      hidden += 1;
+    }
+  }
+
+  revalidatePath("/admin/catalog");
+
+  if (hidden === 0) {
+    return { error: lastError ?? "Не удалось скрыть товары." };
+  }
+
+  if (hidden < productIds.length) {
+    return {
+      success: true,
+      message: `Скрыто ${hidden} из ${productIds.length} товаров.`,
+    };
+  }
+
+  return { success: true, message: `Скрыто ${hidden} товар(ов).` };
+}
+
+export async function bulkShowProductsAction(
+  productIds: string[],
+): Promise<IntegrationActionState> {
+  if (productIds.length === 0) {
+    return { error: "Выберите хотя бы один товар." };
+  }
+
+  let shown = 0;
+  let skipped = 0;
+  let lastError: string | undefined;
+
+  for (const productId of productIds) {
+    const result = await showProductAction(productId);
+    if (result.error) {
+      if (result.error.startsWith("Нельзя показать на витрине:")) {
+        skipped += 1;
+      } else {
+        lastError = result.error;
+      }
+    } else {
+      shown += 1;
+    }
+  }
+
+  revalidatePath("/admin/catalog");
+
+  if (shown === 0) {
+    if (skipped > 0) {
+      return {
+        error: `Не удалось показать ${skipped} товар(ов). Добавьте категорию, фото и фото по цветам.`,
+      };
+    }
+    return { error: lastError ?? "Не удалось показать товары." };
+  }
+
+  if (shown < productIds.length) {
+    return {
+      success: true,
+      message: `Показано ${shown} из ${productIds.length}. Пропущено: ${productIds.length - shown}.`,
+    };
+  }
+
+  return { success: true, message: `Показано ${shown} товар(ов).` };
 }
 
 export async function exportMoySkladOrderAction(

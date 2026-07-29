@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { AdminFetchErrorState, AdminForbiddenState } from "@/components/admin/admin-error-state";
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
 import { AdminCustomersSearch } from "@/components/admin/customers/admin-customers-search";
 import { AdminCustomersTable } from "@/components/admin/customers/admin-customers-table";
@@ -57,13 +58,10 @@ export default async function AdminCustomersPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Клиенты</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Список зарегистрированных клиентов. Статус «Опт» назначается только при регистрации
-          через форму для оптовиков ({data.total} всего).
-        </p>
-      </header>
+      <AdminPageHeader
+        title="Клиенты"
+        description={`Список зарегистрированных клиентов. Статус «Опт» назначается только при регистрации через форму для оптовиков (${data.total} всего).`}
+      />
 
       <AdminCustomersSearch defaultQuery={query} />
 

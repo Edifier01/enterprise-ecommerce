@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminFilterChips } from "@/components/admin/admin-filter-chips";
 import { AdminFetchErrorState, AdminForbiddenState } from "@/components/admin/admin-error-state";
 import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
@@ -63,17 +64,15 @@ export default async function AdminInventoryPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Склад</h1>
-          <p className="text-sm text-muted-foreground">
-            {groupBy === "product"
-              ? `Товары на складе (${inventory.total})`
-              : `Остатки по вариантам (${inventory.total} позиций).`}
-          </p>
-        </div>
-        <AdminInventoryStockSync canSync={canSyncStock} />
-      </div>
+      <AdminPageHeader
+        title="Склад"
+        description={
+          groupBy === "product"
+            ? `Товары на складе (${inventory.total})`
+            : `Остатки по вариантам (${inventory.total} позиций).`
+        }
+        actions={<AdminInventoryStockSync canSync={canSyncStock} />}
+      />
 
       <AdminSavedViews
         activeId={activeView}

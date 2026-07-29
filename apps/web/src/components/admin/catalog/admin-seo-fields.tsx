@@ -4,17 +4,16 @@ const textareaClass =
 type AdminSeoFieldsProps = {
   metaTitle?: string | null;
   metaDescription?: string | null;
+  embedded?: boolean;
 };
 
-export function AdminSeoFields({ metaTitle, metaDescription }: AdminSeoFieldsProps) {
-  return (
-    <div className="space-y-4 rounded-lg border border-border p-4">
-      <div>
-        <p className="font-medium">SEO</p>
-        <p className="text-xs text-muted-foreground">
-          Заголовок и описание для поисковых систем. Если пусто — используется название товара.
-        </p>
-      </div>
+export function AdminSeoFields({
+  metaTitle,
+  metaDescription,
+  embedded = false,
+}: AdminSeoFieldsProps) {
+  const fields = (
+    <>
       <label className="flex flex-col gap-2 text-sm">
         Meta title
         <input
@@ -33,6 +32,22 @@ export function AdminSeoFields({ metaTitle, metaDescription }: AdminSeoFieldsPro
           className={textareaClass}
         />
       </label>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="space-y-4">{fields}</div>;
+  }
+
+  return (
+    <div className="space-y-4 rounded-lg border border-border p-4">
+      <div>
+        <p className="font-medium">SEO</p>
+        <p className="text-xs text-muted-foreground">
+          Заголовок и описание для поисковых систем. Если пусто — используется название товара.
+        </p>
+      </div>
+      {fields}
     </div>
   );
 }

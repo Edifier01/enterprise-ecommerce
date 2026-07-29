@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 import { AdminDataTable, type AdminDataTableColumn } from "@/components/admin/admin-data-table";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
@@ -8,6 +9,7 @@ import {
   AdminMobileCard,
   AdminMobileCardRow,
 } from "@/components/admin/admin-mobile-card";
+import { AdminCatalogBulkToolbar } from "@/components/admin/catalog/admin-catalog-bulk-toolbar";
 import { AdminProductHideButton } from "@/components/admin/catalog/admin-product-hide-button";
 import { AdminProductPrices } from "@/components/admin/catalog/admin-product-prices";
 import { AdminProductStock } from "@/components/admin/catalog/admin-product-stock";
@@ -127,6 +129,17 @@ function buildColumns(
 
   if (canWrite) {
     columns.push({
+      id: "visibility",
+      header: "Витрина",
+      cell: (product) => (
+        <AdminProductHideButton
+          productId={product.id}
+          status={product.status}
+          variant="toggle"
+        />
+      ),
+    });
+    columns.push({
       id: "actions",
       header: "Действия",
       cell: (product) => (
@@ -137,7 +150,7 @@ function buildColumns(
           >
             Изменить
           </Link>
-          <AdminProductHideButton productId={product.id} hidden={product.status === "archived"} />
+          <AdminProductHideButton productId={product.id} status={product.status} variant="button" />
         </div>
       ),
     });
@@ -153,80 +166,122 @@ export function AdminCatalogTable({
   categoryNames,
   searchQuery,
 }: AdminCatalogTableProps) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+
   return (
-    <AdminDataTable
-      tableId="admin-catalog-products"
-      columns={buildColumns(canWrite, listParams, categoryNames)}
-      rows={products}
-      getRowId={(product) => product.id}
-      stickyHeader
-      density="compact"
-      emptyState={
-        <AdminEmptyState
-          title={searchQuery ? "Ничего не найдено" : "Нет товаров из МойСклад"}
-          description={
-            searchQuery
-              ? "Попробуйте изменить поисковый запрос или сбросить фильтры."
-              : "Запустите импорт на странице интеграции МойСклад."
-          }
-          action={
-            searchQuery
-              ? undefined
-              : { label: "Интеграция МойСклад", href: "/admin/integrations/moysklad" }
-          }
+    <div className="space-y-3">
+      {canWrite ? (
+        <AdminCatalogBulkToolbar
+          selectedIds={selectedIds}
+          onClearSelection={() => setSelectedIds(new Set())}
         />
-      }
-      renderMobileCard={(product) => {
-        return (
-          <AdminMobileCard key={product.id}>
-            <div className="flex gap-3">
-              <div className="relative size-16 shrink-0 overflow-hidden rounded-md border bg-muted">
-                <ProductThumbnail
-                  src={product.image_url}
-                  productSlug={product.slug}
-                  erpImageUrl={product.erp_image_url}
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="min-w-0 flex-1 space-y-2">
-                <p className="font-medium leading-snug">{product.name}</p>
-                {isMoySkladSynced(product.sync_source) ? <MoySkladBadge /> : null}
-                <AdminMobileCardRow label="Slug">
-                  <span className="break-all font-normal text-muted-foreground">{product.slug}</span>
-                </AdminMobileCardRow>
-                <AdminMobileCardRow label="Статус">
-                  {PRODUCT_STATUS_LABELS[product.status] ?? product.status}
-                </AdminMobileCardRow>
-                <AdminMobileCardRow label="Категория">
-                  {getProductCategoryName(product.category_id, categoryNames)}
-                </AdminMobileCardRow>
-                <AdminMobileCardRow label="Розница">
-                  <AdminProductPrices product={product} compact />
-                </AdminMobileCardRow>
-                <AdminMobileCardRow label="Остаток (МС)">
-                  <AdminProductStock product={product} />
-                </AdminMobileCardRow>
+      ) : null}
+
+      <AdminDataTable
+        tableId="admin-catalog-products"
+        columns={buildColumns(canWrite, listParams, categoryNames)}
+        rows={products}
+        getRowId={(product) => product.id}
+        stickyHeader
+        density="compact"
+        selectable={canWrite}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        emptyState={
+          <AdminEmptyState
+            title={searchQuery ? "Ничего не найдено" : "Нет товаров из МойСклад"}
+            description={
+              searchQuery
+                ? "Попробуйте изменить поисковый запрос или сбросить фильтры."
+                : "Запустите импорт на странице интеграции МойСклад."
+            }
+            action={
+              searchQuery
+                ? undefined
+                : { label: "Интеграция МойСклад", href: "/admin/integrations/moysklad" }
+            }
+          />
+        }
+        renderMobileCard={(product) => {
+          return (
+            <AdminMobileCard key={product.id}>
+              <div className="flex gap-3">
                 {canWrite ? (
-                  <>
-                    <Link
-                      href={buildAdminCatalogEditHref(product.id, listParams)}
-                      className="inline-flex text-sm font-medium text-primary hover:underline"
-                    >
-                      Изменить
-                    </Link>
-                    <AdminProductHideButton
-                      productId={product.id}
-                      hidden={product.status === "archived"}
+                  <label className="flex shrink-0 items-start pt-1">
+                    <input
+                      type="checkbox"
+                      aria-label="Выбрать строку"
+                      checked={selectedIds.has(product.id)}
+                      onChange={() => {
+                        setSelectedIds((current) => {
+                          const next = new Set(current);
+                          if (next.has(product.id)) {
+                            next.delete(product.id);
+                          } else {
+                            next.add(product.id);
+                          }
+                          return next;
+                        });
+                      }}
                     />
-                  </>
+                  </label>
                 ) : null}
+                <div className="relative size-16 shrink-0 overflow-hidden rounded-md border bg-muted">
+                  <ProductThumbnail
+                    src={product.image_url}
+                    productSlug={product.slug}
+                    erpImageUrl={product.erp_image_url}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <p className="font-medium leading-snug">{product.name}</p>
+                  {isMoySkladSynced(product.sync_source) ? <MoySkladBadge /> : null}
+                  <AdminMobileCardRow label="Slug">
+                    <span className="break-all font-normal text-muted-foreground">{product.slug}</span>
+                  </AdminMobileCardRow>
+                  <AdminMobileCardRow label="Статус">
+                    {PRODUCT_STATUS_LABELS[product.status] ?? product.status}
+                  </AdminMobileCardRow>
+                  <AdminMobileCardRow label="Категория">
+                    {getProductCategoryName(product.category_id, categoryNames)}
+                  </AdminMobileCardRow>
+                  <AdminMobileCardRow label="Розница">
+                    <AdminProductPrices product={product} compact />
+                  </AdminMobileCardRow>
+                  <AdminMobileCardRow label="Остаток (МС)">
+                    <AdminProductStock product={product} />
+                  </AdminMobileCardRow>
+                  {canWrite ? (
+                    <>
+                      <AdminMobileCardRow label="Витрина">
+                        <AdminProductHideButton
+                          productId={product.id}
+                          status={product.status}
+                          variant="toggle"
+                        />
+                      </AdminMobileCardRow>
+                      <Link
+                        href={buildAdminCatalogEditHref(product.id, listParams)}
+                        className="inline-flex text-sm font-medium text-primary hover:underline"
+                      >
+                        Изменить
+                      </Link>
+                      <AdminProductHideButton
+                        productId={product.id}
+                        status={product.status}
+                        variant="button"
+                      />
+                    </>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          </AdminMobileCard>
-        );
-      }}
-    />
+            </AdminMobileCard>
+          );
+        }}
+      />
+    </div>
   );
 }

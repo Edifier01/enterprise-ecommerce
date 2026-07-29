@@ -41,7 +41,7 @@ export function AdminMobileNav({ admin }: { admin: AdminUser }) {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 md:hidden">
+      <div className="admin-shell flex items-center justify-between gap-3 border-b border-sidebar-border bg-sidebar px-4 py-3 md:hidden">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -71,12 +71,12 @@ export function AdminMobileNav({ admin }: { admin: AdminUser }) {
           />
           <aside
             id="admin-mobile-nav"
-            className="absolute inset-y-0 left-0 flex w-[min(100%,18rem)] flex-col bg-background shadow-xl"
+            className="admin-shell absolute inset-y-0 left-0 flex w-[min(100%,18rem)] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl"
             role="dialog"
             aria-modal="true"
             aria-label="Навигация админ-панели"
           >
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <div className="flex items-center justify-between border-b border-sidebar-border px-4 py-3">
               <div className="min-w-0">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Админ-панель
@@ -99,10 +99,10 @@ export function AdminMobileNav({ admin }: { admin: AdminUser }) {
               className="overflow-y-auto p-3"
             />
 
-            <form action={adminLogoutAction} className="border-t border-border p-3">
+            <form action={adminLogoutAction} className="border-t border-sidebar-border p-2">
               <button
                 type="submit"
-                className="min-h-11 w-full rounded-md px-3 py-2.5 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="min-h-10 w-full rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               >
                 Выйти
               </button>

@@ -8,21 +8,23 @@ type AdminSidebarProps = {
 
 export function AdminSidebar({ admin }: AdminSidebarProps) {
   return (
-    <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-muted/30 md:flex">
-      <div className="border-b border-border px-4 py-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+    <aside className="admin-shell hidden w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
+      <div className="border-b border-sidebar-border px-4 py-5">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           Админ-панель
         </p>
-        <p className="mt-1 truncate text-sm font-medium">{admin.email}</p>
+        <p className="mt-1.5 truncate text-sm font-medium text-sidebar-foreground">
+          {admin.email}
+        </p>
         <p className="text-xs text-muted-foreground">{admin.role}</p>
       </div>
 
       <AdminSidebarNav permissions={admin.permissions} />
 
-      <form action={adminLogoutAction} className="border-t border-border p-3">
+      <form action={adminLogoutAction} className="mt-auto border-t border-sidebar-border p-2">
         <button
           type="submit"
-          className="w-full rounded-md px-3 py-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="min-h-10 w-full rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         >
           Выйти
         </button>

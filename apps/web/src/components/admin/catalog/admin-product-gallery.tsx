@@ -16,6 +16,8 @@ import type { ProductImage } from "@/lib/admin/catalog-shared";
 import { getSwatchStyle } from "@/lib/store/color-swatch";
 import { erpImageProxyPath, productImageRenderProps, resolveProductGalleryImageSrc } from "@/lib/store/product-image";
 
+import { cn } from "@/lib/utils";
+
 const selectClass =
   "h-8 w-full min-w-[10rem] rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
@@ -25,6 +27,7 @@ type AdminProductGalleryProps = {
   images: ProductImage[];
   erpImageUrl?: string | null;
   colorOptions?: string[];
+  embedded?: boolean;
 };
 
 function ColorSwatch({ label }: { label: string }) {
@@ -195,11 +198,15 @@ export function AdminProductGallery({
   images,
   erpImageUrl,
   colorOptions = [],
+  embedded = false,
 }: AdminProductGalleryProps) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadColor, setUploadColor] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const { showToast } = useToast();
 
@@ -228,32 +235,58 @@ export function AdminProductGallery({
     router.refresh();
   }
 
-  function handleUpload(file: File) {
+  function handleUploadFiles(files: FileList | File[]) {
+    const fileList = [...files];
+    if (fileList.length === 0) return;
+
     setError(null);
-    if (file.type.startsWith("video/")) {
+    const invalidVideo = fileList.find((file) => file.type.startsWith("video/"));
+    if (invalidVideo) {
       setError("Видео не поддерживается. Загружайте фото в формате JPEG, PNG, WebP или GIF.");
       return;
     }
+
     startTransition(async () => {
-      const formData = new FormData();
-      formData.append("file", file);
-      const upload = await uploadAdminMediaAction(formData);
-      if (!upload.ok) {
-        setError(upload.error);
-        return;
+      let sortOrder = sortedImages.length;
+      let uploaded = 0;
+      let lastError: string | null = null;
+
+      for (let index = 0; index < fileList.length; index += 1) {
+        const file = fileList[index];
+        setUploadProgress(`Загрузка ${index + 1} из ${fileList.length}…`);
+
+        const formData = new FormData();
+        formData.append("file", file);
+        const upload = await uploadAdminMediaAction(formData);
+        if (!upload.ok) {
+          lastError = upload.error;
+          continue;
+        }
+
+        const result = await addProductImageAction(
+          productId,
+          upload.url,
+          sortOrder,
+          uploadColor || null,
+        );
+        if (result.error) {
+          lastError = result.error;
+          continue;
+        }
+
+        sortOrder += 1;
+        uploaded += 1;
       }
-      const result = await addProductImageAction(
-        productId,
-        upload.url,
-        sortedImages.length,
-        uploadColor || null,
-      );
-      if (result.error) {
-        setError(result.error);
-        return;
+
+      setUploadProgress(null);
+      if (uploaded > 0) {
+        showToast(`Загружено фото: ${uploaded}`);
+        setUploadColor("");
+        refresh();
       }
-      setUploadColor("");
-      refresh();
+      if (lastError) {
+        setError(lastError);
+      }
     });
   }
 
@@ -337,15 +370,45 @@ export function AdminProductGallery({
     });
   }
 
+  function handleDropReorder(targetId: string) {
+    if (!draggingId || draggingId === targetId) return;
+
+    const fromIndex = sortedImages.findIndex((item) => item.id === draggingId);
+    const toIndex = sortedImages.findIndex((item) => item.id === targetId);
+    if (fromIndex < 0 || toIndex < 0) return;
+
+    const reordered = [...sortedImages];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+
+    setError(null);
+    startTransition(async () => {
+      for (let index = 0; index < reordered.length; index += 1) {
+        const image = reordered[index];
+        if (image.sort_order === index) continue;
+        const result = await updateProductImageAction(image.id, productId, { sort_order: index });
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+      }
+      refresh();
+    });
+  }
+
+  const rootClassName = embedded ? "space-y-4" : "space-y-4 rounded-lg border border-border p-4";
+
   return (
-    <div className="space-y-4 rounded-lg border border-border p-4">
-      <div>
-        <p className="font-medium">Галерея</p>
-        <p className="text-xs text-muted-foreground">
-          Дополнительные фото для витрины. Привяжите фото к цвету — на карточке товара галерея
-          переключится при выборе цвета. Без привязки фото показывается для всех вариантов.
-        </p>
-      </div>
+    <div className={rootClassName}>
+      {!embedded ? (
+        <div>
+          <p className="font-medium">Галерея</p>
+          <p className="text-xs text-muted-foreground">
+            Дополнительные фото для витрины. Привяжите фото к цвету — на карточке товара галерея
+            переключится при выборе цвета. Без привязки фото показывается для всех вариантов.
+          </p>
+        </div>
+      ) : null}
 
       <ColorCoveragePanel
         colors={coverageFromOptions.colors}
@@ -442,9 +505,35 @@ export function AdminProductGallery({
           {sortedImages.map((image, index) => (
             <li
               key={image.id}
-              className="flex flex-wrap items-start gap-3 rounded-md border border-border/60 p-3"
+              draggable={!pending}
+              onDragStart={() => setDraggingId(image.id)}
+              onDragEnd={() => {
+                setDraggingId(null);
+                setDragOverId(null);
+              }}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDragOverId(image.id);
+              }}
+              onDragLeave={() => {
+                if (dragOverId === image.id) setDragOverId(null);
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                handleDropReorder(image.id);
+                setDraggingId(null);
+                setDragOverId(null);
+              }}
+              className={cn(
+                "flex flex-wrap items-start gap-3 rounded-md border border-border/60 p-3 transition-colors",
+                draggingId === image.id && "opacity-60",
+                dragOverId === image.id && draggingId !== image.id && "border-primary bg-muted/40",
+              )}
             >
-              <div className="relative size-16 shrink-0 overflow-hidden rounded-md border bg-muted">
+              <div
+                className="relative size-16 shrink-0 cursor-grab overflow-hidden rounded-md border bg-muted active:cursor-grabbing"
+                title="Перетащите для изменения порядка"
+              >
                 <Image
                   {...productImageRenderProps(resolveProductGalleryImageSrc(productSlug, image.url))}
                   alt=""
@@ -517,10 +606,11 @@ export function AdminProductGallery({
             ref={fileRef}
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
+            multiple
             className="hidden"
             onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) handleUpload(file);
+              const files = event.target.files;
+              if (files && files.length > 0) handleUploadFiles(files);
               event.target.value = "";
             }}
           />
@@ -531,8 +621,9 @@ export function AdminProductGallery({
             disabled={pending}
             onClick={() => fileRef.current?.click()}
           >
-            {pending ? "Загрузка…" : "Загрузить в галерею"}
+            {pending ? uploadProgress ?? "Загрузка…" : "Загрузить в галерею"}
           </Button>
+          <p className="text-xs text-muted-foreground">Можно выбрать несколько файлов сразу.</p>
         </div>
       </div>
 

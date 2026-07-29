@@ -7,9 +7,8 @@ import { redirect } from "next/navigation";
 
 
 import { AdminFilterChips } from "@/components/admin/admin-filter-chips";
-
 import { AdminFetchErrorState } from "@/components/admin/admin-error-state";
-
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminSavedViews } from "@/components/admin/admin-saved-views";
 
 import { AdminCatalogCategoryPicker } from "@/components/admin/catalog/admin-catalog-category-picker";
@@ -234,37 +233,22 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
 
       <div className="space-y-6">
 
-        <div className="flex flex-wrap items-center justify-between gap-4">
-
-          <div>
-
-            <h1 className="text-2xl font-semibold tracking-tight">Каталог</h1>
-
-            <p className="text-sm text-muted-foreground">
-
+        <AdminPageHeader
+          title="Каталог"
+          description={
+            <>
               Товары импортируются из МойСклад. Назначьте категории в{" "}
-
               <Link href="/admin/integrations/moysklad/import" className="text-foreground underline">
-
                 очереди импорта
-
               </Link>{" "}
-
               или на странице{" "}
-
               <Link href="/admin/catalog/workflow" className="text-foreground underline">
-
                 оформления
-
               </Link>
-
               .
-
-            </p>
-
-          </div>
-
-        </div>
+            </>
+          }
+        />
 
 
 
@@ -372,49 +356,28 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
 
     <div className="space-y-6">
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
-
-        <div>
-
+      <AdminPageHeader
+        title={categoryLabel}
+        description={
+          searchQuery ? `Результаты поиска (${products.total})` : `${products.total} товаров`
+        }
+        breadcrumb={
           <Link
-
             href="/admin/catalog?view=categories"
-
             className="text-sm text-muted-foreground hover:text-foreground"
-
           >
-
             ← К категориям
-
           </Link>
-
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{categoryLabel}</h1>
-
-          <p className="text-sm text-muted-foreground">
-
-            {searchQuery
-
-              ? `Результаты поиска (${products.total})`
-
-              : `${products.total} товаров`}
-
-          </p>
-
-        </div>
-
-        <Link
-
-          href="/admin/catalog/workflow"
-
-          className="text-sm font-medium text-primary hover:underline"
-
-        >
-
-          Оформление товаров
-
-        </Link>
-
-      </div>
+        }
+        actions={
+          <Link
+            href="/admin/catalog/workflow"
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            Оформление товаров
+          </Link>
+        }
+      />
 
 
 

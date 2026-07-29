@@ -2,6 +2,8 @@ export type AdminNavLink = {
   href: string;
   label: string;
   exact: boolean;
+  /** Visual prominence in sidebar; defaults to secondary. */
+  tier?: "primary" | "secondary";
   /** At least one permission required; defaults to admin:read. */
   permissions?: readonly string[];
 };
@@ -15,12 +17,12 @@ export type AdminNavSection = {
 export const ADMIN_NAV_SECTIONS: readonly AdminNavSection[] = [
   {
     title: null,
-    items: [{ href: "/admin", label: "Сводка", exact: true }],
+    items: [{ href: "/admin", label: "Сводка", exact: true, tier: "primary" }],
   },
   {
     title: "Витрина",
     items: [
-      { href: "/admin/catalog?all=1", label: "Товары", exact: false },
+      { href: "/admin/catalog?all=1", label: "Товары", exact: false, tier: "primary" },
       {
         href: "/admin/catalog/workflow",
         label: "Оформление",
@@ -30,6 +32,7 @@ export const ADMIN_NAV_SECTIONS: readonly AdminNavSection[] = [
         href: "/admin/catalog/categories",
         label: "Категории",
         exact: false,
+        tier: "primary",
         permissions: ["catalog:write"],
       },
     ],

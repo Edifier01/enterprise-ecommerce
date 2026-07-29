@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
@@ -10,10 +11,10 @@ import {
   updateCategoryDetailsAction,
   type CatalogActionState,
 } from "@/app/actions/admin-catalog";
+import { AdminFormSection } from "@/components/admin/admin-form-section";
 import { AdminCategorySelect } from "@/components/admin/catalog/admin-category-select";
 import { AdminConfirmDialog } from "@/components/admin/admin-confirm-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminCategory } from "@/lib/admin/catalog-shared";
 import {
   buildCategoryOptions,
@@ -145,11 +146,7 @@ export function AdminCategoryPanel({ categories, canWrite = false }: AdminCatego
   return (
     <div className="space-y-6">
       {canWrite ? (
-      <Card className="max-w-xl">
-        <CardHeader>
-          <CardTitle>Новая категория</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <AdminFormSection title="Новая категория" description="Корневая категория или подкатегория витрины.">
           <form action={createAction} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <label htmlFor="cat-name" className="text-sm font-medium">
@@ -218,19 +215,14 @@ export function AdminCategoryPanel({ categories, canWrite = false }: AdminCatego
               {createPending ? "Создание..." : "Создать категорию"}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </AdminFormSection>
       ) : (
         <p className="text-sm text-muted-foreground">
           Режим просмотра — изменение категорий доступно только администраторам с правом записи.
         </p>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Категории</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <AdminFormSection title="Категории" description="Иерархия категорий и количество товаров в каждой.">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -262,7 +254,18 @@ export function AdminCategoryPanel({ categories, canWrite = false }: AdminCatego
                         <td className="py-3 pr-4 text-muted-foreground">
                           {getCategoryParentName(categories, category.parent_id)}
                         </td>
-                        <td className="py-3 pr-4 tabular-nums">{category.product_count ?? 0}</td>
+                        <td className="py-3 pr-4 tabular-nums">
+                          {(category.product_count ?? 0) > 0 ? (
+                            <Link
+                              href={`/admin/catalog?category_id=${category.id}&all=1`}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              {category.product_count}
+                            </Link>
+                          ) : (
+                            category.product_count ?? 0
+                          )}
+                        </td>
                         <td className="py-3 pr-4">
                           {category.is_active ? "Активна" : "Скрыта"}
                         </td>
@@ -342,8 +345,7 @@ export function AdminCategoryPanel({ categories, canWrite = false }: AdminCatego
               {actionError}
             </p>
           ) : null}
-        </CardContent>
-      </Card>
+      </AdminFormSection>
 
       <AdminConfirmDialog
         open={deleteTarget != null}

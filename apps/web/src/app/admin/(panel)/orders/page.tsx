@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminFilterChips } from "@/components/admin/admin-filter-chips";
 import { AdminSavedViews } from "@/components/admin/admin-saved-views";
 import { AdminFetchErrorState, AdminForbiddenState } from "@/components/admin/admin-error-state";
@@ -97,14 +98,14 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Заказы</h1>
-        <p className="text-sm text-muted-foreground">
-          {searchQuery
+      <AdminPageHeader
+        title="Заказы"
+        description={
+          searchQuery
             ? `Результаты поиска (${orders.total})`
-            : `Управление заказами (${orders.total} всего).`}
-        </p>
-      </div>
+            : `Управление заказами (${orders.total} всего).`
+        }
+      />
 
       <AdminSavedViews
         activeId={activeFilter || "all"}

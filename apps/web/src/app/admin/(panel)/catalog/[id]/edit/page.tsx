@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminProductEditForm } from "@/components/admin/catalog/admin-product-edit-form";
 import { getAdminProduct, listAdminCategories } from "@/lib/admin/catalog";
 import { getAdminReturnLabel, parseAdminReturnPath } from "@/lib/admin/catalog-list-url";
@@ -45,13 +46,16 @@ export default async function AdminEditProductPage({ params, searchParams }: Pag
   const backLabel = getAdminReturnLabel(returnTo);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href={returnTo} className="text-sm text-muted-foreground hover:text-foreground">
-          {backLabel}
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">Редактирование товара</h1>
-      </div>
+    <div className="mx-auto w-full max-w-6xl space-y-6">
+      <AdminPageHeader
+        title="Редактирование товара"
+        description={product.name}
+        breadcrumb={
+          <Link href={returnTo} className="text-sm text-muted-foreground hover:text-foreground">
+            {backLabel}
+          </Link>
+        }
+      />
       {categoriesResult.ok ? null : (
         <p className="text-sm text-amber-700" role="status">
           {categoriesResult.error}
