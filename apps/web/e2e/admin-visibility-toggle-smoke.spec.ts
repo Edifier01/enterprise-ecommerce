@@ -25,7 +25,7 @@ test.describe("Admin catalog visibility smoke", () => {
 
     await expect(page.getByRole("heading", { name: "Все товары", level: 1 })).toBeVisible();
 
-    const productScope = catalogProductScope(page, E2E_MS_NAME);
+    const productScope = await catalogProductScope(page, E2E_MS_NAME);
     await expect(productScope).toBeVisible();
 
     const editLink = productScope.getByRole("link", { name: "Изменить" });
