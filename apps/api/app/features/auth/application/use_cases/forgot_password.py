@@ -14,6 +14,7 @@ from app.features.auth.domain.ports import (
     IUnitOfWork,
     IUserRepository,
 )
+from app.features.auth.infrastructure.email.templates import build_password_reset_email
 
 
 class ForgotPasswordUseCase:
@@ -50,17 +51,13 @@ class ForgotPasswordUseCase:
         await self._token_repository.create(token)
 
         reset_url = f"{settings.storefront_url.rstrip('/')}/reset-password?token={raw_token}"
+        subject, body_text, body_html = build_password_reset_email(reset_url=reset_url)
         await self._email_service.send(
             EmailMessage(
                 to=user.email,
-                subject="Восстановление пароля — Сухопут",
-                body_text=(
-                    "Здравствуйте!\n\n"
-                    "Для сброса пароля перейдите по ссылке:\n"
-                    f"{reset_url}\n\n"
-                    "Ссылка действует ограниченное время. "
-                    "Если вы не запрашивали сброс, проигнорируйте это письмо."
-                ),
+                subject=subject,
+                body_text=body_text,
+                body_html=body_html,
             )
         )
         await self._unit_of_work.commit()

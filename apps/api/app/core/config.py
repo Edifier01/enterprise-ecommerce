@@ -64,6 +64,7 @@ class Settings(BaseSettings):
     storefront_url: str = "http://localhost:3000"
     email_provider: str = "console"
     email_from: str = "noreply@example.com"
+    email_reply_to: str = ""
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""
@@ -171,6 +172,30 @@ class Settings(BaseSettings):
         if "*" in self.cors_origins:
             raise ValueError(
                 "cors_origins must not include '*' when credentials are enabled in production."
+            )
+        if self.email_provider != "smtp":
+            raise ValueError(
+                "email_provider must be 'smtp' in production."
+            )
+        if not self.smtp_host.strip():
+            raise ValueError(
+                "smtp_host is required in production when email_provider=smtp."
+            )
+        if not self.smtp_user.strip() and not self.email_from.strip():
+            raise ValueError(
+                "smtp_user or email_from is required in production when email_provider=smtp."
+            )
+        if not self.smtp_password.get_secret_value().strip():
+            raise ValueError(
+                "smtp_password is required in production when email_provider=smtp."
+            )
+        if not self.email_from.strip():
+            raise ValueError(
+                "email_from is required in production."
+            )
+        if not self.storefront_url.startswith("https://"):
+            raise ValueError(
+                "storefront_url must use https in production."
             )
         return self
 

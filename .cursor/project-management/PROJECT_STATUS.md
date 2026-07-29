@@ -51,12 +51,12 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 - [x] **Admin Panel Phase B/C** — committed + pushed `a51743b` (2026-07-29; prod smoke pending)
 - [x] **Admin Phase B E2E smokes** — visibility toggle + description save specs (2026-07-24; local run pending Postgres)
 - [x] **stich.su UX parity P0/P1** — gallery zoom, mini-cart, Zod shipping (2026-07-24; deploy pending)
-- [ ] Wave 0 ops: prod deploy pending fixes — **IN_PROGRESS** (a51743b pushed 2026-07-29; CI/deploy confirmation pending)
+- [ ] Wave 0 ops: prod deploy — **PARTIAL** (storefront ✅; API DB 503; admin smoke pending)
 - [ ] Wave 0 ops: MS stock verify + gallery re-upload on prod
 - [x] Wave 0 code: CI deploy gate, auth rate limits, media 500 fix, deploy.sh smoke
 - [ ] TipTap product description (deferred; needs storefront HTML sanitize)
 - [ ] Real product/category photography — BACKLOG
-- [ ] SMTP email delivery (production)
+- [ ] SMTP email delivery (production) — code ready; VPS env + deploy pending
 - [ ] Final YooKassa payment integration
 
 ## Recently Completed
@@ -133,20 +133,20 @@ None.
 
 ## Next Actions
 
-1. Commit admin redesign separately from storefront parity; run `tsc` + new admin E2E (Postgres up)
-2. Deploy pending fixes + admin redesign; prod smoke on `/admin`
-3. Confirm Docker volume `media_uploads` + gallery re-upload on prod
-4. SMTP production delivery
-5. YooKassa provider integration (replace/refactor Stripe paths)
+1. **Fix prod Postgres** — `/health/ready` returns 503; check `docker compose ps` + postgres logs on VPS
+2. Admin smoke: KPI cards + 2-col product edit on `/admin`
+3. Wave 0.2: `MOYSKLAD_STORE_ID` + «Обновить остатки»
+4. Wave 0.5: `TRUSTED_PROXY_HOPS=1`, `MEDIA_PUBLIC_BASE_URL`
+5. YooKassa provider integration (Wave 1 — after Wave 0 green)
 
 ---
 
 ## Last Updated
 
-2026-07-29 (Wave 0: admin Phase B/C commit + push)
+2026-07-29 (Wave 1.2: production SMTP email code complete)
 
 ---
 
 ## Last Agent
 
-GPT-5.5 (AI bootstrap package documentation)
+Composer (production auth email)

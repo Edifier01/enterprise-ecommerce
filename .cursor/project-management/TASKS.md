@@ -611,10 +611,11 @@ The third duplicate Sprint E section was removed during full project review. All
 - [x] Email verification for retail + wholesale registration
 - [x] Login blocked until email verified (403)
 - [x] Password reset flow (forgot + reset)
-- [x] ConsoleEmailService for dev; SMTP stub for prod
+- [x] ConsoleEmailService for dev; SmtpEmailService for prod (2026-07-29)
+- [x] HTML email templates + Reply-To (`EMAIL_REPLY_TO`)
 - [x] Frontend pages + server actions (RU)
-- [x] OpenAPI + 19 auth pytest tests
-- [ ] **Follow-up:** SMTP production delivery (next step)
+- [x] OpenAPI + auth pytest tests (36 with SMTP/template coverage)
+- [ ] **Follow-up:** prod `.env.production` + deploy + DNS SPF/DKIM
 
 ---
 
@@ -1084,7 +1085,7 @@ The third duplicate Sprint E section was removed during full project review. All
   - [x] 0.7 Customer auth rate limits (`CheckoutRateLimitMiddleware`)
   - [x] 0.8 Media 500 leak fix + remove duplicate `SyncProtectedFieldError`
   - [x] deploy.sh preflight (TRUSTED_PROXY_HOPS warn, MEDIA https) + post-deploy smoke + media volume check
-  - [ ] 0.1 Prod deploy pending fixes (push master → CI → deploy)
+  - [ ] 0.1 Prod deploy pending fixes (master at 07663b7; storefront smoke ✅; **API DB 503**)
   - [ ] 0.2 Verify MOYSKLAD_STORE_ID + «Обновить остатки»
   - [ ] 0.3 Verify media_uploads volume on prod (automated in deploy.sh)
   - [ ] 0.4 Re-upload 404 gallery URLs
@@ -1133,7 +1134,7 @@ The third duplicate Sprint E section was removed during full project review. All
 - [x] Zod validation on checkout shipping form (stich parity 2026-07-24)
 - [ ] Global security headers (CSP/X-Frame-Options beyond checkout)
 - [ ] Media backup runbook for `media_uploads` volume
-- [ ] SMTP production delivery
+- [ ] SMTP production delivery — **CODE DONE** (2026-07-29); prod env + DNS + deploy pending
 
 ---
 
@@ -1219,15 +1220,15 @@ The third duplicate Sprint E section was removed during full project review. All
 - [x] Agent action document: `docs/reviews/PROJECT-ACTION-PLAN-2026-07-29.md` — actionable Wave 0–4 plan with file references, exit criteria, agent rules
 
 **Wave 0 execution (immediate):**
-- [ ] 0.1 Deploy pending fixes — **IN_PROGRESS** (a51743b pushed; CI → deploy pending)
-- [ ] 0.2 Verify MOYSKLAD_STORE_ID + run stock sync in admin
+- [ ] 0.1 Deploy pending fixes — **PARTIAL** (API+DB ✅; external smoke + deploy pending)
+- [ ] 0.2 Verify MOYSKLAD_STORE_ID + run stock sync in admin — **PARTIAL** (cron sync ran on startup; verify inventory UI)
 - [ ] 0.3 Verify media_uploads Docker volume on prod
 - [ ] 0.4 Re-upload 404 gallery photos
 - [ ] 0.5 Set TRUSTED_PROXY_HOPS=1 + MEDIA_PUBLIC_BASE_URL on prod
 
 **Wave 1 execution (release gate):**
 - [ ] 1.1 YooKassa payment integration (MAIN BLOCKER — see ACTION-PLAN doc)
-- [ ] 1.2 SMTP production delivery
+- [ ] 1.2 SMTP production delivery — **CODE DONE**; set `.env.production` on VPS + deploy + DNS
 - [ ] 1.3 Assign categories to 329 products + publish
 - [ ] 1.4 Guest email in checkout (MS export fix)
 - [ ] 1.5 Shipping in MS order export + public OrderDetailSchema

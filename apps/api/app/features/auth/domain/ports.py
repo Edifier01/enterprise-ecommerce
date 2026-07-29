@@ -93,6 +93,8 @@ class EmailMessage:
     to: str
     subject: str
     body_text: str
+    body_html: str | None = None
+    reply_to: str | None = None
 
 
 class IEmailService(ABC):

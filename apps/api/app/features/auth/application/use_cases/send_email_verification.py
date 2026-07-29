@@ -13,6 +13,7 @@ from app.features.auth.domain.ports import (
     IEmailService,
     IUnitOfWork,
 )
+from app.features.auth.infrastructure.email.templates import build_verification_email
 
 
 class SendEmailVerificationUseCase:
@@ -49,16 +50,13 @@ class SendEmailVerificationUseCase:
         verify_url = (
             f"{settings.storefront_url.rstrip('/')}/verify-email?token={raw_token}"
         )
+        subject, body_text, body_html = build_verification_email(verify_url=verify_url)
         await self._email_service.send(
             EmailMessage(
                 to=user.email,
-                subject="Подтвердите email — Сухопут",
-                body_text=(
-                    "Здравствуйте!\n\n"
-                    "Для завершения регистрации подтвердите ваш email по ссылке:\n"
-                    f"{verify_url}\n\n"
-                    "Если вы не регистрировались, проигнорируйте это письмо."
-                ),
+                subject=subject,
+                body_text=body_text,
+                body_html=body_html,
             )
         )
         await self._unit_of_work.commit()

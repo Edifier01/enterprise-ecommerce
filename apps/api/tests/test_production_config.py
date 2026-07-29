@@ -20,6 +20,13 @@ def _base_production_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ADMIN_DEV_PASSWORD", "strong-admin-password")
     monkeypatch.setenv("MOYSKLAD_API_TOKEN", "")
     monkeypatch.setenv("MOYSKLAD_WEBHOOK_SECRET", "")
+    monkeypatch.setenv("EMAIL_PROVIDER", "smtp")
+    monkeypatch.setenv("EMAIL_FROM", "noreply@shop.example.com")
+    monkeypatch.setenv("STOREFRONT_URL", "https://shop.example.com")
+    monkeypatch.setenv("SMTP_HOST", "sm42.hosting.reg.ru")
+    monkeypatch.setenv("SMTP_PORT", "587")
+    monkeypatch.setenv("SMTP_USER", "noreply@shop.example.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "smtp-test-password")
 
 
 def test_production_settings_valid_with_local_media(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -68,6 +75,27 @@ def test_production_requires_moysklad_webhook_secret_when_integration_enabled(
     monkeypatch.setenv("MOYSKLAD_API_TOKEN", "test-token")
     monkeypatch.setenv("MOYSKLAD_WEBHOOK_SECRET", "")
     with pytest.raises(ValidationError, match="moysklad_webhook_secret"):
+        Settings()
+
+
+def test_production_rejects_console_email_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_production_env(monkeypatch)
+    monkeypatch.setenv("EMAIL_PROVIDER", "console")
+    with pytest.raises(ValidationError, match="email_provider"):
+        Settings()
+
+
+def test_production_rejects_missing_smtp_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_production_env(monkeypatch)
+    monkeypatch.setenv("SMTP_HOST", "")
+    with pytest.raises(ValidationError, match="smtp_host"):
+        Settings()
+
+
+def test_production_rejects_http_storefront_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_production_env(monkeypatch)
+    monkeypatch.setenv("STOREFRONT_URL", "http://shop.example.com")
+    with pytest.raises(ValidationError, match="storefront_url"):
         Settings()
 
 
