@@ -64,6 +64,46 @@
 - [ ] Commit + prod deploy smoke
 - [ ] Optional Playwright smoke (mini-cart / invalid shipping)
 
+### Feature: Admin Panel Visual & UX Redesign — Phase A
+
+**Status:** COMPLETED (2026-07-24)
+
+**Scope:** Frontend-only shell — nav tiers, sidebar polish, page header / form section primitives.
+
+- [x] `AdminPageHeader` + `AdminFormSection` components
+- [x] Nav `tier: primary | secondary` on Сводка, Товары, Категории
+- [x] Sidebar + mobile drawer tier styling (`admin-nav-*` utilities)
+- [x] Admin shell layout polish (`admin-shell`, `--sidebar-*` tokens)
+- [x] Dashboard uses `AdminPageHeader` (proof)
+- [x] Phase B — catalog edit 2-col, visibility bulk, categories, gallery polish (2026-07-24)
+
+### Feature: Admin Panel Visual & UX Redesign — Phase B
+
+**Status:** COMPLETED (2026-07-24)
+
+**Scope:** Frontend-only — catalog edit layout, visibility toggles/bulk, categories polish, gallery UX.
+
+- [x] B.1 Product edit 2-column layout (`AdminPageHeader`, `AdminFormSection`, gallery left / merchandising right)
+- [x] B.2 Bidirectional visibility toggle + `showProductAction` + bulk hide/show toolbar on catalog list
+- [x] B.3 Categories `AdminFormSection` + product_count links + `AdminPageHeader`
+- [x] B.4 Gallery multi-upload + native HTML5 DnD reorder (Up/Down fallback kept)
+- [x] Catalog list/category landing `AdminPageHeader`
+- [x] Playwright E2E Phase B smokes — `admin-visibility-toggle-smoke.spec.ts`, `admin-product-description-save.spec.ts` (2026-07-24; committed a51743b)
+- [ ] Deploy + prod smoke
+
+### Feature: Admin Panel Visual & UX Redesign — Phase C
+
+**Status:** COMPLETED (2026-07-24; pushed a51743b 2026-07-29)
+
+**Scope:** Frontend-only — dashboard KPI cards, action center polish, list page headers.
+
+- [x] C.1 `AdminKpiCard` component (variants, optional href, icons)
+- [x] C.2 Dashboard metrics migrated to `AdminKpiCard`; «Требует внимания» visual polish (same links/data)
+- [x] C.3 `AdminPageHeader` on orders, inventory, customers list pages
+- [x] Verifier PASSED WITH NOTES (2026-07-24)
+- [ ] TipTap rich text (deferred)
+- [ ] Deploy + prod smoke + run new E2E with Postgres
+
 ### Feature: Monorepo Scaffold
 
 **Status:** COMPLETED
@@ -1101,7 +1141,7 @@ The third duplicate Sprint E section was removed during full project review. All
 
 ### BUG: Storefront — корзина, SKU, фото товара
 
-**Status:** COMPLETED (code fix 2026-07-23; prod deploy pending)
+**Status:** COMPLETED (code fix 2026-07-23; superseded by storefront photo/specs fix 2026-07-24)
 
 - [x] Cart badge on header + mobile nav; refresh via `cart:updated` event
 - [x] Hide SKU row on PDP characteristics + purchase panel
@@ -1109,6 +1149,18 @@ The third duplicate Sprint E section was removed during full project review. All
 - [x] PLP/search API batch-load gallery for `image_url` resolution (list/search routes)
 - [x] Pytest: `test_product_serializers.py` (5 tests)
 - [ ] Deploy to prod
+
+---
+
+### BUG: Storefront — PDP photo crop, PLP missing photos, hide specs block
+
+**Status:** COMPLETED (code fix 2026-07-24; prod deploy pending)
+
+- [x] PDP gallery main image `object-contain` (no corner crop)
+- [x] PLP `ProductCard` uses `ProductThumbnail` with ERP/placeholder onError fallback
+- [x] `ProductThumbnail` ERP proxy fallback when `productSlug` set
+- [x] Remove PDP «Характеристики» block; remove «Артикул» from specs table
+- [ ] Deploy + prod smoke on `https://сухопут-кмв.рф`
 
 ---
 
@@ -1153,10 +1205,42 @@ The third duplicate Sprint E section was removed during full project review. All
 
 ---
 
+## Epic: Project Action Plan 2026-07-29
+
+**Status:** IN_PROGRESS
+
+### Feature: Full Project Review + Agent Action Document
+
+**Status:** COMPLETED (2026-07-29)
+
+**Deliverables:**
+- [x] Full project review: admin panel (14 waves), storefront, architecture, security, SEO — 2026-07-29
+- [x] Interactive canvas: `project-review-2026-07-29.canvas.tsx`
+- [x] Agent action document: `docs/reviews/PROJECT-ACTION-PLAN-2026-07-29.md` — actionable Wave 0–4 plan with file references, exit criteria, agent rules
+
+**Wave 0 execution (immediate):**
+- [ ] 0.1 Deploy pending fixes — **IN_PROGRESS** (a51743b pushed; CI → deploy pending)
+- [ ] 0.2 Verify MOYSKLAD_STORE_ID + run stock sync in admin
+- [ ] 0.3 Verify media_uploads Docker volume on prod
+- [ ] 0.4 Re-upload 404 gallery photos
+- [ ] 0.5 Set TRUSTED_PROXY_HOPS=1 + MEDIA_PUBLIC_BASE_URL on prod
+
+**Wave 1 execution (release gate):**
+- [ ] 1.1 YooKassa payment integration (MAIN BLOCKER — see ACTION-PLAN doc)
+- [ ] 1.2 SMTP production delivery
+- [ ] 1.3 Assign categories to 329 products + publish
+- [ ] 1.4 Guest email in checkout (MS export fix)
+- [ ] 1.5 Shipping in MS order export + public OrderDetailSchema
+- [ ] 1.6 Replace placeholder contacts in site-config.ts
+
+---
+
 ## Improvements (previous)
 
 **Status:** COMPLETED
 
+- [x] Universal AI agent system bootstrap package (`docs/ai-agent-system-bootstrap/`) incl. project planning/todo coordination (2026-07-29)
+- [x] Universal AI agent system bootstrap prompt (`docs/UNIVERSAL-AI-AGENT-SYSTEM-BOOTSTRAP-PROMPT.md`) (2026-07-28)
 - [x] Admin Panel UX Improvement Plan saved to `docs/reviews/ADMIN-PANEL-UX-IMPROVEMENT-PLAN-2026-07-22.md`
 - [x] Add Phase 25 to PROJECT_ROADMAP for Project Management Layer
 - [x] Sync DECISIONS.md when new ADRs are created (architecture-decision-records skill)

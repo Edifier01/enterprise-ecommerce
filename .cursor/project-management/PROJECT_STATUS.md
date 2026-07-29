@@ -46,17 +46,26 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
+- [x] **Storefront PDP/PLP photo + hide specs** — object-contain, ProductThumbnail fallback, remove характеристики (2026-07-24; deploy pending)
+- [x] **Admin Panel Phase B** — catalog edit 2-col, visibility bulk, categories, gallery UX (2026-07-24; deploy pending)
+- [x] **Admin Panel Phase B/C** — committed + pushed `a51743b` (2026-07-29; prod smoke pending)
+- [x] **Admin Phase B E2E smokes** — visibility toggle + description save specs (2026-07-24; local run pending Postgres)
 - [x] **stich.su UX parity P0/P1** — gallery zoom, mini-cart, Zod shipping (2026-07-24; deploy pending)
-- [ ] Wave 0 ops: prod deploy pending fixes (push master → CI → deploy)
+- [ ] Wave 0 ops: prod deploy pending fixes — **IN_PROGRESS** (a51743b pushed 2026-07-29; CI/deploy confirmation pending)
 - [ ] Wave 0 ops: MS stock verify + gallery re-upload on prod
 - [x] Wave 0 code: CI deploy gate, auth rate limits, media 500 fix, deploy.sh smoke
-- [ ] Admin design system / loading states polish (UX roadmap step 2)
+- [ ] TipTap product description (deferred; needs storefront HTML sanitize)
 - [ ] Real product/category photography — BACKLOG
 - [ ] SMTP email delivery (production)
 - [ ] Final YooKassa payment integration
 
 ## Recently Completed
 
+- [x] **Universal AI agent system bootstrap package** — reusable multi-document package for creating project-specific AI development systems with skills inventory, agents, project planning/todo coordination, `/start-feature`, model routing, templates, and validation (`docs/ai-agent-system-bootstrap/`) (2026-07-29)
+- [x] **Universal AI agent system bootstrap prompt** — reusable document for creating a project-specific agent/orchestrator system from scratch (`docs/UNIVERSAL-AI-AGENT-SYSTEM-BOOTSTRAP-PROMPT.md`) (2026-07-28)
+- [x] **Storefront PDP/PLP photo + hide specs** — object-contain gallery/cards, ProductThumbnail ERP fallback, removed «Характеристики»/«Артикул» on PDP (2026-07-24)
+- [x] **Admin Panel Visual & UX Redesign A/B/C** — shell, catalog 2-col edit, visibility/bulk, gallery DnD, KPI dashboard; verifier PASSED WITH NOTES (2026-07-24)
+- [x] **Admin redesign E2E specs** — visibility toggle + description save (written; Postgres run pending)
 - [x] **stich.su UX parity** — gap analysis + gallery loupe/lightbox + mini-cart + Zod shipping; verifier PASSED WITH NOTES (2026-07-24)
 - [x] **Comprehensive audit synthesis** — 10 specialist agents, unified roadmap Waves 0–4 (`docs/reviews/COMPREHENSIVE-AUDIT-2026-07-23.md`) (2026-07-23)
 - [x] **Storefront PLP photos** — list/search API gallery fallback + product-grid resolver, 5 pytest (2026-07-23)
@@ -124,21 +133,20 @@ None.
 
 ## Next Actions
 
-1. Deploy media upload fix; verify prod gallery upload smoke
-2. Confirm Docker volume `media_uploads` persists across deploys
-3. Admin design system primitives (`AdminPageHeader`, `AdminLoadingSection`, …)
-4. Back up Docker volume `media_uploads` periodically
-5. SMTP production delivery
-6. YooKassa provider integration (replace/refactor Stripe paths)
+1. Commit admin redesign separately from storefront parity; run `tsc` + new admin E2E (Postgres up)
+2. Deploy pending fixes + admin redesign; prod smoke on `/admin`
+3. Confirm Docker volume `media_uploads` + gallery re-upload on prod
+4. SMTP production delivery
+5. YooKassa provider integration (replace/refactor Stripe paths)
 
 ---
 
 ## Last Updated
 
-2026-07-24 (stich.su UX parity P0/P1)
+2026-07-29 (Wave 0: admin Phase B/C commit + push)
 
 ---
 
 ## Last Agent
 
-Implementation Agent (stich.su UX parity)
+GPT-5.5 (AI bootstrap package documentation)
