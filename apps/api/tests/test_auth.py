@@ -96,8 +96,8 @@ async def test_register_success(auth_client: AsyncClient) -> None:
     assert response.status_code == 201
     data = response.json()
     assert data["email"] == "user@example.com"
-    assert data["first_name"] == "Тест"
-    assert data["last_name"] == "Пользователь"
+    assert data["first_name"] == ""
+    assert data["last_name"] == ""
     assert data["email_verification_required"] is True
     assert "id" in data
     assert "created_at" in data
@@ -258,8 +258,6 @@ async def test_register_invalid_email_returns_422(auth_client: AsyncClient) -> N
     response = await auth_client.post(
         "/api/v1/auth/register",
         json={
-            "first_name": "Тест",
-            "last_name": "Пользователь",
             "email": "not-an-email",
             "password": "validpassword",
         },

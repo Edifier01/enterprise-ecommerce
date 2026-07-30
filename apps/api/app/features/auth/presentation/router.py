@@ -98,8 +98,6 @@ async def register(
         user = await use_case.execute(
             email=request.email,
             password=request.password,
-            first_name=request.first_name,
-            last_name=request.last_name,
         )
     except DuplicateEmailError:
         raise HTTPException(status_code=409, detail="Email already registered")

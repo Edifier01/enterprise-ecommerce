@@ -7,8 +7,6 @@ def retail_register_payload(email: str, password: str = "secret123") -> dict[str
     return {
         "email": email,
         "password": password,
-        "first_name": "Тест",
-        "last_name": "Пользователь",
     }
 
 

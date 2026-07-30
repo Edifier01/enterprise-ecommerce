@@ -27,8 +27,6 @@ class RegisterUserUseCase:
         *,
         email: str,
         password: str,
-        first_name: str,
-        last_name: str,
     ) -> User:
         existing = await self._repository.get_by_email(email)
         if existing is not None:
@@ -42,8 +40,6 @@ class RegisterUserUseCase:
             is_active=True,
             is_wholesaler=False,
             created_at=datetime.now(timezone.utc),
-            first_name=first_name.strip(),
-            last_name=last_name.strip(),
             email_verified_at=None,
         )
         saved_user = await self._repository.create(user)

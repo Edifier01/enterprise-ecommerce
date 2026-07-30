@@ -65,21 +65,22 @@ export async function registerAction(
   _prev: AuthActionState | null,
   formData: FormData,
 ): Promise<AuthActionState> {
-  const firstName = readRequiredString(formData, "first_name");
-  const lastName = readRequiredString(formData, "last_name");
   const email = readRequiredString(formData, "email");
   const password = formData.get("password");
+  const passwordConfirm = formData.get("password_confirm");
 
-  if (!firstName || !lastName || !email || typeof password !== "string") {
+  if (!email || typeof password !== "string" || typeof passwordConfirm !== "string") {
     return { error: "Заполните все обязательные поля." };
+  }
+
+  if (password !== passwordConfirm) {
+    return { error: "Пароли не совпадают." };
   }
 
   const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      first_name: firstName,
-      last_name: lastName,
       email,
       password,
     }),

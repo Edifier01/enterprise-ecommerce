@@ -4571,16 +4571,6 @@ components:
       title: ProductVariantSchema
     RegisterRequest:
       properties:
-        first_name:
-          type: string
-          maxLength: 100
-          minLength: 1
-          title: First Name
-        last_name:
-          type: string
-          maxLength: 100
-          minLength: 1
-          title: Last Name
         email:
           type: string
           format: email
@@ -4592,8 +4582,6 @@ components:
           title: Password
       type: object
       required:
-      - first_name
-      - last_name
       - email
       - password
       title: RegisterRequest

@@ -32,36 +32,6 @@ export function RegisterForm() {
       <CardContent>
         <form action={formAction} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <label htmlFor="last_name" className="text-sm font-medium">
-              Фамилия
-            </label>
-            <input
-              id="last_name"
-              name="last_name"
-              type="text"
-              autoComplete="family-name"
-              required
-              maxLength={100}
-              className={inputClassName}
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label htmlFor="first_name" className="text-sm font-medium">
-              Имя
-            </label>
-            <input
-              id="first_name"
-              name="first_name"
-              type="text"
-              autoComplete="given-name"
-              required
-              maxLength={100}
-              className={inputClassName}
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
             <label htmlFor="email" className="text-sm font-medium">
               Email
             </label>
@@ -90,6 +60,22 @@ export function RegisterForm() {
               className={inputClassName}
             />
             <p className="text-xs text-muted-foreground">Минимум 8 символов.</p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="password_confirm" className="text-sm font-medium">
+              Повторите пароль
+            </label>
+            <input
+              id="password_confirm"
+              name="password_confirm"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              maxLength={128}
+              className={inputClassName}
+            />
           </div>
 
           {state.error && (
