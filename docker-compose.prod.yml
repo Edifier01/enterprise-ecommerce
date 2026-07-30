@@ -89,6 +89,7 @@ services:
         - enterprise-ecommerce-web:previous
       args:
         NEXT_PUBLIC_API_URL: https://${DOMAIN}
+        NEXT_PUBLIC_MEDIA_BASE_URL: https://${DOMAIN}/media
         NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
     environment:
       API_INTERNAL_URL: http://api:8000

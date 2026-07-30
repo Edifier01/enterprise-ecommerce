@@ -1,4 +1,3 @@
-import { getApiBase } from "@/lib/api-base";
 import { siteConfig } from "@/lib/store/site-config";
 
 /** Tiny neutral blur used while product photos load (reduces CLS). */
@@ -10,6 +9,12 @@ function readMediaBaseUrl(): string | null {
   return raw.length > 0 ? raw.replace(/\/$/, "") : null;
 }
 
+/** Browser-facing site origin. Must not use API_INTERNAL_URL (SSR-only Docker hostname). */
+export function getPublicSiteBase(): string {
+  const raw = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:8000";
+  return raw.replace(/\/$/, "");
+}
+
 function resolveMediaPath(path: string): string {
   const mediaBase = readMediaBaseUrl();
   if (mediaBase) {
@@ -17,13 +22,11 @@ function resolveMediaPath(path: string): string {
     return `${mediaBase}/${relativePath}`;
   }
 
-  const apiBase = getApiBase().replace(/\/$/, "");
-  return `${apiBase}${path}`;
+  return `${getPublicSiteBase()}${path}`;
 }
 
 function resolveApiPath(path: string): string {
-  const apiBase = getApiBase().replace(/\/$/, "");
-  return `${apiBase}${path}`;
+  return `${getPublicSiteBase()}${path}`;
 }
 
 function isMoySkladDownloadUrl(src: string): boolean {
@@ -33,6 +36,29 @@ function isMoySkladDownloadUrl(src: string): boolean {
 
 export function erpImageProxyPath(slug: string): string {
   return `/api/v1/products/${slug}/erp-image`;
+}
+
+function isInternalDockerApiHost(hostname: string): boolean {
+  return hostname === "api" || hostname === "api.local";
+}
+
+/** Rewrite SSR-leaked http://api:8000/media/... URLs to the public storefront origin. */
+function rewriteInternalAssetUrl(src: string): string {
+  try {
+    const parsed = new URL(src);
+    if (!isInternalDockerApiHost(parsed.hostname)) {
+      return src;
+    }
+    if (parsed.pathname.startsWith("/media/")) {
+      return resolveMediaPath(parsed.pathname);
+    }
+    if (parsed.pathname.startsWith("/api/")) {
+      return resolveApiPath(parsed.pathname);
+    }
+  } catch {
+    // Not a valid absolute URL — return unchanged.
+  }
+  return src;
 }
 
 /**
@@ -46,7 +72,7 @@ export function resolveProductImageUrl(src?: string | null): string {
 
   const trimmed = src.trim();
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return trimmed;
+    return rewriteInternalAssetUrl(trimmed);
   }
 
   if (trimmed.startsWith("/api/")) {

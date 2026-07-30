@@ -2,67 +2,47 @@
 
 ## Latest Session
 
-Composer — email verification code + link flow (auth)
+Composer — storefront product photo SSR URL fix
 
 ## Completed Work
 
-**Email verification: код + ссылка (2026-07-30):**
+**Storefront photos not showing (2026-07-30):**
 
-1. Backend: `generate_verification_code()` — 6-значный код; два токена в `auth_tokens` (код + ссылка).
-2. `POST /api/v1/auth/verify-email-code` — подтверждение по `{ email, code }`.
-3. HTML/text шаблон письма — код крупно + кнопка-ссылка как fallback.
-4. Rate limit: 5 req/min на verify-email-code.
-5. Frontend: форма ввода кода на `/register/check-email`, `verifyEmailCodeAction`.
-6. Login: сообщение «Email подтверждён» при `?verified=success`.
-7. OpenAPI: `VerifyEmailCodeRequest` + endpoint.
-8. Tests: 38/38 auth+email green; tsc clean.
+Root cause: SSR used `getApiBase()` → `API_INTERNAL_URL=http://api:8000`, emitting browser-inaccessible image URLs (`http://api:8000/media/...`). Prod API and media files were fine.
 
-**Password reset** — без изменений (уже было: «Забыли пароль?», `/forgot-password`, `/reset-password`, письма).
+1. `product-image.ts` — `getPublicSiteBase()` uses `NEXT_PUBLIC_API_URL` only for `/media/` and `/api/` paths.
+2. Added `rewriteInternalAssetUrl()` — rewrites leaked `http://api:8000/...` absolute URLs.
+3. `docker-compose.prod.yml` + `Dockerfile.web` — `NEXT_PUBLIC_MEDIA_BASE_URL=https://${DOMAIN}/media` build arg.
+
+Prod smoke before fix: API returns `image_url: /media/a7413a6e...webp`, file loads at public URL, but homepage showed placeholder.
 
 ## Files Changed
 
 | Path | Change |
 |------|--------|
-| `apps/api/app/features/auth/application/auth_token_utils.py` | `generate_verification_code()` |
-| `apps/api/app/features/auth/application/use_cases/send_email_verification.py` | dual tokens (code + link) |
-| `apps/api/app/features/auth/application/use_cases/verify_email_code.py` | New use case |
-| `apps/api/app/features/auth/application/use_cases/verify_email.py` | revoke sibling tokens on success |
-| `apps/api/app/features/auth/infrastructure/email/templates.py` | code + link in verification email |
-| `apps/api/app/features/auth/presentation/schemas.py` | `VerifyEmailCodeRequest` |
-| `apps/api/app/features/auth/presentation/router.py` | `POST /verify-email-code` |
-| `apps/api/app/core/middleware.py` | rate limit for verify-email-code |
-| `apps/api/tests/test_auth.py` | code verification tests |
-| `apps/api/tests/test_email_templates.py` | updated template test |
-| `openapi.yaml` | verify-email-code endpoint + schema |
-| `apps/web/src/app/actions/auth.ts` | `verifyEmailCodeAction` |
-| `apps/web/src/components/auth/check-email-card.tsx` | code input form |
-| `apps/web/src/components/auth/login-form.tsx` | verified success message |
+| `apps/web/src/lib/store/product-image.ts` | public site base + internal URL rewrite |
+| `docker-compose.prod.yml` | `NEXT_PUBLIC_MEDIA_BASE_URL` build arg |
+| `docker/Dockerfile.web` | `NEXT_PUBLIC_MEDIA_BASE_URL` ARG/ENV |
 
 ## Test Run Results
 
-- `pytest tests/test_auth.py tests/test_email_templates.py tests/test_smtp_email_service.py tests/test_production_config.py`: ✅ 38/38
 - `tsc --noEmit` (apps/web): ✅ clean
 
 ## Known Issues
 
-- Code not deployed to prod yet.
-- SMTP password rotation reminder from prior session still applies.
-- DNS SPF/DKIM not verified in-session.
-- Playwright auth E2E for code flow not added (backend coverage sufficient for MVP).
+- **Requires web container rebuild + deploy** — fix is in Next.js bundle, not hot-swappable.
+- Auth email code + E2E admin-orders fix also pending deploy on same branch.
 
 ## Next Recommended Action
 
-**Deploy + prod SMTP smoke:**
+```bash
+bash scripts/deploy.sh
+```
 
-1. Set `.env.production` SMTP vars (see `docs/ops/PRODUCTION-EMAIL-SETUP.md`).
-2. `bash scripts/deploy.sh`
-3. Smoke: Register → enter code on check-email page → login
-4. Smoke: Forgot password → reset via link → login
-
-Configure SPF/DKIM in reg.ru DNS before go-live send volume.
+Then verify homepage: «Кроссовки Элкland 178E» shows photo (not beige placeholder).
 
 ---
 
 ## Previous Session
 
-Composer — Wave 1.2: production auth email (SMTP + HTML templates)
+Composer — email verification code + link flow (auth)
