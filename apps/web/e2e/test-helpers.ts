@@ -79,7 +79,17 @@ export function cartCheckoutButton(page: Page, scope?: Locator) {
   return root
     .getByRole("button", { name: "Перейти к оформлению" })
     .or(root.getByRole("button", { name: "Оформить" }))
+    .and(root.locator(":visible"))
     .first();
+}
+
+async function waitForCartLines(page: Page, minLines = 1) {
+  await expect(async () => {
+    const response = await page.request.get(`${E2E_API_BASE}/api/v1/cart`);
+    expect(response.ok()).toBeTruthy();
+    const cart = (await response.json()) as { lines: unknown[] };
+    expect(cart.lines.length).toBeGreaterThanOrEqual(minLines);
+  }).toPass({ timeout: 30_000 });
 }
 
 export async function clickAdminCatalogEditLink(page: Page, rowMarker: string) {
@@ -162,7 +172,13 @@ export async function addPrimaryProductToCart(page: Page, scope?: Locator) {
   );
   await Promise.all([cartAddResponse, button.click()]);
 
+  await waitForCartLines(page);
+
   await page.goto("/cart");
+  await expect(page.getByRole("heading", { name: "Корзина" })).toBeVisible();
+  await expect(page.getByText("Загружаем корзину...")).toHaveCount(0, {
+    timeout: 30_000,
+  });
   await expect(cartCheckoutButton(page)).toBeVisible({
     timeout: 30_000,
   });

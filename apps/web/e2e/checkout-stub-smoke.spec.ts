@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { addPrimaryProductToCart, cartCheckoutButton, fillCheckoutShipping, primaryAddToCartButton } from "./test-helpers";
+import { addPrimaryProductToCart, cartCheckoutButton, ensureCartEmpty, fillCheckoutShipping, primaryAddToCartButton } from "./test-helpers";
 
 /**
  * Full guest checkout via dev payment stub (ADR-006).
@@ -11,6 +11,8 @@ test.describe("Checkout stub smoke", () => {
     page,
   }) => {
     test.setTimeout(90_000);
+
+    await ensureCartEmpty(page);
 
     await page.goto("/products/classic-white-t-shirt");
     await expect(primaryAddToCartButton(page)).toBeVisible();
