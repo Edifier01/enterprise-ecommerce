@@ -605,7 +605,7 @@ The third duplicate Sprint E section was removed during full project review. All
 
 ### Feature: Email Verification & Password Reset
 
-**Status:** COMPLETED (2026-07-15)
+**Status:** COMPLETED (2026-07-15; code flow added 2026-07-30)
 
 - [x] Migration 012 — `email_verified_at` + `auth_tokens`
 - [x] Email verification for retail + wholesale registration
@@ -614,7 +614,9 @@ The third duplicate Sprint E section was removed during full project review. All
 - [x] ConsoleEmailService for dev; SmtpEmailService for prod (2026-07-29)
 - [x] HTML email templates + Reply-To (`EMAIL_REPLY_TO`)
 - [x] Frontend pages + server actions (RU)
-- [x] OpenAPI + auth pytest tests (36 with SMTP/template coverage)
+- [x] **Verification code (6 digits) + link in email** (2026-07-30)
+- [x] `POST /verify-email-code` + form on `/register/check-email`
+- [x] OpenAPI + auth pytest tests (38 with code/SMTP/template coverage)
 - [ ] **Follow-up:** prod `.env.production` + deploy + DNS SPF/DKIM
 
 ---

@@ -36,23 +36,34 @@ def _layout(*, title: str, body_html: str) -> str:
 </html>"""
 
 
-def build_verification_email(*, verify_url: str) -> tuple[str, str, str]:
+def build_verification_email(
+    *,
+    verify_url: str,
+    verification_code: str,
+) -> tuple[str, str, str]:
     subject = "Подтвердите email — Сухопут"
     body_text = (
         "Здравствуйте!\n\n"
-        "Для завершения регистрации подтвердите ваш email по ссылке:\n"
+        "Для завершения регистрации введите код подтверждения на сайте:\n"
+        f"Код: {verification_code}\n\n"
+        "Или перейдите по ссылке:\n"
         f"{verify_url}\n\n"
+        "Код и ссылка действуют ограниченное время. "
         "Если вы не регистрировались, проигнорируйте это письмо."
     )
     safe_url = escape(verify_url)
+    safe_code = escape(verification_code)
     body_html = _layout(
         title=subject,
         body_html=(
             "<p>Здравствуйте!</p>"
-            "<p>Для завершения регистрации подтвердите ваш email:</p>"
+            "<p>Для завершения регистрации введите код на сайте:</p>"
+            f'<p style="font-size:28px;font-weight:700;letter-spacing:0.2em;color:#334155;margin:16px 0;">{safe_code}</p>'
+            "<p>Или нажмите кнопку ниже:</p>"
             f'<p><a href="{safe_url}" style="display:inline-block;background:#334155;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:600;">Подтвердить email</a></p>'
             f'<p style="word-break:break-all;font-size:13px;color:#71717a;">{safe_url}</p>'
-            "<p>Если вы не регистрировались, проигнорируйте это письмо.</p>"
+            "<p>Код и ссылка действуют ограниченное время. "
+            "Если вы не регистрировались, проигнорируйте это письмо.</p>"
         ),
     )
     return subject, body_text, body_html

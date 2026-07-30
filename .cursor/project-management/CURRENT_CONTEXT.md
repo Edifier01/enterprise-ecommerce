@@ -6,19 +6,19 @@
 
 ## Current Module
 
-Auth email — production SMTP delivery
+Auth email — verification code + password reset UX
 
 ---
 
 ## Current Feature
 
-**Wave 1.2 SMTP** — `SmtpEmailService` implemented ✅; prod env + DNS + deploy pending
+**Email verification code** — код + ссылка в письме, форма на `/register/check-email` ✅
 
 ---
 
 ## Active Agent
 
-Composer (production auth email)
+Composer (auth email verification code)
 
 ---
 
@@ -36,7 +36,7 @@ Browser checks (Playwright MCP, smoke tests): **`https://сухопут-кмв.�
 
 ## Current Blockers
 
-1. **Deploy pending** — SMTP code not on prod yet; set `.env.production` on VPS
+1. **Deploy pending** — auth email code changes not on prod yet; SMTP env on VPS
 2. **YooKassa** — payment not implemented (main release blocker)
 3. **329 товаров без категорий** — content ops
 4. **DNS SPF/DKIM** — recommended before first live send
@@ -47,6 +47,8 @@ Browser checks (Playwright MCP, smoke tests): **`https://сухопут-кмв.�
 
 | Area | Status |
 |------|--------|
+| Email verification (code + link) | ✅ implemented locally |
+| Password reset (forgot + reset) | ✅ already complete |
 | Auth email code (SMTP + HTML templates) | ✅ merged locally; deploy pending |
 | reg.ru SMTP runbook | ✅ `docs/ops/PRODUCTION-EMAIL-SETUP.md` |
 | Prod `.env.production` SMTP vars | ⏳ operator action on VPS |
@@ -64,4 +66,4 @@ This document contains concrete Wave 0–4 tasks with file paths, implementation
 
 ## Last Updated
 
-2026-07-29 (Wave 1.2: production SMTP email implemented — deploy pending)
+2026-07-30 (email verification code + link flow)

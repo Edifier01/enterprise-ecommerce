@@ -28,6 +28,12 @@ def _extract_token_from_email(body: str) -> str:
     return match.group(1)
 
 
+def _extract_code_from_email(body: str) -> str:
+    match = re.search(r"Код: (\d{6})", body)
+    assert match is not None, f"Code not found in email body: {body}"
+    return match.group(1)
+
+
 async def _verify_user_from_last_email(client: AsyncClient) -> None:
     message = _recording_email.last
     assert message is not None
@@ -155,6 +161,45 @@ async def test_verify_email_success(auth_client: AsyncClient) -> None:
         json=retail_register_payload("verify@example.com"),
     )
     assert login_response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_verify_email_code_success(auth_client: AsyncClient) -> None:
+    email = "code-verify@example.com"
+    await auth_client.post(
+        "/api/v1/auth/register",
+        json=retail_register_payload(email),
+    )
+    message = _recording_email.last
+    assert message is not None
+    code = _extract_code_from_email(message.body_text)
+
+    response = await auth_client.post(
+        "/api/v1/auth/verify-email-code",
+        json={"email": email, "code": code},
+    )
+    assert response.status_code == 200
+
+    login_response = await auth_client.post(
+        "/api/v1/auth/login",
+        json=retail_register_payload(email),
+    )
+    assert login_response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_verify_email_code_invalid_returns_400(auth_client: AsyncClient) -> None:
+    email = "bad-code@example.com"
+    await auth_client.post(
+        "/api/v1/auth/register",
+        json=retail_register_payload(email),
+    )
+
+    response = await auth_client.post(
+        "/api/v1/auth/verify-email-code",
+        json={"email": email, "code": "000000"},
+    )
+    assert response.status_code == 400
 
 
 @pytest.mark.asyncio

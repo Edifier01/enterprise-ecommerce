@@ -215,6 +215,42 @@ export async function resetPasswordAction(
   redirect("/login?reset=success");
 }
 
+export async function verifyEmailCodeAction(
+  _prev: AuthActionState | null,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const email = readRequiredString(formData, "email");
+  const code = readRequiredString(formData, "code");
+
+  if (!email || !code) {
+    return { error: "Укажите email и код подтверждения." };
+  }
+
+  if (!/^\d{6}$/.test(code)) {
+    return { error: "Код должен содержать 6 цифр." };
+  }
+
+  const res = await fetch(`${API_BASE}/api/v1/auth/verify-email-code`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, code }),
+  });
+
+  if (res.status === 400) {
+    return { error: "Неверный или устаревший код. Запросите новое письмо." };
+  }
+
+  if (res.status === 422) {
+    return { error: "Код должен содержать 6 цифр." };
+  }
+
+  if (!res.ok) {
+    return { error: "Не удалось подтвердить email. Попробуйте снова." };
+  }
+
+  redirect("/login?verified=success");
+}
+
 export async function resendVerificationAction(
   _prev: AuthActionState | null,
   formData: FormData,

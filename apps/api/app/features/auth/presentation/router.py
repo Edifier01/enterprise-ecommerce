@@ -31,6 +31,7 @@ from app.features.auth.application.use_cases.verify_email import (
     InvalidVerificationTokenError,
     VerifyEmailUseCase,
 )
+from app.features.auth.application.use_cases.verify_email_code import VerifyEmailCodeUseCase
 from app.features.auth.domain.entities import User
 from app.features.auth.domain.ports import (
     IAuthTokenRepository,
@@ -59,6 +60,7 @@ from app.features.auth.presentation.schemas import (
     ResendVerificationRequest,
     ResetPasswordRequest,
     TokenResponse,
+    VerifyEmailCodeRequest,
     VerifyEmailRequest,
     WholesalerRegisterRequest,
 )
@@ -187,6 +189,25 @@ async def verify_email(
         await use_case.execute(request.token)
     except InvalidVerificationTokenError:
         raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+    return MessageResponse(message="Email verified successfully")
+
+
+@router.post(
+    "/verify-email-code",
+    response_model=MessageResponse,
+    operation_id="verifyEmailCode",
+)
+async def verify_email_code(
+    request: VerifyEmailCodeRequest,
+    repo: IUserRepository = Depends(get_user_repository),
+    token_repo: IAuthTokenRepository = Depends(get_auth_token_repository),
+    uow: IUnitOfWork = Depends(get_unit_of_work),
+) -> MessageResponse:
+    use_case = VerifyEmailCodeUseCase(repo, token_repo, uow)
+    try:
+        await use_case.execute(request.email, request.code)
+    except InvalidVerificationTokenError:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
     return MessageResponse(message="Email verified successfully")
 
 

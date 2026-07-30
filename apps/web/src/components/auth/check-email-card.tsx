@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
-import { resendVerificationAction, type AuthActionState } from "@/app/actions/auth";
+import {
+  resendVerificationAction,
+  verifyEmailCodeAction,
+  type AuthActionState,
+} from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,7 +20,11 @@ import {
 const initialState: AuthActionState = {};
 
 export function CheckEmailCard({ email }: { email: string }) {
-  const [state, formAction, pending] = useActionState(
+  const [verifyState, verifyAction, verifyPending] = useActionState(
+    verifyEmailCodeAction,
+    initialState,
+  );
+  const [resendState, resendAction, resendPending] = useActionState(
     resendVerificationAction,
     initialState,
   );
@@ -24,38 +32,72 @@ export function CheckEmailCard({ email }: { email: string }) {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle>Проверьте почту</CardTitle>
+        <CardTitle>Подтвердите email</CardTitle>
         <CardDescription>
-          Мы отправили письмо с ссылкой для подтверждения на{" "}
+          Мы отправили письмо с кодом подтверждения на{" "}
           <span className="font-medium text-foreground">{email}</span>.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Перейдите по ссылке в письме, чтобы завершить регистрацию. После
-          подтверждения вы сможете войти в аккаунт.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          В режиме разработки ссылка также выводится в лог API-сервера.
-        </p>
-
-        <form action={formAction} className="flex flex-col gap-3">
+      <CardContent className="space-y-6">
+        <form action={verifyAction} className="flex flex-col gap-3">
           <input type="hidden" name="email" value={email} />
-          <Button type="submit" variant="outline" disabled={pending} className="w-full">
-            {pending ? "Отправка..." : "Отправить письмо повторно"}
+          <div className="flex flex-col gap-2">
+            <label htmlFor="verification-code" className="text-sm font-medium">
+              Код из письма
+            </label>
+            <input
+              id="verification-code"
+              name="code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+              minLength={6}
+              maxLength={6}
+              pattern="\d{6}"
+              placeholder="000000"
+              className="h-11 rounded-lg border border-input bg-background px-3 text-center text-lg tracking-[0.3em] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          </div>
+
+          {verifyState.error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {verifyState.error}
+            </p>
+          ) : null}
+
+          <Button type="submit" disabled={verifyPending} className="w-full">
+            {verifyPending ? "Проверка..." : "Подтвердить email"}
           </Button>
         </form>
 
-        {state.error ? (
-          <p className="text-sm text-destructive" role="alert">
-            {state.error}
+        <div className="space-y-3 border-t pt-4">
+          <p className="text-sm text-muted-foreground">
+            Также можно перейти по ссылке в письме — она откроет подтверждение
+            автоматически.
           </p>
-        ) : null}
-        {state.success ? (
-          <p className="text-sm text-store-success" role="status">
-            {state.success}
+          <p className="text-xs text-muted-foreground">
+            В режиме разработки код и ссылка выводятся в лог API-сервера.
           </p>
-        ) : null}
+
+          <form action={resendAction} className="flex flex-col gap-3">
+            <input type="hidden" name="email" value={email} />
+            <Button type="submit" variant="outline" disabled={resendPending} className="w-full">
+              {resendPending ? "Отправка..." : "Отправить письмо повторно"}
+            </Button>
+          </form>
+
+          {resendState.error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {resendState.error}
+            </p>
+          ) : null}
+          {resendState.success ? (
+            <p className="text-sm text-store-success" role="status">
+              {resendState.success}
+            </p>
+          ) : null}
+        </div>
 
         <Button className="w-full" render={<Link href="/login" />}>
           Перейти ко входу

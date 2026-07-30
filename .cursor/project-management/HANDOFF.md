@@ -2,71 +2,62 @@
 
 ## Latest Session
 
-Composer — Wave 1.2: production auth email (SMTP + HTML templates)
+Composer — email verification code + link flow (auth)
 
 ## Completed Work
 
-**Production auth email — SMTP delivery (2026-07-29):**
+**Email verification: код + ссылка (2026-07-30):**
 
-1. Implemented `SmtpEmailService` via `aiosmtplib` (STARTTLS:587, SSL:465).
-2. HTML email templates for verification + password reset (RU, brand Сухопут).
-3. Added `EMAIL_REPLY_TO` config (`support@...` in transactional mail).
-4. Production validator: requires `EMAIL_PROVIDER=smtp`, SMTP host/user/password, HTTPS `STOREFRONT_URL`.
-5. Tests: `test_smtp_email_service.py`, `test_email_templates.py`, updated `test_production_config.py` — 36/36 auth+email tests green.
-6. Ops runbook: `docs/ops/PRODUCTION-EMAIL-SETUP.md` (reg.ru `sm42.hosting.reg.ru`).
+1. Backend: `generate_verification_code()` — 6-значный код; два токена в `auth_tokens` (код + ссылка).
+2. `POST /api/v1/auth/verify-email-code` — подтверждение по `{ email, code }`.
+3. HTML/text шаблон письма — код крупно + кнопка-ссылка как fallback.
+4. Rate limit: 5 req/min на verify-email-code.
+5. Frontend: форма ввода кода на `/register/check-email`, `verifyEmailCodeAction`.
+6. Login: сообщение «Email подтверждён» при `?verified=success`.
+7. OpenAPI: `VerifyEmailCodeRequest` + endpoint.
+8. Tests: 38/38 auth+email green; tsc clean.
+
+**Password reset** — без изменений (уже было: «Забыли пароль?», `/forgot-password`, `/reset-password`, письма).
 
 ## Files Changed
 
 | Path | Change |
 |------|--------|
-| `apps/api/app/features/auth/infrastructure/email/smtp_email_service.py` | Real SMTP send |
-| `apps/api/app/features/auth/infrastructure/email/templates.py` | HTML + plain templates |
-| `apps/api/app/features/auth/application/use_cases/send_email_verification.py` | Use templates |
-| `apps/api/app/features/auth/application/use_cases/forgot_password.py` | Use templates |
-| `apps/api/app/features/auth/domain/ports.py` | `body_html`, `reply_to` on EmailMessage |
-| `apps/api/app/core/config.py` | `email_reply_to`, production SMTP validation |
-| `apps/api/requirements.txt` | `aiosmtplib` |
-| `apps/api/tests/test_smtp_email_service.py` | New |
-| `apps/api/tests/test_email_templates.py` | New |
-| `apps/api/tests/test_production_config.py` | SMTP production gates |
-| `.env.example`, `.env.production.example` | SMTP + reply-to docs |
-| `docs/ops/PRODUCTION-EMAIL-SETUP.md` | reg.ru setup runbook |
+| `apps/api/app/features/auth/application/auth_token_utils.py` | `generate_verification_code()` |
+| `apps/api/app/features/auth/application/use_cases/send_email_verification.py` | dual tokens (code + link) |
+| `apps/api/app/features/auth/application/use_cases/verify_email_code.py` | New use case |
+| `apps/api/app/features/auth/application/use_cases/verify_email.py` | revoke sibling tokens on success |
+| `apps/api/app/features/auth/infrastructure/email/templates.py` | code + link in verification email |
+| `apps/api/app/features/auth/presentation/schemas.py` | `VerifyEmailCodeRequest` |
+| `apps/api/app/features/auth/presentation/router.py` | `POST /verify-email-code` |
+| `apps/api/app/core/middleware.py` | rate limit for verify-email-code |
+| `apps/api/tests/test_auth.py` | code verification tests |
+| `apps/api/tests/test_email_templates.py` | updated template test |
+| `openapi.yaml` | verify-email-code endpoint + schema |
+| `apps/web/src/app/actions/auth.ts` | `verifyEmailCodeAction` |
+| `apps/web/src/components/auth/check-email-card.tsx` | code input form |
+| `apps/web/src/components/auth/login-form.tsx` | verified success message |
 
 ## Test Run Results
 
-- `pytest tests/test_smtp_email_service.py tests/test_email_templates.py tests/test_production_config.py tests/test_auth.py`: ✅ 36/36
+- `pytest tests/test_auth.py tests/test_email_templates.py tests/test_smtp_email_service.py tests/test_production_config.py`: ✅ 38/38
+- `tsc --noEmit` (apps/web): ✅ clean
 
 ## Known Issues
 
 - Code not deployed to prod yet.
-- SMTP password was shared in chat — rotate in reg.ru if concerned; set only in server `.env.production` (never commit).
+- SMTP password rotation reminder from prior session still applies.
 - DNS SPF/DKIM not verified in-session.
-- Marketing mail (`info@`) deferred to Phase 2 per user confirmation.
-- Playwright auth E2E not added (backend coverage sufficient for MVP).
+- Playwright auth E2E for code flow not added (backend coverage sufficient for MVP).
 
 ## Next Recommended Action
 
-**On production VPS** — edit `.env.production` (see `docs/ops/PRODUCTION-EMAIL-SETUP.md`):
+**Deploy + prod SMTP smoke:**
 
-```env
-EMAIL_PROVIDER=smtp
-STOREFRONT_URL=https://сухопут-кмв.рф
-EMAIL_FROM=noreply@сухопут-кмв.рф
-EMAIL_REPLY_TO=support@сухопут-кмв.рф
-SMTP_HOST=sm42.hosting.reg.ru
-SMTP_PORT=587
-SMTP_USER=noreply@сухопут-кмв.рф
-SMTP_PASSWORD=<mailbox-password>
-SMTP_USE_TLS=true
-```
-
-Then deploy and smoke:
-
-```bash
-bash scripts/deploy.sh
-# Register → check inbox → verify → login
-# Forgot password → reset → login
-```
+1. Set `.env.production` SMTP vars (see `docs/ops/PRODUCTION-EMAIL-SETUP.md`).
+2. `bash scripts/deploy.sh`
+3. Smoke: Register → enter code on check-email page → login
+4. Smoke: Forgot password → reset via link → login
 
 Configure SPF/DKIM in reg.ru DNS before go-live send volume.
 
@@ -74,4 +65,4 @@ Configure SPF/DKIM in reg.ru DNS before go-live send volume.
 
 ## Previous Session
 
-Composer — Wave 0 continue: prod smoke + API health check
+Composer — Wave 1.2: production auth email (SMTP + HTML templates)

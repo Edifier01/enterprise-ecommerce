@@ -52,6 +52,7 @@ class CheckoutRateLimitMiddleware(BaseHTTPMiddleware):
     AUTH_RESEND_VERIFICATION_LIMIT = 3
     AUTH_RESET_PASSWORD_LIMIT = 5
     AUTH_VERIFY_EMAIL_LIMIT = 10
+    AUTH_VERIFY_EMAIL_CODE_LIMIT = 5
     MUTATING_METHODS = {"POST", "PATCH", "DELETE"}
 
     def __init__(self, app) -> None:
@@ -88,6 +89,8 @@ class CheckoutRateLimitMiddleware(BaseHTTPMiddleware):
             return self.AUTH_RESET_PASSWORD_LIMIT
         if path == "/api/v1/auth/verify-email" and request.method == "POST":
             return self.AUTH_VERIFY_EMAIL_LIMIT
+        if path == "/api/v1/auth/verify-email-code" and request.method == "POST":
+            return self.AUTH_VERIFY_EMAIL_CODE_LIMIT
         return None
 
     @staticmethod

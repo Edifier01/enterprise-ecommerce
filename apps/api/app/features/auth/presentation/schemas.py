@@ -65,6 +65,11 @@ class VerifyEmailRequest(BaseModel):
     token: str = Field(min_length=16, max_length=256)
 
 
+class VerifyEmailCodeRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
 class ResendVerificationRequest(BaseModel):
     email: EmailStr
 

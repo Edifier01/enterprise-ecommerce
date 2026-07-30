@@ -19,6 +19,7 @@ const initialState: AuthActionState = {};
 export function LoginForm() {
   const searchParams = useSearchParams();
   const resetSuccess = searchParams.get("reset") === "success";
+  const verifiedSuccess = searchParams.get("verified") === "success";
   const [state, formAction, pending] = useActionState(loginAction, initialState);
   const [resendState, resendAction, resendPending] = useActionState(
     resendVerificationAction,
@@ -39,6 +40,11 @@ export function LoginForm() {
         {resetSuccess ? (
           <p className="text-sm text-store-success" role="status">
             Пароль успешно изменён. Войдите с новым паролем.
+          </p>
+        ) : null}
+        {verifiedSuccess ? (
+          <p className="text-sm text-store-success" role="status">
+            Email подтверждён. Теперь вы можете войти в аккаунт.
           </p>
         ) : null}
 

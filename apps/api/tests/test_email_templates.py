@@ -6,12 +6,16 @@ from app.features.auth.infrastructure.email.templates import (
 )
 
 
-def test_build_verification_email_contains_link() -> None:
+def test_build_verification_email_contains_link_and_code() -> None:
     subject, body_text, body_html = build_verification_email(
-        verify_url="https://shop.example.com/verify-email?token=abc123"
+        verify_url="https://shop.example.com/verify-email?token=abc123",
+        verification_code="482913",
     )
     assert subject == "Подтвердите email — Сухопут"
+    assert "482913" in body_text
+    assert "Код: 482913" in body_text
     assert "https://shop.example.com/verify-email?token=abc123" in body_text
+    assert "482913" in body_html
     assert "https://shop.example.com/verify-email?token=abc123" in body_html
     assert "Подтвердить email" in body_html
 

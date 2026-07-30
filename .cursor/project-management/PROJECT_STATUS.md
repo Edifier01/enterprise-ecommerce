@@ -56,7 +56,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 - [x] Wave 0 code: CI deploy gate, auth rate limits, media 500 fix, deploy.sh smoke
 - [ ] TipTap product description (deferred; needs storefront HTML sanitize)
 - [ ] Real product/category photography — BACKLOG
-- [ ] SMTP email delivery (production) — code ready; VPS env + deploy pending
+- [ ] SMTP email delivery (production) — code + link verification ready; VPS env + deploy pending
 - [ ] Final YooKassa payment integration
 
 ## Recently Completed
@@ -143,10 +143,10 @@ None.
 
 ## Last Updated
 
-2026-07-29 (Wave 1.2: production SMTP email code complete)
+2026-07-30 (email verification code + link flow)
 
 ---
 
 ## Last Agent
 
-Composer (production auth email)
+Composer (auth email verification code)

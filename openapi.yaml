@@ -587,6 +587,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/auth/verify-email-code:
+    post:
+      tags:
+      - auth
+      summary: Verify Email Code
+      operationId: verifyEmailCode
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailCodeRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/auth/resend-verification:
     post:
       tags:
@@ -4753,6 +4778,23 @@ components:
       - msg
       - type
       title: ValidationError
+    VerifyEmailCodeRequest:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        code:
+          type: string
+          maxLength: 6
+          minLength: 6
+          pattern: ^\d{6}$
+          title: Code
+      type: object
+      required:
+      - email
+      - code
+      title: VerifyEmailCodeRequest
     VerifyEmailRequest:
       properties:
         token:
