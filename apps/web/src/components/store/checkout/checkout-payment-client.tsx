@@ -38,7 +38,11 @@ type PaymentState = {
   paymentIntentId: string;
 };
 
-export function CheckoutPaymentClient() {
+type CheckoutPaymentClientProps = {
+  requireGuestEmail?: boolean;
+};
+
+export function CheckoutPaymentClient({ requireGuestEmail = false }: CheckoutPaymentClientProps) {
   const resolvedMode = resolvePaymentMode();
   const [cart, setCart] = useState<Cart | null>(null);
   const [payment, setPayment] = useState<PaymentState | null>(null);
@@ -94,10 +98,19 @@ export function CheckoutPaymentClient() {
       setError(parsed.formError);
       return;
     }
+    if (requireGuestEmail && !parsed.data.guest_email) {
+      setFieldErrors({ guest_email: "Укажите email для подтверждения заказа" });
+      setError("Проверьте поля доставки");
+      return;
+    }
     setFieldErrors({});
     startTransition(async () => {
       try {
-        const session = await createCheckoutSession(parsed.data);
+        const { guest_email, ...shipping } = parsed.data;
+        const session = await createCheckoutSession({
+          shipping,
+          ...(guest_email ? { guest_email } : {}),
+        });
         const intent = await createPaymentIntent(session.id);
         setPayment({
           sessionId: session.id,
@@ -179,6 +192,7 @@ export function CheckoutPaymentClient() {
             }}
           >
             <CheckoutShippingForm
+              showGuestEmail={requireGuestEmail}
               disabled={Boolean(payment) || isPending}
               fieldErrors={fieldErrors}
             />

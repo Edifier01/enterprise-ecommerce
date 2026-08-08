@@ -17,6 +17,7 @@ from app.features.checkout.application.checkout_service import (
     CheckoutService,
     CheckoutSessionNotFoundError,
     EmptyCartError,
+    MissingGuestEmailError,
     MissingShippingDetailsError,
 )
 from app.features.checkout.application.webhook_service import WebhookService
@@ -239,10 +240,13 @@ async def create_checkout_session(
             idempotency_key=idempotency_key,
             is_wholesaler=_is_wholesaler(user),
             shipping=shipping,
+            guest_email=str(body.guest_email) if body.guest_email else None,
         )
     except EmptyCartError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except MissingShippingDetailsError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except MissingGuestEmailError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     except (WholesalePriceUnavailableError, VariantNotPurchasableError) as exc:
         _raise_cart_errors(exc)

@@ -26,6 +26,10 @@ class MissingShippingDetailsError(Exception):
     pass
 
 
+class MissingGuestEmailError(Exception):
+    pass
+
+
 class CheckoutService:
     def __init__(
         self,
@@ -47,6 +51,7 @@ class CheckoutService:
         *,
         is_wholesaler: bool = False,
         shipping: OrderShippingDetails | None = None,
+        guest_email: str | None = None,
     ) -> CheckoutSession:
         if idempotency_key:
             existing = await self._repo.get_checkout_session_by_idempotency_key(idempotency_key)
@@ -64,6 +69,10 @@ class CheckoutService:
         if not is_wholesaler and shipping is None:
             raise MissingShippingDetailsError("Shipping details are required for retail checkout")
 
+        if user_id is None and not is_wholesaler:
+            if not guest_email or not guest_email.strip():
+                raise MissingGuestEmailError("Guest email is required for checkout")
+
         cart = await self._cart_service.validate_cart_for_checkout(cart, is_wholesaler=is_wholesaler)
 
         subtotal = cart.subtotal_cents
@@ -79,6 +88,7 @@ class CheckoutService:
             total_cents=subtotal,
             idempotency_key=idempotency_key,
             shipping=shipping,
+            guest_email=guest_email.strip() if guest_email else None,
         )
 
         line_snapshots = [

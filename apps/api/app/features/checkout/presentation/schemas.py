@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class CartLineSchema(BaseModel):
@@ -46,6 +46,7 @@ class CheckoutShippingRequest(BaseModel):
 
 class CreateCheckoutSessionRequest(BaseModel):
     shipping: CheckoutShippingRequest | None = None
+    guest_email: EmailStr | None = None
 
 
 class CheckoutSessionResponse(BaseModel):

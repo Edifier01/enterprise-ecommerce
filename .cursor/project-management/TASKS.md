@@ -1271,13 +1271,14 @@ The third duplicate Sprint E section was removed during full project review. All
 
 **Wave A follow-ups (from audit — NEW tasks):**
 - [x] ADR-015 ERP stock reconciliation (MS sync vs local deduct oversell) — **IMPLEMENTED 2026-08-08**
-- [ ] Fix payment_failed → release → retry succeeded (money without order)
-- [ ] Guest email on checkout session → order
+- [x] Fix payment_failed → release → retry succeeded (money without order) — **L3 2026-08-08**
+- [x] Guest email on checkout session → order — **2026-08-08**
 - [ ] Stable client idempotency keys
 - [ ] Prod fail-fast: JWT length, non-empty admin creds, provider credentials
 - [ ] Inventory repo no-op when missing `inventory_items` row
 - [ ] Do not mark webhook processed when payment/session missing
 - [ ] Release reservation on amount-mismatch captured payments
+- [x] ADR-016 transactional outbox for MS export — **2026-08-08**
 
 ---
 

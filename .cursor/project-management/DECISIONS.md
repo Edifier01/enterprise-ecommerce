@@ -766,7 +766,42 @@ YooKassa (audit Wave A1).
 - `ecommerce/01-catalog`, `ecommerce/02-checkout`, `ecommerce/04-orders`
 - `database/01-schema`, `database/02-migrations`, `database/03-indexing`
 - `architecture/01-ddd`, `architecture/02-module-boundaries`
-- ADR-002, ADR-005, ADR-010, ADR-004, ADR-016 (planned)
+- ADR-002, ADR-005, ADR-010, ADR-004, ADR-016
+
+---
+
+## ADR-016
+
+| Field | Value |
+|-------|-------|
+| **Decision ID** | ADR-016 |
+| **Date** | 2026-08-08 |
+| **Status** | Accepted |
+| **Full ADR** | `docs/adr/ADR-016-transactional-outbox-moysklad-export.md` |
+
+**Context:**
+
+Prod audit L7: MoySklad order export HTTP ran inside the payment webhook
+transaction before `commit()`, holding inventory locks. Guest orders also
+failed export without email (L2). ADR-015 awaiting counter depends on reliable
+export.
+
+**Decision:**
+
+- `integration_outbox` table — enqueue `moysklad.order_export` in the same txn as order creation.
+- Remove synchronous MS HTTP from `WebhookService`; processor runs in MoySklad cron loop.
+- `checkout_sessions.guest_email` required for guest retail checkout; copied to `orders.guest_email`.
+- L3: `payment_failed` webhook keeps reservation (Stripe PI retry); release only on `payment_canceled`.
+
+**Consequences:**
+
+- Positive: webhook txn is DB-only; export retries observable; L3 money-without-order closed.
+- Negative: export is eventually consistent until cron runs.
+
+**Related Rules:**
+
+- `integrations/00-integrations`, `ecommerce/02-checkout`, `ecommerce/04-orders`
+- ADR-010, ADR-015, ADR-004
 
 ---
 

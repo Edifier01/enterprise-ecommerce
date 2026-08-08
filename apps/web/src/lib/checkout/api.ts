@@ -110,13 +110,18 @@ export type CheckoutShippingInput = {
   address: string;
 };
 
+export type CreateCheckoutSessionInput = {
+  shipping: CheckoutShippingInput;
+  guest_email?: string;
+};
+
 export function createCheckoutSession(
-  shipping?: CheckoutShippingInput,
+  input: CreateCheckoutSessionInput,
 ): Promise<CheckoutSession> {
   return requestJson<CheckoutSession>("/api/v1/checkout/sessions", {
     method: "POST",
     headers: { "Idempotency-Key": createIdempotencyKey("checkout") },
-    body: JSON.stringify(shipping ? { shipping } : {}),
+    body: JSON.stringify(input),
   });
 }
 

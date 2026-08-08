@@ -93,6 +93,7 @@ def _session_from_model(model: CheckoutSessionModel) -> CheckoutSession:
         shipping_recipient_name=model.shipping_recipient_name,
         shipping_phone=model.shipping_phone,
         shipping_address=model.shipping_address,
+        guest_email=model.guest_email,
     )
 
 
@@ -303,6 +304,7 @@ class CheckoutRepository(ICheckoutRepository):
         total_cents: int,
         idempotency_key: str | None,
         shipping: OrderShippingDetails | None = None,
+        guest_email: str | None = None,
     ) -> CheckoutSession:
         model = CheckoutSessionModel(
             cart_id=cart_id,
@@ -315,6 +317,7 @@ class CheckoutRepository(ICheckoutRepository):
             shipping_recipient_name=shipping.recipient_name if shipping else None,
             shipping_phone=shipping.phone if shipping else None,
             shipping_address=shipping.address if shipping else None,
+            guest_email=guest_email,
         )
         self._session.add(model)
         await self._session.flush()

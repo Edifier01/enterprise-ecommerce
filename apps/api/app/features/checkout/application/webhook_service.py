@@ -14,7 +14,9 @@ from app.features.inventory.application.inventory_service import (
     InventoryReservationMissingError,
     InventoryService,
 )
-from app.features.integrations.moysklad.application.export_order import OrderExportService
+from app.features.integrations.moysklad.infrastructure.persistence.outbox_repository import (
+    IntegrationOutboxRepository,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +33,12 @@ class WebhookService:
         repo: ICheckoutRepository,
         stripe_gateway: IStripeGateway,
         inventory_service: InventoryService,
-        order_export: OrderExportService | None = None,
+        export_outbox: IntegrationOutboxRepository | None = None,
     ) -> None:
         self._repo = repo
         self._stripe = stripe_gateway
         self._inventory_service = inventory_service
-        self._order_export = order_export
+        self._export_outbox = export_outbox
 
     async def handle_stripe_webhook(
         self, payload: bytes, signature_header: str | None
@@ -98,7 +100,7 @@ class WebhookService:
                 payment_method_summary=self._extract_payment_method_summary(data_object),
                 order_id=existing_order.id,
             )
-            await self._try_export_to_moysklad(existing_order.id)
+            await self._enqueue_moysklad_export(existing_order.id)
             return
 
         paid_amount, paid_currency = self._extract_paid_amount_and_currency(data_object)
@@ -216,7 +218,7 @@ class WebhookService:
             order_number=order_number,
             checkout_session_id=session.id,
             customer_id=session.user_id,
-            guest_email=None,
+            guest_email=session.guest_email,
             currency=session.currency,
             subtotal_cents=subtotal_cents,
             total_cents=session.total_cents,
@@ -244,12 +246,12 @@ class WebhookService:
             session.id, CheckoutSessionStatus.COMPLETED.value
         )
         await self._repo.mark_cart_converted(session.cart_id)
-        await self._try_export_to_moysklad(order.id)
+        await self._enqueue_moysklad_export(order.id)
 
-    async def _try_export_to_moysklad(self, order_id: uuid.UUID) -> None:
-        if self._order_export is None:
+    async def _enqueue_moysklad_export(self, order_id: uuid.UUID) -> None:
+        if self._export_outbox is None:
             return
-        await self._order_export.try_export_order(order_id)
+        await self._export_outbox.enqueue_moysklad_order_export(order_id)
 
     async def _mark_payment_amount_mismatch(
         self,
@@ -294,10 +296,7 @@ class WebhookService:
             failure_code=last_error.get("code"),
             failure_message=last_error.get("message"),
         )
-        await self._repo.update_checkout_session_status(
-            payment.checkout_session_id, CheckoutSessionStatus.CANCELED.value
-        )
-        await self._inventory_service.release_checkout_session(payment.checkout_session_id)
+        # L3: keep session + reservation alive — Stripe allows retry on the same PI.
 
     async def _handle_payment_canceled(self, payment_intent_id: str) -> None:
         payment = await self._repo.get_payment_record_by_stripe_pi_id(payment_intent_id)

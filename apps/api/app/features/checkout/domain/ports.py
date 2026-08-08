@@ -86,6 +86,7 @@ class ICheckoutRepository(ABC):
         total_cents: int,
         idempotency_key: str | None,
         shipping: OrderShippingDetails | None = None,
+        guest_email: str | None = None,
     ) -> CheckoutSession:
         pass
 

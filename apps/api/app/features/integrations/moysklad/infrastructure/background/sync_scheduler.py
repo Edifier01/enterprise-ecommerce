@@ -5,7 +5,10 @@ import logging
 
 from app.core.config import settings
 from app.core.database import async_session_factory
-from app.features.integrations.moysklad.application.export_order import run_pending_order_exports
+from app.features.integrations.moysklad.application.export_order import (
+    run_pending_order_exports,
+    run_pending_outbox_exports,
+)
 from app.features.integrations.moysklad.application.reconcile_stock import run_erp_stock_reconciliation
 from app.features.integrations.moysklad.application.sync_stock import run_moysklad_stock_sync
 
@@ -33,6 +36,7 @@ async def moysklad_sync_loop(stop_event: asyncio.Event) -> None:
                         reconcile_result.orders_settled,
                         reconcile_result.variants_swept,
                     )
+                await run_pending_outbox_exports(session)
                 await run_pending_order_exports(session)
                 await session.commit()
         except Exception:

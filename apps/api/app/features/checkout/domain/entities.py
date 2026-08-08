@@ -154,6 +154,7 @@ class CheckoutSession:
     shipping_recipient_name: str | None = None
     shipping_phone: str | None = None
     shipping_address: str | None = None
+    guest_email: str | None = None
 
 
 @dataclass

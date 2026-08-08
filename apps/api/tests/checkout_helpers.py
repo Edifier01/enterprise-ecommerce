@@ -5,5 +5,6 @@ RETAIL_SHIPPING_JSON = {
         "recipient_name": "Тест Пользователь",
         "phone": "+79001234567",
         "address": "г. Москва, ул. Тестовая, д. 1",
-    }
+    },
+    "guest_email": "guest.checkout@example.com",
 }

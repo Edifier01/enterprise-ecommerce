@@ -19,7 +19,9 @@ from app.features.catalog.infrastructure.inventory_ports_adapter import (
 from app.features.checkout.application.cart_service import CartService
 from app.features.checkout.application.checkout_service import CheckoutService
 from app.features.checkout.application.webhook_service import WebhookService
-from app.features.integrations.moysklad.application.export_order import OrderExportService
+from app.features.integrations.moysklad.infrastructure.persistence.outbox_repository import (
+    IntegrationOutboxRepository,
+)
 from app.features.checkout.domain.ports import ICheckoutRepository, IStripeGateway
 from app.features.checkout.infrastructure.persistence.repository import CheckoutRepository
 from app.features.checkout.infrastructure.stub.gateway import StubPaymentGateway
@@ -80,19 +82,19 @@ def get_checkout_service(
     return CheckoutService(repo, cart_service, stripe_gateway, inventory_service)
 
 
-def get_order_export_service(
+def get_export_outbox_repository(
     session: AsyncSession = Depends(get_db_session),
-) -> OrderExportService:
-    return OrderExportService(session)
+) -> IntegrationOutboxRepository:
+    return IntegrationOutboxRepository(session)
 
 
 def get_webhook_service(
     repo: ICheckoutRepository = Depends(get_checkout_repository),
     stripe_gateway: IStripeGateway = Depends(get_stripe_gateway),
     inventory_service: InventoryService = Depends(get_inventory_service),
-    order_export: OrderExportService = Depends(get_order_export_service),
+    export_outbox: IntegrationOutboxRepository = Depends(get_export_outbox_repository),
 ) -> WebhookService:
-    return WebhookService(repo, stripe_gateway, inventory_service, order_export)
+    return WebhookService(repo, stripe_gateway, inventory_service, export_outbox)
 
 
 def _get_token_service() -> ITokenService:

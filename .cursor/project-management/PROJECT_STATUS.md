@@ -15,13 +15,13 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Current Objective
 
-**Wave A then YooKassa** — ADR-015 stock reconciliation ✅; remaining: payment retry, guest email, idempotency, ADR-016 outbox.
+**Wave A then YooKassa** — ADR-015 ✅; Wave A (L3/guest email/ADR-016) ✅; next YooKassa.
 
 ---
 
 ## Current Sprint
 
-**Final Project Gate — YooKassa** ⏳ **PLANNED** (Wave A: ADR-015 ✅; remaining L3/guest email/ADR-016)
+**Final Project Gate — YooKassa** ⏳ **PLANNED** (Wave A ✅; deploy 021–022 pending)
 
 ---
 
@@ -48,7 +48,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 - [x] **Prod readiness audit 2026-08-08** — verifier ⚠️ PASSED WITH NOTES; `docs/reviews/PROD-READINESS-AUDIT-2026-08-08.md`
 - [x] **ADR-015 ERP stock reconciliation** — Option D implemented; verifier ⚠️ PASSED WITH NOTES (deploy `021` pending)
-- [ ] **Wave A remainder** — L3 retry lifecycle; guest email; idempotency; ADR-016 outbox; security fail-fast
+- [x] **Wave A remainder** — L3 retry lifecycle; guest email; ADR-016 outbox (deploy `022` pending)
 - [x] **AI system bootstrap docs** — HOW-THE-SYSTEM-WORKS, SKILLS-TO-AGENTS-PIPELINE, REFERENCE-IMPLEMENTATION, RU overview (2026-08-08)
 - [x] **AI-003 agent cherry-pick** — silent-failure-hunter, diff-reviewer, YooKassa checkout rules, post-edit hook (2026-08-08)
 - [ ] **Retail registration** — email + password + confirm; commit + deploy pending (2026-07-30)
@@ -142,9 +142,9 @@ None.
 
 ## Next Actions
 
-1. Deploy migration `021` on staging/prod; smoke MS stock sync after a test sale
-2. `/start-feature` Wave A remainder: L3 payment retry + guest email + ADR-016 outbox
-3. Then YooKassa Feature Plan
+1. Deploy migrations `021`–`022` on staging/prod; smoke guest checkout + MS export
+2. `/start-feature YooKassa payment integration` (ADR-004)
+3. Optional: Wave A tail (L4 idempotency, A5 security fail-fast)
 4. Parallel: Wave 0 ops + ~329 categories + SMTP + contacts + SEO
 
 ---

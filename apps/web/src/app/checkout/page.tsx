@@ -2,13 +2,16 @@ import type { Metadata } from "next";
 
 import { CheckoutPaymentClient } from "@/components/store/checkout/checkout-payment-client";
 import { PageContainer } from "@/components/store/layout/page-container";
+import { getCurrentUser } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Оформление заказа",
   description: "Безопасная оплата заказа через Stripe",
 };
 
-export default function CheckoutPage() {
+export default async function CheckoutPage() {
+  const user = await getCurrentUser();
+
   return (
     <PageContainer as="div" className="space-y-6">
       <header className="space-y-2">
@@ -19,7 +22,7 @@ export default function CheckoutPage() {
         </p>
       </header>
 
-      <CheckoutPaymentClient />
+      <CheckoutPaymentClient requireGuestEmail={user === null} />
     </PageContainer>
   );
 }

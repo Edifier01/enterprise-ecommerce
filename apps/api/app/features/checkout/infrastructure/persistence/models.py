@@ -151,6 +151,7 @@ class CheckoutSessionModel(Base):
     shipping_recipient_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     shipping_phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     shipping_address: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    guest_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

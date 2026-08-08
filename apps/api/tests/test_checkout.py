@@ -344,7 +344,23 @@ async def test_create_payment_intent_with_fake_gateway(checkout_client: AsyncCli
 
 
 @pytest.mark.asyncio
-async def test_payment_failed_releases_inventory_reservation(
+async def test_guest_checkout_requires_email(checkout_client: AsyncClient) -> None:
+    await checkout_client.post(
+        "/api/v1/cart/lines",
+        json={"variant_id": str(_VARIANT_ID), "quantity": 1},
+    )
+    response = await checkout_client.post(
+        "/api/v1/checkout/sessions",
+        json={
+            "shipping": RETAIL_SHIPPING_JSON["shipping"],
+        },
+        headers={"Idempotency-Key": "checkout-key-no-guest-email"},
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_payment_failed_keeps_reservation_for_retry(
     checkout_client_with_db: tuple[AsyncClient, async_sessionmaker],
 ) -> None:
     client, session_factory = checkout_client_with_db
@@ -375,13 +391,60 @@ async def test_payment_failed_releases_inventory_reservation(
         inventory = await session.get(InventoryItemModel, _VARIANT_ID)
         assert inventory is not None
         assert inventory.quantity_on_hand == 10
-        assert inventory.quantity_reserved == 0
+        assert inventory.quantity_reserved == 2
 
         reservations = (
             await session.execute(select(InventoryReservationModel))
         ).scalars().all()
         assert len(reservations) == 1
-        assert reservations[0].status == "released"
+        assert reservations[0].status == "active"
+
+
+@pytest.mark.asyncio
+async def test_payment_failed_then_succeeded_creates_order(
+    checkout_client_with_db: tuple[AsyncClient, async_sessionmaker],
+) -> None:
+    client, session_factory = checkout_client_with_db
+    await client.post(
+        "/api/v1/cart/lines",
+        json={"variant_id": str(_VARIANT_ID), "quantity": 2},
+    )
+    session_resp = await client.post(
+        "/api/v1/checkout/sessions",
+        json=RETAIL_SHIPPING_JSON,
+        headers={"Idempotency-Key": "checkout-key-failed-retry"},
+    )
+    session_id = session_resp.json()["id"]
+    await client.post(
+        f"/api/v1/checkout/sessions/{session_id}/payment-intent",
+        headers={"Idempotency-Key": "pi-key-failed-retry"},
+    )
+
+    failed_event = _payment_failed_event(_FAKE_PI_ID, "evt_test_failed_retry")
+    assert (
+        await client.post(
+            "/api/v1/webhooks/stripe",
+            content=json.dumps(failed_event),
+            headers={"Stripe-Signature": "fake_sig"},
+        )
+    ).status_code == 200
+
+    success_event = _payment_succeeded_event(
+        _FAKE_PI_ID, "evt_test_success_after_failed", amount_cents=5000
+    )
+    assert (
+        await client.post(
+            "/api/v1/webhooks/stripe",
+            content=json.dumps(success_event),
+            headers={"Stripe-Signature": "fake_sig"},
+        )
+    ).status_code == 200
+
+    async with session_factory() as session:
+        orders = (await session.execute(select(OrderModel))).scalars().all()
+        assert len(orders) == 1
+        assert orders[0].guest_email == RETAIL_SHIPPING_JSON["guest_email"]
+        assert orders[0].total_cents == 5000
 
 
 @pytest.mark.asyncio
@@ -449,6 +512,7 @@ async def test_webhook_success_creates_order(checkout_client_with_db: tuple) -> 
         orders = result.scalars().all()
         assert len(orders) == 1
         assert orders[0].total_cents == 5000
+        assert orders[0].guest_email == RETAIL_SHIPPING_JSON["guest_email"]
 
         inventory = await session.get(InventoryItemModel, _VARIANT_ID)
         assert inventory is not None

@@ -19,6 +19,12 @@ export const checkoutShippingSchema = z.object({
     .trim()
     .min(8, "Укажите адрес доставки")
     .max(500, "Слишком длинный адрес"),
+  guest_email: z
+    .string()
+    .trim()
+    .email("Укажите корректный email")
+    .optional()
+    .or(z.literal("")),
 });
 
 export type CheckoutShippingInput = z.infer<typeof checkoutShippingSchema>;
@@ -41,7 +47,10 @@ export function parseCheckoutShipping(
   for (const issue of parsed.error.issues) {
     const key = issue.path[0];
     if (
-      (key === "recipient_name" || key === "phone" || key === "address") &&
+      (key === "recipient_name" ||
+        key === "phone" ||
+        key === "address" ||
+        key === "guest_email") &&
       !fieldErrors[key]
     ) {
       fieldErrors[key] = issue.message;
@@ -59,6 +68,8 @@ type CheckoutShippingFormProps = {
   defaultRecipientName?: string;
   defaultPhone?: string;
   defaultAddress?: string;
+  defaultGuestEmail?: string;
+  showGuestEmail?: boolean;
   disabled?: boolean;
   fieldErrors?: CheckoutShippingFieldErrors;
 };
@@ -67,6 +78,8 @@ export function CheckoutShippingForm({
   defaultRecipientName = "",
   defaultPhone = "",
   defaultAddress = "",
+  defaultGuestEmail = "",
+  showGuestEmail = false,
   disabled = false,
   fieldErrors,
 }: CheckoutShippingFormProps) {
@@ -75,6 +88,27 @@ export function CheckoutShippingForm({
 
   return (
     <div className="space-y-4">
+      {showGuestEmail ? (
+        <div>
+          <label htmlFor="guest_email" className="text-sm font-medium">
+            Email для подтверждения заказа
+          </label>
+          <input
+            id="guest_email"
+            name="guest_email"
+            type="email"
+            required
+            disabled={disabled}
+            defaultValue={defaultGuestEmail}
+            autoComplete="email"
+            aria-invalid={Boolean(fieldErrors?.guest_email)}
+            className={`mt-1.5 ${inputClass}`}
+          />
+          {fieldErrors?.guest_email ? (
+            <p className="mt-1 text-xs text-destructive">{fieldErrors.guest_email}</p>
+          ) : null}
+        </div>
+      ) : null}
       <div>
         <label htmlFor="shipping_recipient_name" className="text-sm font-medium">
           Получатель
@@ -137,9 +171,11 @@ export function CheckoutShippingForm({
 
 export function readCheckoutShippingFromForm(form: HTMLFormElement): CheckoutShippingInput {
   const data = new FormData(form);
+  const guestEmail = String(data.get("guest_email") ?? "").trim();
   return {
     recipient_name: String(data.get("shipping_recipient_name") ?? "").trim(),
     phone: String(data.get("shipping_phone") ?? "").trim(),
     address: String(data.get("shipping_address") ?? "").trim(),
+    ...(guestEmail ? { guest_email: guestEmail } : {}),
   };
 }

@@ -15,6 +15,9 @@ from app.features.integrations.moysklad.infrastructure.outbound_client import (
 from app.features.integrations.moysklad.infrastructure.persistence.order_export_repository import (
     OrderExportRepository,
 )
+from app.features.integrations.moysklad.infrastructure.persistence.outbox_repository import (
+    IntegrationOutboxRepository,
+)
 from app.features.integrations.moysklad.infrastructure.persistence.sync_repository import (
     SyncStateRepository,
 )
@@ -145,7 +148,49 @@ class OrderExportService:
             await client.close()
 
 
+async def _export_order_ids(
+    session: AsyncSession,
+    client: IMoySkladOrderExportClient,
+    order_ids: list[uuid.UUID],
+    *,
+    outbox: IntegrationOutboxRepository | None = None,
+) -> int:
+    if not order_ids:
+        return 0
+    use_case = ExportOrderUseCase(session, client)
+    exported = 0
+    for order_id in order_ids:
+        result = await use_case.execute(order_id)
+        if outbox is not None:
+            if result.status in ("success", "already_exported"):
+                await outbox.mark_completed(order_id)
+            elif result.status == "failed" and result.error:
+                await outbox.record_failure(order_id, result.error)
+        if result.status == "success":
+            exported += 1
+    return exported
+
+
+async def run_pending_outbox_exports(session: AsyncSession, *, limit: int = 20) -> int:
+    """Process ADR-016 outbox rows (MoySklad HTTP outside payment webhook txn)."""
+    client = build_moysklad_outbound_client()
+    if client is None:
+        return 0
+
+    outbox = IntegrationOutboxRepository(session)
+    pending = await outbox.list_pending_moysklad_exports(limit=limit)
+    if not pending:
+        await client.close()
+        return 0
+
+    try:
+        return await _export_order_ids(session, client, pending, outbox=outbox)
+    finally:
+        await client.close()
+
+
 async def run_pending_order_exports(session: AsyncSession, *, limit: int = 20) -> int:
+    """Legacy safety net — orders without moysklad_order_id (pre-outbox or missed enqueue)."""
     client = build_moysklad_outbound_client()
     if client is None:
         return 0
@@ -156,16 +201,10 @@ async def run_pending_order_exports(session: AsyncSession, *, limit: int = 20) -
         await client.close()
         return 0
 
-    use_case = ExportOrderUseCase(session, client)
-    exported = 0
     try:
-        for order_id in pending:
-            result = await use_case.execute(order_id)
-            if result.status == "success":
-                exported += 1
+        return await _export_order_ids(session, client, pending)
     finally:
         await client.close()
-    return exported
 
 
 async def export_order_by_id(session: AsyncSession, order_id: uuid.UUID) -> ExportOrderResult:
