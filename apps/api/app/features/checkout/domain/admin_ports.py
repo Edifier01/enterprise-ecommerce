@@ -89,3 +89,7 @@ class IAdminOrdersRepository(ABC):
         reason: str | None,
     ) -> tuple[Order, list[OrderLine], list[AdminOrderStatusHistoryEntry], AdminOrderCustomerInfo]:
         ...
+
+    @abstractmethod
+    async def mark_erp_fulfilled(self, order_number: str, fulfilled_at: datetime) -> None:
+        ...

@@ -51,8 +51,9 @@ Format:
 
 | Goal | Primary Skill | Secondary | Agent |
 |------|---------------|-----------|-------|
-| Stripe checkout | stripe-integration | pci-compliance, implement-checkout-flow | checkout-specialist |
-| Payments (generic) | payment-integration | stripe-integration | checkout-specialist |
+| YooKassa / final payments | payment-integration | pci-compliance, implement-checkout-flow | checkout-specialist (+ silent-failure-hunter, diff-reviewer) |
+| Stripe checkout (legacy prototype) | stripe-integration | pci-compliance, implement-checkout-flow | checkout-specialist |
+| Payments (generic) | payment-integration | pci-compliance | checkout-specialist |
 | Product catalog | implement-catalog-feature | postgresql, ddd-context-mapping | catalog-specialist |
 | Inventory / stock | inventory-demand-planning | postgresql-optimization | database-engineer |
 | Pricing / promotions | pricing | — | catalog-specialist |
@@ -87,7 +88,9 @@ Format:
 | Context boundaries | ddd-context-mapping | — | enterprise-architect |
 | System design | senior-architect | backend-architect | enterprise-architect |
 | Security review | cc-skill-security-review | pci-compliance, security-auditor | security-auditor |
-| Code review | code-review-checklist | cc-skill-coding-standards | verifier |
+| Diff / PR review | code-review-checklist | cc-skill-coding-standards | diff-reviewer |
+| Silent failure audit | code-review-checklist | payment-integration | silent-failure-hunter |
+| Code review / quality gate | code-review-checklist | cc-skill-coding-standards | verifier |
 | Docs lookup | context7-auto-research | — | — |
 
 ### DevOps

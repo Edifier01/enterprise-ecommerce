@@ -15,8 +15,8 @@ class InventoryItemModel(Base):
         CheckConstraint("quantity_on_hand >= 0", name="ck_inventory_items_on_hand_non_negative"),
         CheckConstraint("quantity_reserved >= 0", name="ck_inventory_items_reserved_non_negative"),
         CheckConstraint(
-            "quantity_on_hand >= quantity_reserved",
-            name="ck_inventory_items_on_hand_gte_reserved",
+            "quantity_awaiting_fulfillment >= 0",
+            name="ck_inventory_items_awaiting_non_negative",
         ),
     )
 
@@ -30,6 +30,7 @@ class InventoryItemModel(Base):
     )
     quantity_on_hand: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     quantity_reserved: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    quantity_awaiting_fulfillment: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

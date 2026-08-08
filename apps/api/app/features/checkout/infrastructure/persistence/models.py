@@ -240,6 +240,7 @@ class OrderModel(Base):
         nullable=False,
     )
     moysklad_order_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    erp_fulfilled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

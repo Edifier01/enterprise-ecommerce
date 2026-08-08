@@ -22,18 +22,28 @@ Every agent must:
 | `database-engineer` | PostgreSQL schema, migrations, indexes | Composer 2.5 | Alembic, SQL |
 | `api-engineer` | REST design, OpenAPI, versioning | Composer 2.5 | `openapi.yaml` |
 | `catalog-specialist` | Products, categories, variants | Composer 2.5 | Catalog feature |
-| `checkout-specialist` | Cart, Stripe, webhooks, orders | Opus | Checkout, payments |
+| `checkout-specialist` | Cart, YooKassa (final), webhooks, orders | Opus | Checkout, payments |
+| `silent-failure-hunter` | Swallowed errors / dangerous fallbacks | Composer 2.5 | Payments, sync, auth (readonly) |
+| `diff-reviewer` | Multi-dimension diff review + confidence gate | Composer 2.5 | Pre-verifier review (readonly) |
 | `security-auditor` | Auth, PCI, OWASP audits | Opus | Sensitive modules (readonly) |
 | `qa-engineer` | Playwright E2E, integration tests | Composer 2.5 | Test flows |
-| `devops-engineer` | Docker, CI/CD, GitHub Actions | GPT-5.5 | Pipelines, deploy |
+| `devops-engineer` | Docker, CI/CD, GitHub Actions | GPT-5.5 / Grok 4.5 | Pipelines, deploy |
 | `verifier` | Validates completed work before done | Composer 2.5 | Post-implementation check |
-| `project-orchestrator` | Feature planning + specialist routing | GPT-5.5 | Every feature (never writes code) |
+| `project-orchestrator` | Feature planning + specialist routing | GPT-5.5 / Grok 4.5 | Every feature (never writes code) |
 
 > **Cost policy (AI-002):** Opus is reserved for genuinely complex/high-stakes work
 > only — `enterprise-architect` (COMPLEX/ADR), `security-auditor` (auth/PCI), and
-> `checkout-specialist` (payments). Per-feature coordination (`project-orchestrator`)
-> and validation (`verifier`) run on cheaper models and escalate to Opus only when a
-> real architectural/security concern surfaces.
+> `checkout-specialist` (payments). Coordination (`project-orchestrator`) and
+> validation (`verifier`, `diff-reviewer`, `silent-failure-hunter`) run on cheaper
+> models and escalate to Opus only when a real architectural/security concern surfaces.
+
+## Suggested review chain (payments / auth / PCI)
+
+```text
+implement → silent-failure-hunter → diff-reviewer → verifier
+```
+
+For routine UI/docs changes, `verifier` alone is enough.
 
 ## Workflows
 
@@ -48,3 +58,4 @@ Domain workflows live in `workflows/` at repo root:
 - Template: `templates/07-agent-template.md`
 - Orchestration: `.cursor/skills/subagent-orchestrator/SKILL.md`
 - PM protocol: `.cursor/rules/core/10-project-state-management.mdc`
+- Hooks: `.cursor/hooks.json` (PM session + post-edit quality reminder)

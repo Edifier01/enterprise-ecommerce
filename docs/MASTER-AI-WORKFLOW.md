@@ -285,3 +285,6 @@ Not sure?
 | `openapi.yaml` | API contract |
 | `.cursor/workflows/feature-lifecycle.md` | This workflow in detail |
 | `.cursor/skills/start-feature/SKILL.md` | Entry point skill |
+| `docs/ai-agent-system-bootstrap/` | Portable package to recreate this AI system in another project |
+| `docs/AI-AGENT-SYSTEM-OVERVIEW.ru.md` | Russian overview of the AI system |
+| `docs/MASTER-AI-WORKFLOW.md` | This file |

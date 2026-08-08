@@ -705,6 +705,71 @@ Remove admin MFA entirely. Login returns JWT after email+password. Migration 018
 
 ---
 
+## ADR-015
+
+| Field | Value |
+|-------|-------|
+| **Decision ID** | ADR-015 |
+| **Date** | 2026-08-08 |
+| **Status** | Accepted |
+| **Full ADR** | `docs/adr/ADR-015-erp-stock-reconciliation.md` |
+
+**Context:**
+
+ADR-005 deducts `quantity_on_hand` locally on paid order; ADR-010 makes
+MoySklad authoritative for the same column. MS order export creates a
+`customerorder`, which does not reduce the ERP balance until shipment, so the
+next stock sync restores the pre-sale quantity — the P0 oversell loop in
+`PROD-READINESS-AUDIT-2026-08-08` §2 L1 / §3 P0-STOCK. Must be decided before
+YooKassa (audit Wave A1).
+
+**Decision:**
+
+- `quantity_on_hand` becomes a pure ERP mirror with a single writer (MS sync)
+  for `sync_source=moysklad`; `manual` variants keep local deduct.
+- New site-owned `inventory_items.quantity_awaiting_fulfillment` holds
+  paid-but-not-yet-ERP-shipped units; sellable =
+  `on_hand − reserved − awaiting`.
+- `apply_stock` assigns `max(ms_stock, 0)` under `FOR UPDATE` — no more
+  `max(ms_quantity, reserved)` fabrication — and logs/alerts on drift instead.
+- Reconciliation cron settles `awaiting` per order from MoySklad shipped
+  quantities (`orders.erp_fulfilled_at`), then rewrites `awaiting` per variant
+  from still-unfulfilled exported orders, making the model convergent.
+- Order cancel/return settles `awaiting` for ERP variants instead of restoring
+  `on_hand`; `in_stock` recomputed on every availability transition (P1-DENORM).
+- Migration `021`: additive column + `orders.erp_fulfilled_at` + partial index;
+  drops CHECK `ck_inventory_items_on_hand_gte_reserved`; backfills `awaiting`
+  from confirmed exported orders.
+
+**Alternatives Considered:**
+
+| Alternative | Reason Rejected |
+|-------------|-----------------|
+| A — read-time sellable = MS − unshipped exported qty | Same semantics, wrong placement: forces an unbounded Orders join onto the hot availability path and breaks the ADR-005 context boundary; adopted as the reconciliation invariant instead |
+| B — MS authoritative only, no local deduct | Does not fix the bug: reservations are consumed at payment while the MS balance moves only at shipment, leaving no subtrahend; would require multi-day reservations |
+| C — soft sync, never raise `on_hand` above previous local | Path-dependent ratchet that suppresses legitimate restocks (phantom out-of-stock), never converges, effectively untestable |
+| D2 — set `reserve` on exported `customerorder` positions, read `stock − reserve` | Correct target state, but rests oversell protection on the least reliable path today (L2 guest email, L7 best-effort export). **Deferred until ADR-016 outbox**, not rejected |
+| D3 — separate `erp_quantity_on_hand`, keep all ADR-005 CHECKs | Re-introduces two writers computing `max(erp − awaiting, reserved)` — same fabrication plus an extra column |
+
+**Consequences:**
+
+- Positive: oversell loop closed at the cause; restocks still work; state
+  self-heals; ERP↔site drift observable; `in_stock` accurate; provider-neutral
+  for YooKassa.
+- Negative: third counter + reconciliation job to operate; ADR-005's
+  cross-column DB CHECK is relaxed (guard moves to the locked reservation gate
+  + monitoring); residual oversell risk until MS export is reliable (ADR-016).
+
+**Related Rules:**
+
+- `integrations/00-integrations`
+- `ecommerce/01-catalog`, `ecommerce/02-checkout`, `ecommerce/04-orders`
+- `database/01-schema`, `database/02-migrations`, `database/03-indexing`
+- `architecture/01-ddd`, `architecture/02-module-boundaries`
+- ADR-002, ADR-005, ADR-010, ADR-004, ADR-016 (planned)
+
+---
+
 ## PM-002
 
 | Field | Value |
@@ -723,6 +788,40 @@ stich.su UX parity asked whether AJAX catalog/cart UI needed a new architecture 
 No new ADR. Implement gallery zoom, mini-cart dropdown, and Zod shipping validation as extensions of ADR-002/003/005/010/011. Keep URL-synced soft navigation for filters (already exceeds stich full-page reload). Out of scope: YooKassa, redesign, wishlist/bonuses, promocodes.
 
 **Related:** `docs/reviews/STICH-SU-PARITY-GAP-ANALYSIS-2026-07-24.md`
+
+---
+
+## AI-003
+
+| Field | Value |
+|-------|-------|
+| **Decision ID** | AI-003 |
+| **Date** | 2026-08-08 |
+| **Status** | Approved |
+| **Full ADR** | N/A — agent-system enrichment, not application architecture |
+
+**Context:**
+
+Reviewed external agent catalogs (agentic-awesome-skills, ECC, agency-agents). Full installs would collide with the project-specific orchestrator, PM layer, and model routing.
+
+**Decision:**
+
+Cherry-pick only:
+
+1. Strengthen `checkout-specialist` with YooKassa-first payment hard rules (agency payments patterns + ADR-004)
+2. Add readonly `silent-failure-hunter` (ECC pattern)
+3. Add readonly `diff-reviewer` (ECC orch-review / confidence-gated multi-dimension review)
+4. Add fail-open `postToolUse` quality reminder hook for TS/Python + sensitive paths
+5. Wire review chain into orchestrator, verifier, skill-router, model routing
+
+Do **not** wholesale install AAS/ECC/Agency.
+
+**Consequences:**
+
+- Positive: Better payment/webhook quality gates before YooKassa sprint; less swallowed-error risk
+- Negative: Two more agents to remember; hook noise if path detection is wrong (fail-open)
+
+**Related:** `.cursor/agents/README.md`, `.cursor/hooks.json`
 
 ---
 

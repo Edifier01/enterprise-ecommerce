@@ -25,13 +25,19 @@ class InventoryItem:
     variant_id: UUID
     quantity_on_hand: int
     quantity_reserved: int
+    quantity_awaiting_fulfillment: int
     version: int
     created_at: datetime
     updated_at: datetime
 
     @property
     def available_quantity(self) -> int:
-        return self.quantity_on_hand - self.quantity_reserved
+        return max(
+            0,
+            self.quantity_on_hand
+            - self.quantity_reserved
+            - self.quantity_awaiting_fulfillment,
+        )
 
 
 @dataclass(frozen=True)

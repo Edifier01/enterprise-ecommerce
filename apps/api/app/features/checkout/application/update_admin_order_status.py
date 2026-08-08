@@ -38,10 +38,14 @@ class UpdateAdminOrderStatusUseCase:
         if new_status not in allowed:
             raise InvalidOrderStatusTransitionError(order.status, new_status)
 
+        line_quantities = [(line.variant_id, line.quantity) for line in lines]
+
         if new_status == OrderStatus.CANCELED:
-            await self._inventory_service.restore_order_lines(
-                [(line.variant_id, line.quantity) for line in lines]
-            )
+            await self._inventory_service.restore_order_lines(line_quantities)
+
+        # ADR-015: local SHIPPED ≠ ERP fulfillment. Do not settle awaiting or set
+        # erp_fulfilled_at here — awaiting clears when MS stock drops (apply_stock)
+        # or when reconcile sees MS order deleted / future per-position shipped qty.
 
         return await self._repository.update_order_status(
             order_number=order_number,

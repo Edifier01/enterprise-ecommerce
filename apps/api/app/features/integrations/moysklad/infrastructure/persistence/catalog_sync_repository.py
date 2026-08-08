@@ -1,12 +1,13 @@
 """Persist MoySklad catalog snapshots into local DB."""
 
+import logging
 import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.catalog.domain.stock_availability import is_in_stock_for_storefront
+from app.features.catalog.infrastructure.inventory_ports_adapter import StorefrontAvailabilityAdapter
 from app.features.catalog.infrastructure.persistence.models import (
     ProductModel,
     ProductVariantModel,
@@ -14,6 +15,8 @@ from app.features.catalog.infrastructure.persistence.models import (
 from app.features.integrations.moysklad.application.slug import unique_slug
 from app.features.integrations.moysklad.domain.ports import MoySkladProduct, MoySkladVariant
 from app.features.inventory.infrastructure.persistence.models import InventoryItemModel
+
+logger = logging.getLogger(__name__)
 
 
 class CatalogSyncRepository:
@@ -166,44 +169,59 @@ class CatalogSyncRepository:
 
     async def apply_stock(self, variant: ProductVariantModel, quantity: int) -> None:
         item = await self._session.scalar(
-            select(InventoryItemModel).where(InventoryItemModel.variant_id == variant.id)
+            select(InventoryItemModel)
+            .where(InventoryItemModel.variant_id == variant.id)
+            .with_for_update()
         )
+        ms_stock = max(quantity, 0)
         if item is None:
-            await self._ensure_inventory_item(variant.id, quantity=quantity)
+            await self._ensure_inventory_item(variant.id, quantity=ms_stock)
             return
-        reserved = item.quantity_reserved
-        item.quantity_on_hand = max(quantity, reserved)
-        available = item.quantity_on_hand - reserved
-        variant.in_stock = is_in_stock_for_storefront(available)
-        product = await self._session.get(ProductModel, variant.product_id)
-        if product is not None:
-            any_in_stock = (
-                await self._session.scalar(
-                    select(ProductVariantModel.in_stock).where(
-                        ProductVariantModel.product_id == product.id,
-                        ProductVariantModel.in_stock.is_(True),
-                    )
-                )
+
+        previous_on_hand = item.quantity_on_hand
+        item.quantity_on_hand = ms_stock
+        item.version += 1
+
+        # ADR-015: when ERP physical balance drops, release matching awaiting.
+        # Until per-position shipped qty exists, stock drop is the durable signal
+        # that warehouse consumed units (demand). Unrelated write-offs may settle
+        # early — sellable stays non-inflating because on_hand also dropped.
+        if ms_stock < previous_on_hand and item.quantity_awaiting_fulfillment > 0:
+            drop = previous_on_hand - ms_stock
+            settled = min(drop, item.quantity_awaiting_fulfillment)
+            item.quantity_awaiting_fulfillment -= settled
+
+        commitments = item.quantity_reserved + item.quantity_awaiting_fulfillment
+        if commitments > item.quantity_on_hand:
+            logger.warning(
+                "inventory_erp_below_site_commitments",
+                extra={
+                    "variant_id": str(variant.id),
+                    "ms_stock": ms_stock,
+                    "reserved": item.quantity_reserved,
+                    "awaiting": item.quantity_awaiting_fulfillment,
+                },
             )
-            product.in_stock = any_in_stock is not None
+
+        available = max(item.quantity_on_hand - commitments, 0)
+        availability = StorefrontAvailabilityAdapter(self._session)
+        await availability.apply_availability(variant.id, available)
         await self._session.flush()
 
     async def _ensure_inventory_item(self, variant_id: uuid.UUID, *, quantity: int) -> None:
+        ms_stock = max(quantity, 0)
         self._session.add(
             InventoryItemModel(
                 id=uuid.uuid4(),
                 variant_id=variant_id,
-                quantity_on_hand=quantity,
+                quantity_on_hand=ms_stock,
                 quantity_reserved=0,
+                quantity_awaiting_fulfillment=0,
                 version=0,
             )
         )
-        variant = await self._session.get(ProductVariantModel, variant_id)
-        if variant is not None:
-            variant.in_stock = is_in_stock_for_storefront(quantity)
-            product = await self._session.get(ProductModel, variant.product_id)
-            if product is not None:
-                product.in_stock = variant.in_stock
+        availability = StorefrontAvailabilityAdapter(self._session)
+        await availability.apply_availability(variant_id, ms_stock)
         await self._session.flush()
 
     async def _slug_exists(self, slug: str) -> bool:

@@ -16,7 +16,8 @@ description: Select Composer 2.5, GPT-5.5, or Opus and matching MCP servers per 
 | Feature planning / orchestration | GPT-5.5 | Context7, Memory |
 | Research, docs, math | GPT-5.5 | Context7, Fetch |
 | Architecture, security, payments (checkout-specialist) | Opus | Memory, Context7 |
-| Checkout + Stripe (domain lead) | Opus | PostgreSQL, OpenAPI |
+| Checkout + YooKassa (domain lead; Stripe = legacy) | Opus | PostgreSQL, OpenAPI |
+| Diff review / silent-failure audit | Composer 2.5 | GitHub, PostgreSQL |
 | E2E checkout | Composer 2.5 | Playwright |
 | Deploy / CI | GPT-5.5 | Docker, GitHub |
 | Prod debugging | Opus | Sentry, GitHub |
@@ -25,7 +26,8 @@ description: Select Composer 2.5, GPT-5.5, or Opus and matching MCP servers per 
 `security-auditor` (auth/PCI), `checkout-specialist` (payments). Coordination and
 verification default to cheaper models and escalate to Opus only on evidence.
 
-**Code review:** routine → `verifier` (Composer 2.5); architectural/security → Opus.
+**Code review:** routine → `diff-reviewer` then `verifier` (Composer 2.5);
+payments/auth → add `silent-failure-hunter`; architectural/security Critical → Opus.
 
 ## Steps
 

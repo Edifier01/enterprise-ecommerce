@@ -11,6 +11,7 @@ from app.features.inventory.domain.entities import (
     InventoryReservation,
     InventoryReservationStatus,
 )
+from app.features.inventory.domain.errors import InventoryItemMissingError
 from app.features.inventory.domain.ports import IInventoryRepository
 from app.features.inventory.infrastructure.persistence.models import (
     InventoryItemModel,
@@ -24,6 +25,7 @@ def _item_from_model(model: InventoryItemModel) -> InventoryItem:
         variant_id=model.variant_id,
         quantity_on_hand=model.quantity_on_hand,
         quantity_reserved=model.quantity_reserved,
+        quantity_awaiting_fulfillment=model.quantity_awaiting_fulfillment,
         version=model.version,
         created_at=model.created_at,
         updated_at=model.updated_at,
@@ -55,7 +57,12 @@ class InventoryRepository(IInventoryRepository):
         model = result.scalar_one_or_none()
         if model is None:
             return 0
-        return model.quantity_on_hand - model.quantity_reserved
+        return max(
+            0,
+            model.quantity_on_hand
+            - model.quantity_reserved
+            - model.quantity_awaiting_fulfillment,
+        )
 
     async def lock_items_by_variant_ids(self, variant_ids: list[UUID]) -> dict[UUID, InventoryItem]:
         if not variant_ids:
@@ -69,41 +76,71 @@ class InventoryRepository(IInventoryRepository):
         )
         return {model.variant_id: _item_from_model(model) for model in result.scalars().all()}
 
-    async def _get_item_model(self, variant_id: UUID) -> InventoryItemModel | None:
+    async def _get_item_model_for_update(self, variant_id: UUID) -> InventoryItemModel | None:
         result = await self._session.execute(
-            select(InventoryItemModel).where(InventoryItemModel.variant_id == variant_id)
+            select(InventoryItemModel)
+            .where(InventoryItemModel.variant_id == variant_id)
+            .with_for_update()
         )
         return result.scalar_one_or_none()
 
-    async def increment_reserved(self, variant_id: UUID, quantity: int) -> None:
-        model = await self._get_item_model(variant_id)
+    def _require_item_model(self, variant_id: UUID, model: InventoryItemModel | None) -> InventoryItemModel:
         if model is None:
-            return
+            raise InventoryItemMissingError(variant_id)
+        return model
+
+    async def increment_reserved(self, variant_id: UUID, quantity: int) -> None:
+        model = self._require_item_model(
+            variant_id, await self._get_item_model_for_update(variant_id)
+        )
         model.quantity_reserved += quantity
         model.version += 1
         await self._session.flush()
 
     async def release_reserved(self, variant_id: UUID, quantity: int) -> None:
-        model = await self._get_item_model(variant_id)
-        if model is None:
-            return
+        model = self._require_item_model(
+            variant_id, await self._get_item_model_for_update(variant_id)
+        )
         model.quantity_reserved -= quantity
         model.version += 1
         await self._session.flush()
 
     async def deduct_reserved(self, variant_id: UUID, quantity: int) -> None:
-        model = await self._get_item_model(variant_id)
-        if model is None:
-            return
-        model.quantity_on_hand -= quantity
-        model.quantity_reserved -= quantity
+        await self.commit_reserved(variant_id, quantity, erp_managed=False)
+
+    async def commit_reserved(self, variant_id: UUID, quantity: int, *, erp_managed: bool) -> None:
+        model = self._require_item_model(
+            variant_id, await self._get_item_model_for_update(variant_id)
+        )
+        if erp_managed:
+            model.quantity_reserved -= quantity
+            model.quantity_awaiting_fulfillment += quantity
+        else:
+            model.quantity_on_hand -= quantity
+            model.quantity_reserved -= quantity
+        model.version += 1
+        await self._session.flush()
+
+    async def settle_awaiting(self, variant_id: UUID, quantity: int) -> None:
+        model = self._require_item_model(
+            variant_id, await self._get_item_model_for_update(variant_id)
+        )
+        model.quantity_awaiting_fulfillment = max(0, model.quantity_awaiting_fulfillment - quantity)
+        model.version += 1
+        await self._session.flush()
+
+    async def set_awaiting(self, variant_id: UUID, quantity: int) -> None:
+        model = self._require_item_model(
+            variant_id, await self._get_item_model_for_update(variant_id)
+        )
+        model.quantity_awaiting_fulfillment = max(0, quantity)
         model.version += 1
         await self._session.flush()
 
     async def restore_on_hand(self, variant_id: UUID, quantity: int) -> None:
-        model = await self._get_item_model(variant_id)
-        if model is None:
-            return
+        model = self._require_item_model(
+            variant_id, await self._get_item_model_for_update(variant_id)
+        )
         model.quantity_on_hand += quantity
         model.version += 1
         await self._session.flush()

@@ -1,15 +1,16 @@
 ---
 name: implement-checkout-flow
-description: Implement checkout, cart, Stripe payments, webhooks, and order confirmation following DDD and PCI scope rules.
+description: Implement checkout, cart, YooKassa payments (final; Stripe legacy), webhooks/notifications, and order confirmation following DDD and PCI scope rules.
 ---
 
 # Implement Checkout Flow
 
-> **Stack:** Next.js + FastAPI + PostgreSQL + Stripe  
+> **Stack:** Next.js + FastAPI + PostgreSQL + YooKassa (final; Stripe = prototype)  
 > **Rules:** ecommerce/02-checkout, ecommerce/03-payments, security/02-pci  
-> **Skills:** stripe-integration, pci-compliance, ddd-context-mapping  
-> **Agent:** checkout-specialist  
-> **MCP:** PostgreSQL, OpenAPI, Sentry
+> **Skills:** payment-integration, pci-compliance, ddd-context-mapping (stripe-integration = legacy only)  
+> **Agents:** checkout-specialist → silent-failure-hunter → diff-reviewer → verifier  
+> **MCP:** PostgreSQL, OpenAPI, Sentry  
+> **ADR:** ADR-004
 
 ## Workflow
 
@@ -24,9 +25,10 @@ description: Implement checkout, cart, Stripe payments, webhooks, and order conf
 
 - FastAPI: checkout use cases in `apps/api/app/features/checkout/`
 - Domain: CheckoutSession aggregate, Order aggregate
-- Stripe: PaymentIntent + webhook handlers (`stripe-integration`)
+- Payments: provider-neutral domain + YooKassa adapter (`payment-integration`); do not grow Stripe surface
 - Never store raw card data (PCI — `pci-compliance`)
-- Webhook signature verification mandatory
+- Notification/webhook signature verification + idempotent dedupe mandatory
+- Create Order only after verified provider success (not redirect)
 
 ### 3. Frontend (Composer 2.5)
 

@@ -12,6 +12,10 @@ from app.features.auth.domain.entities import User
 from app.features.auth.domain.ports import InvalidTokenError, ITokenService
 from app.features.auth.infrastructure.persistence.repository import UserRepository
 from app.features.auth.infrastructure.security.jwt_token_service import JwtTokenService
+from app.features.catalog.infrastructure.inventory_ports_adapter import (
+    StorefrontAvailabilityAdapter,
+    VariantSourceAdapter,
+)
 from app.features.checkout.application.cart_service import CartService
 from app.features.checkout.application.checkout_service import CheckoutService
 from app.features.checkout.application.webhook_service import WebhookService
@@ -43,11 +47,14 @@ def get_inventory_repository(
 
 
 def get_inventory_service(
+    session: AsyncSession = Depends(get_db_session),
     repo: IInventoryRepository = Depends(get_inventory_repository),
 ) -> InventoryService:
     return InventoryService(
         repo,
         reservation_ttl=timedelta(minutes=settings.inventory_reservation_ttl_minutes),
+        variant_source=VariantSourceAdapter(session),
+        storefront_availability=StorefrontAvailabilityAdapter(session),
     )
 
 

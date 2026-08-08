@@ -15,13 +15,13 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Current Objective
 
-**Final YooKassa Payment Integration** — replace Stripe prototype with production provider before release gate.
+**Wave A then YooKassa** — ADR-015 stock reconciliation ✅; remaining: payment retry, guest email, idempotency, ADR-016 outbox.
 
 ---
 
 ## Current Sprint
 
-**Final Project Gate — YooKassa** ⏳ **PLANNED**
+**Final Project Gate — YooKassa** ⏳ **PLANNED** (Wave A: ADR-015 ✅; remaining L3/guest email/ADR-016)
 
 ---
 
@@ -31,7 +31,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 **Overall roadmap:** ~99% (25/26 phases)
 
-**Phase 24 (application):** ~92% functional / ~60% business release-ready (comprehensive audit 2026-07-23; YooKassa + ops gaps)
+**Phase 24 (application):** ~92% functional / **~45–55% business release-ready** (prod audit 2026-08-08)
 
 ---
 
@@ -46,7 +46,14 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
-- [x] **Storefront PDP/PLP photo + hide specs** — object-contain, ProductThumbnail fallback, remove характеристики (2026-07-24; deploy pending)
+- [x] **Prod readiness audit 2026-08-08** — verifier ⚠️ PASSED WITH NOTES; `docs/reviews/PROD-READINESS-AUDIT-2026-08-08.md`
+- [x] **ADR-015 ERP stock reconciliation** — Option D implemented; verifier ⚠️ PASSED WITH NOTES (deploy `021` pending)
+- [ ] **Wave A remainder** — L3 retry lifecycle; guest email; idempotency; ADR-016 outbox; security fail-fast
+- [x] **AI system bootstrap docs** — HOW-THE-SYSTEM-WORKS, SKILLS-TO-AGENTS-PIPELINE, REFERENCE-IMPLEMENTATION, RU overview (2026-08-08)
+- [x] **AI-003 agent cherry-pick** — silent-failure-hunter, diff-reviewer, YooKassa checkout rules, post-edit hook (2026-08-08)
+- [ ] **Retail registration** — email + password + confirm; commit + deploy pending (2026-07-30)
+- [ ] **PLP card photo fills frame** — `object-cover` on branch `cursor/plp-card-photo-object-cover`; deploy pending
+- [x] **Storefront PLP/PDP photo SSR URL fix** — deployed ac0bbf1; prod smoke ✅ (2026-07-30)
 - [x] **Admin Panel Phase B** — catalog edit 2-col, visibility bulk, categories, gallery UX (2026-07-24; deploy pending)
 - [x] **Admin Panel Phase B/C** — committed + pushed `a51743b` (2026-07-29; prod smoke pending)
 - [x] **Admin Phase B E2E smokes** — visibility toggle + description save specs (2026-07-24; local run pending Postgres)
@@ -61,6 +68,8 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Recently Completed
 
+- [x] **ADR-015 ERP stock reconciliation** — awaiting counter, mirror apply_stock, migration 021; 7 pytest (2026-08-08)
+- [x] **Production readiness & logic audit** — `docs/reviews/PROD-READINESS-AUDIT-2026-08-08.md` (2026-08-08)
 - [x] **Universal AI agent system bootstrap package** — reusable multi-document package for creating project-specific AI development systems with skills inventory, agents, project planning/todo coordination, `/start-feature`, model routing, templates, and validation (`docs/ai-agent-system-bootstrap/`) (2026-07-29)
 - [x] **Universal AI agent system bootstrap prompt** — reusable document for creating a project-specific agent/orchestrator system from scratch (`docs/UNIVERSAL-AI-AGENT-SYSTEM-BOOTSTRAP-PROMPT.md`) (2026-07-28)
 - [x] **Storefront PDP/PLP photo + hide specs** — object-contain gallery/cards, ProductThumbnail ERP fallback, removed «Характеристики»/«Артикул» on PDP (2026-07-24)
@@ -133,20 +142,19 @@ None.
 
 ## Next Actions
 
-1. Commit admin redesign separately from storefront parity; run `tsc` + new admin E2E (Postgres up)
-2. Deploy pending fixes + admin redesign; prod smoke on `/admin`
-3. Confirm Docker volume `media_uploads` + gallery re-upload on prod
-4. SMTP production delivery
-5. YooKassa provider integration (replace/refactor Stripe paths)
+1. Deploy migration `021` on staging/prod; smoke MS stock sync after a test sale
+2. `/start-feature` Wave A remainder: L3 payment retry + guest email + ADR-016 outbox
+3. Then YooKassa Feature Plan
+4. Parallel: Wave 0 ops + ~329 categories + SMTP + contacts + SEO
 
 ---
 
 ## Last Updated
 
-2026-07-29 (Wave 0: admin Phase B/C commit + push)
+2026-08-08 (ADR-015 verifier PASSED WITH NOTES)
 
 ---
 
 ## Last Agent
 
-GPT-5.5 (AI bootstrap package documentation)
+Grok 4.5 (ADR-015 closeout)

@@ -6,6 +6,10 @@ from datetime import timedelta
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import settings
+from app.features.catalog.infrastructure.inventory_ports_adapter import (
+    StorefrontAvailabilityAdapter,
+    VariantSourceAdapter,
+)
 from app.features.inventory.application.inventory_service import InventoryService
 from app.features.inventory.infrastructure.persistence.repository import InventoryRepository
 
@@ -16,6 +20,8 @@ def build_inventory_service(session: AsyncSession) -> InventoryService:
     return InventoryService(
         InventoryRepository(session),
         reservation_ttl=timedelta(minutes=settings.inventory_reservation_ttl_minutes),
+        variant_source=VariantSourceAdapter(session),
+        storefront_availability=StorefrontAvailabilityAdapter(session),
     )
 
 

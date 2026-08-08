@@ -29,6 +29,18 @@ class IInventoryRepository(ABC):
         pass
 
     @abstractmethod
+    async def commit_reserved(self, variant_id: UUID, quantity: int, *, erp_managed: bool) -> None:
+        pass
+
+    @abstractmethod
+    async def settle_awaiting(self, variant_id: UUID, quantity: int) -> None:
+        pass
+
+    @abstractmethod
+    async def set_awaiting(self, variant_id: UUID, quantity: int) -> None:
+        pass
+
+    @abstractmethod
     async def restore_on_hand(self, variant_id: UUID, quantity: int) -> None:
         pass
 

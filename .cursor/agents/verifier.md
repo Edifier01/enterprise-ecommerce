@@ -13,7 +13,8 @@ When invoked:
 3. Check implementation exists and matches requirements
 4. Run relevant tests or verification steps
 5. Look for edge cases and partial implementations
-6. Validate project management state (see PM checklist below)
+6. If the change set touches payments, webhooks, checkout, MoySklad sync, or auth — require a clean pass from `silent-failure-hunter` (and prefer `diff-reviewer` APPROVE) before marking DONE
+7. Validate project management state (see PM checklist below)
 
 Do not accept claims at face value. Test everything.
 
@@ -39,9 +40,10 @@ Report:
 - PM state stale or inconsistent
 - Specific issues to address
 
-Allowed Skills: code-review-checklist, e2e-testing
+Allowed Skills: code-review-checklist, e2e-testing, payment-integration
 Allowed MCP: Playwright, PostgreSQL
 Related Rules: core/10-project-state-management
+Related Agents: silent-failure-hunter, diff-reviewer, checkout-specialist, security-auditor
 
 After work: update `HANDOFF.md` with verification results.
 
@@ -71,6 +73,13 @@ Before marking any feature DONE, check ALL applicable items:
 - [ ] Sensitive data not logged
 - [ ] Auth-protected endpoints use dependency injection guard
 - [ ] New endpoints documented in `openapi.yaml`
+
+### Payments / webhooks (when applicable)
+- [ ] Provider notification/webhook is source of truth (not redirect) — ADR-004 for YooKassa
+- [ ] Signature verification + event/notification dedupe present
+- [ ] Idempotency keys on money mutations
+- [ ] `silent-failure-hunter` run with no Critical/High open
+- [ ] `diff-reviewer` verdict APPROVE (or CHANGES_REQUESTED items fixed)
 
 ### Documentation & PM State
 - [ ] `openapi.yaml` updated if API endpoints added or changed

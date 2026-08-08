@@ -5,6 +5,7 @@ Infrastructure implementations must satisfy these interfaces.
 """
 
 from abc import ABC, abstractmethod
+from uuid import UUID
 
 from app.features.catalog.domain.entities import Category, Product
 from app.features.catalog.domain.product_list_filters import ProductListFacets, ProductListFilters
@@ -57,4 +58,18 @@ class ICategoryRepository(ABC):
     @abstractmethod
     async def get_by_slug(self, slug: str) -> Category | None:
         """Return a single active category by slug, or None if not found."""
+        ...
+
+
+class IVariantSourcePort(ABC):
+    @abstractmethod
+    async def is_erp_managed(self, variant_id: UUID) -> bool:
+        """True when variant belongs to a MoySklad-synced product."""
+        ...
+
+
+class IStorefrontAvailabilityPort(ABC):
+    @abstractmethod
+    async def apply_availability(self, variant_id: UUID, available: int) -> None:
+        """Recompute variant and product in_stock from sellable quantity."""
         ...

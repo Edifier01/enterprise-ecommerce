@@ -1,5 +1,7 @@
 """Admin orders repository — list, detail, and status transitions."""
 
+from datetime import datetime
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -191,3 +193,14 @@ class AdminOrdersRepository(IAdminOrdersRepository):
         detail = await self.get_order_detail(order_number)
         assert detail is not None
         return detail
+
+    async def mark_erp_fulfilled(self, order_number: str, fulfilled_at: datetime) -> None:
+        result = await self._session.execute(
+            select(OrderModel).where(OrderModel.order_number == order_number)
+        )
+        model = result.scalar_one_or_none()
+        if model is None:
+            raise OrderNotFoundError(order_number)
+        if model.erp_fulfilled_at is None:
+            model.erp_fulfilled_at = fulfilled_at
+            await self._session.flush()

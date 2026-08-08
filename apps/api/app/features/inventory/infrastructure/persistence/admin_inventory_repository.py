@@ -25,7 +25,11 @@ class AdminInventoryRepository(IAdminInventoryRepository):
         self._session = session
 
     def _available_expr(self):
-        return InventoryItemModel.quantity_on_hand - InventoryItemModel.quantity_reserved
+        return (
+            InventoryItemModel.quantity_on_hand
+            - InventoryItemModel.quantity_reserved
+            - InventoryItemModel.quantity_awaiting_fulfillment
+        )
 
     def _base_stmt(self):
         available = self._available_expr()
@@ -273,7 +277,11 @@ class AdminInventoryRepository(IAdminInventoryRepository):
 
         variant = await self._session.get(ProductVariantModel, variant_id)
         if variant is not None:
-            new_available = item.quantity_on_hand - item.quantity_reserved
+            new_available = (
+                item.quantity_on_hand
+                - item.quantity_reserved
+                - item.quantity_awaiting_fulfillment
+            )
             variant.in_stock = is_in_stock_for_storefront(new_available)
             product = await self._session.get(ProductModel, variant.product_id)
             if product is not None:
@@ -289,7 +297,9 @@ class AdminInventoryRepository(IAdminInventoryRepository):
 
         await self._session.flush()
 
-        new_available = item.quantity_on_hand - item.quantity_reserved
+        new_available = (
+            item.quantity_on_hand - item.quantity_reserved - item.quantity_awaiting_fulfillment
+        )
         return AdminInventoryRow(
             variant_id=item.variant_id,
             product_id=product_id,

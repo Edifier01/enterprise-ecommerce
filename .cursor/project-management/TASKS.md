@@ -18,7 +18,7 @@
 - [x] E-Commerce, Security, Testing, Performance Rules (Phases 8–11)
 - [x] Documentation, Workflow, AI, Docker, Git, Integration Rules (Phases 12–17)
 - [x] Skills — 46 skills (Phase 18)
-- [x] Agents — 11 specialists (Phase 19)
+- [x] Agents — 11 specialists (Phase 19); +2 quality agents 2026-08-08 (`silent-failure-hunter`, `diff-reviewer`)
 - [x] Memory MCP + docs/MEMORY.md (Phase 20)
 - [x] MCP configuration — 10 servers (Phase 21)
 - [x] Architecture Review (Phase 22)
@@ -41,6 +41,29 @@
 - [x] Update context-loading skill with mandatory init workflow
 - [x] Create project-management template
 - [x] Create project-state-management rule
+
+### Feature: External Agent Catalog Cherry-Pick (AI-003)
+
+**Status:** COMPLETED (2026-08-08)
+
+Sources reviewed: agentic-awesome-skills, ECC, agency-agents. No wholesale install.
+
+- [x] Upgrade `checkout-specialist` — YooKassa-first hard rules (ADR-004)
+- [x] Add `silent-failure-hunter` (readonly)
+- [x] Add `diff-reviewer` (readonly, confidence-gated)
+- [x] Wire orchestrator / verifier / skill-router / model routing
+- [x] `postToolUse` quality reminder hook (TS/Python + sensitive paths)
+- [x] Record AI-003 in `DECISIONS.md`
+
+### Feature: AI System Bootstrap Docs Enrichment
+
+**Status:** COMPLETED (2026-08-08)
+
+- [x] `HOW-THE-SYSTEM-WORKS.md` — system anatomy + runtime flow
+- [x] `SKILLS-TO-AGENTS-PIPELINE.md` — mandatory skills inventory → project agents
+- [x] `REFERENCE-IMPLEMENTATION.md` — ecommerce worked example (do not clone blindly)
+- [x] Russian overview `docs/AI-AGENT-SYSTEM-OVERVIEW.ru.md`
+- [x] Update bootstrap README / BOOTSTRAP-PROMPT / VALIDATION-CHECKLIST / universal pointer
 
 ---
 
@@ -1152,15 +1175,40 @@ The third duplicate Sprint E section was removed during full project review. All
 
 ---
 
+### Feature: Retail Registration — Email + Password + Confirm
+
+**Status:** IN_PROGRESS (code 2026-07-30; commit/deploy pending)
+
+- [x] Remove first_name/last_name from retail register form and API
+- [x] Add password confirmation field + server action validation
+- [x] OpenAPI RegisterRequest synced
+- [x] Auth pytest 20/20; tsc clean
+- [ ] Commit + deploy
+- [ ] Optional E2E /register smoke
+
+---
+
+### BUG: Storefront — PLP card photo smaller than frame
+
+**Status:** IN_PROGRESS (code fix 2026-07-30; deploy pending)
+
+- [x] Change `ProductCard` thumbnail from `object-contain` to `object-cover`
+- [x] `tsc --noEmit` clean
+- [ ] Commit + deploy to prod
+- [ ] Prod smoke: homepage card image fills square frame
+
+---
+
 ### BUG: Storefront — PDP photo crop, PLP missing photos, hide specs block
 
-**Status:** COMPLETED (code fix 2026-07-24; prod deploy pending)
+**Status:** COMPLETED (deployed 2026-07-30, Deploy #70)
 
 - [x] PDP gallery main image `object-contain` (no corner crop)
 - [x] PLP `ProductCard` uses `ProductThumbnail` with ERP/placeholder onError fallback
 - [x] `ProductThumbnail` ERP proxy fallback when `productSlug` set
 - [x] Remove PDP «Характеристики» block; remove «Артикул» from specs table
-- [ ] Deploy + prod smoke on `https://сухопут-кмв.рф`
+- [x] SSR URL fix — `getPublicSiteBase()` instead of `getApiBase()` for `/media/` paths (ac0bbf1)
+- [x] Deploy + prod smoke on `https://сухопут-кмв.рф` ✅
 
 ---
 
@@ -1205,6 +1253,34 @@ The third duplicate Sprint E section was removed during full project review. All
 
 ---
 
+## Epic: Production Readiness Audit 2026-08-08
+
+**Status:** COMPLETED
+
+### Feature: Full Project Logic + Prod Gap Analysis
+
+**Status:** COMPLETED (2026-08-08) — verifier ⚠️ PASSED WITH NOTES
+
+**Deliverable:** `docs/reviews/PROD-READINESS-AUDIT-2026-08-08.md`
+
+- [x] Round 1 — 8 parallel specialist audits
+- [x] Round 2 — synthesis + delta vs July action plan
+- [x] Round 3 — silent-failure-hunter + diff-reviewer (APPROVE WITH NOTES)
+- [x] Round 4 — verifier PASSED WITH NOTES
+- [x] PM state update
+
+**Wave A follow-ups (from audit — NEW tasks):**
+- [x] ADR-015 ERP stock reconciliation (MS sync vs local deduct oversell) — **IMPLEMENTED 2026-08-08**
+- [ ] Fix payment_failed → release → retry succeeded (money without order)
+- [ ] Guest email on checkout session → order
+- [ ] Stable client idempotency keys
+- [ ] Prod fail-fast: JWT length, non-empty admin creds, provider credentials
+- [ ] Inventory repo no-op when missing `inventory_items` row
+- [ ] Do not mark webhook processed when payment/session missing
+- [ ] Release reservation on amount-mismatch captured payments
+
+---
+
 ## Epic: Project Action Plan 2026-07-29
 
 **Status:** IN_PROGRESS
@@ -1241,6 +1317,7 @@ The third duplicate Sprint E section was removed during full project review. All
 
 - [x] Universal AI agent system bootstrap package (`docs/ai-agent-system-bootstrap/`) incl. project planning/todo coordination (2026-07-29)
 - [x] Universal AI agent system bootstrap prompt (`docs/UNIVERSAL-AI-AGENT-SYSTEM-BOOTSTRAP-PROMPT.md`) (2026-07-28)
+- [x] Bootstrap docs enrichment: HOW-THE-SYSTEM-WORKS + SKILLS-TO-AGENTS-PIPELINE + REFERENCE-IMPLEMENTATION + RU overview (2026-08-08)
 - [x] Admin Panel UX Improvement Plan saved to `docs/reviews/ADMIN-PANEL-UX-IMPROVEMENT-PLAN-2026-07-22.md`
 - [x] Add Phase 25 to PROJECT_ROADMAP for Project Management Layer
 - [x] Sync DECISIONS.md when new ADRs are created (architecture-decision-records skill)

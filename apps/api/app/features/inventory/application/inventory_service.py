@@ -4,6 +4,7 @@ from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+from app.features.catalog.domain.ports import IStorefrontAvailabilityPort, IVariantSourcePort
 from app.features.inventory.domain.entities import (
     InventoryReservation,
     InventoryReservationRequestLine,
@@ -26,6 +27,16 @@ class InventoryReservationMissingError(Exception):
     pass
 
 
+class _ManualVariantSourcePort(IVariantSourcePort):
+    async def is_erp_managed(self, variant_id: UUID) -> bool:
+        return False
+
+
+class _NoOpStorefrontAvailabilityPort(IStorefrontAvailabilityPort):
+    async def apply_availability(self, variant_id: UUID, available: int) -> None:
+        return None
+
+
 class InventoryService:
     CHECKOUT_REFERENCE_TYPE = "checkout_session"
 
@@ -33,9 +44,14 @@ class InventoryService:
         self,
         repo: IInventoryRepository,
         reservation_ttl: timedelta = timedelta(minutes=15),
+        *,
+        variant_source: IVariantSourcePort | None = None,
+        storefront_availability: IStorefrontAvailabilityPort | None = None,
     ) -> None:
         self._repo = repo
         self._reservation_ttl = reservation_ttl
+        self._variant_source = variant_source or _ManualVariantSourcePort()
+        self._storefront = storefront_availability or _NoOpStorefrontAvailabilityPort()
 
     async def get_available_quantity(self, variant_id: UUID) -> int:
         return await self._repo.get_available_quantity(variant_id)
@@ -66,14 +82,36 @@ class InventoryService:
         await self.release_reference(self.CHECKOUT_REFERENCE_TYPE, checkout_session_id)
 
     async def restore_order_lines(self, lines: list[tuple[UUID, int]]) -> None:
-        """Return previously deducted stock to on_hand after admin order cancellation."""
+        """Cancel path: restore manual stock or settle ERP awaiting (never inflate mirror)."""
         if not lines:
             return
         variant_ids = [variant_id for variant_id, _ in lines]
         await self._repo.lock_items_by_variant_ids(variant_ids)
+        touched: list[tuple[UUID, int]] = []
         for variant_id, quantity in lines:
-            if quantity > 0:
+            if quantity <= 0:
+                continue
+            if await self._variant_source.is_erp_managed(variant_id):
+                await self._repo.settle_awaiting(variant_id, quantity)
+            else:
                 await self._repo.restore_on_hand(variant_id, quantity)
+            touched.append((variant_id, quantity))
+        await self._refresh_availability_for_variants(touched)
+
+    async def settle_shipped_order_lines(self, lines: list[tuple[UUID, int]]) -> None:
+        """Ship path: release awaiting for ERP-exported sales."""
+        if not lines:
+            return
+        variant_ids = [variant_id for variant_id, _ in lines]
+        await self._repo.lock_items_by_variant_ids(variant_ids)
+        touched: list[tuple[UUID, int]] = []
+        for variant_id, quantity in lines:
+            if quantity <= 0:
+                continue
+            if await self._variant_source.is_erp_managed(variant_id):
+                await self._repo.settle_awaiting(variant_id, quantity)
+                touched.append((variant_id, quantity))
+        await self._refresh_availability_for_variants(touched)
 
     async def reserve_reference(
         self,
@@ -109,6 +147,9 @@ class InventoryService:
                 reference_id=reference_id,
                 expires_at=expires_at,
             )
+        await self._refresh_availability_for_variants(
+            [(line.variant_id, line.quantity) for line in normalized]
+        )
 
     async def deduct_reference(self, reference_type: str, reference_id: UUID) -> None:
         reservations = await self._repo.get_active_reservations(reference_type, reference_id)
@@ -122,11 +163,19 @@ class InventoryService:
                 raise InventoryReservationMissingError("Reserved inventory is no longer available")
 
         for reservation in reservations:
-            await self._repo.deduct_reserved(reservation.variant_id, reservation.quantity)
+            erp_managed = await self._variant_source.is_erp_managed(reservation.variant_id)
+            await self._repo.commit_reserved(
+                reservation.variant_id,
+                reservation.quantity,
+                erp_managed=erp_managed,
+            )
             await self._repo.set_reservation_status(
                 reservation.id,
                 InventoryReservationStatus.COMMITTED.value,
             )
+        await self._refresh_availability_for_variants(
+            [(r.variant_id, r.quantity) for r in reservations]
+        )
 
     async def release_reference(self, reference_type: str, reference_id: UUID) -> None:
         reservations = await self._repo.get_active_reservations(reference_type, reference_id)
@@ -140,6 +189,9 @@ class InventoryService:
                 reservation.id,
                 InventoryReservationStatus.RELEASED.value,
             )
+        await self._refresh_availability_for_variants(
+            [(r.variant_id, r.quantity) for r in reservations]
+        )
 
     async def expire_active_reservations(self, now: datetime | None = None) -> int:
         now = now or datetime.now(UTC)
@@ -154,7 +206,21 @@ class InventoryService:
                 reservation.id,
                 InventoryReservationStatus.EXPIRED.value,
             )
+        await self._refresh_availability_for_variants(
+            [(r.variant_id, r.quantity) for r in reservations]
+        )
         return len(reservations)
+
+    async def _refresh_availability_for_variants(self, variants: list[tuple[UUID, int]]) -> None:
+        if not variants:
+            return
+        unique_ids = sorted({variant_id for variant_id, _ in variants}, key=str)
+        items = await self._repo.lock_items_by_variant_ids(unique_ids)
+        for variant_id in unique_ids:
+            item = items.get(variant_id)
+            if item is None:
+                continue
+            await self._storefront.apply_availability(variant_id, item.available_quantity)
 
     @staticmethod
     def _normalize_lines(
