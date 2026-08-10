@@ -2,6 +2,23 @@
 
 ## Latest Session
 
+Composer 2.5 — Fix mobile admin-orders E2E (2026-08-10)
+
+## Completed Work
+
+CI almost green after `c2290d4`; remaining failure:
+- `[mobile-chrome] admin-orders-smoke` — `getByText('Доставка и клиент')` not found
+
+**Cause:** Chromium often skipped detail assert (no ORD- yet); mobile ran later after checkout created orders. Assertion was brittle for mobile nav + case.
+
+**Fix:** Wait for detail URL + h1; assert delivery heading case-insensitively; target `main a[href*="/admin/orders/ORD-"]`; drop `uppercase` on that section label.
+
+**Next:** confirm CI green → merge to master → deploy + prod SMTP.
+
+---
+
+## Previous Session
+
 Composer 2.5 — CI green: OpenAPI + auth/checkout E2E (2026-08-10)
 
 ## Completed Work
