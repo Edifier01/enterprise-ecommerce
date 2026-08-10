@@ -14,6 +14,10 @@ export async function fillCheckoutShipping(page: Page) {
   await page.getByLabel("Получатель").fill("Иван Тестов");
   await page.getByLabel("Телефон").fill("+79001234567");
   await page.getByLabel("Адрес доставки").fill("Москва, ул. Тестовая, 1");
+  const guestEmail = page.getByLabel("Email для подтверждения заказа");
+  if (await guestEmail.count()) {
+    await guestEmail.fill("guest.e2e@example.com");
+  }
 }
 
 export async function loginAsAdmin(page: Page) {

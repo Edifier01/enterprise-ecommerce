@@ -3817,6 +3817,12 @@ components:
           anyOf:
           - $ref: '#/components/schemas/CheckoutShippingRequest'
           - type: 'null'
+        guest_email:
+          anyOf:
+          - type: string
+            format: email
+          - type: 'null'
+          title: Guest Email
       type: object
       title: CreateCheckoutSessionRequest
     DashboardSummaryResponse:

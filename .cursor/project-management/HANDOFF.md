@@ -2,6 +2,64 @@
 
 ## Latest Session
 
+Composer 2.5 — CI green: OpenAPI + auth/checkout E2E (2026-08-10)
+
+## Completed Work
+
+Fixed CI failures on `feat/wave-a-l3-guest-email-adr016`:
+
+1. **OpenAPI** — regenerated `openapi.yaml` with `CreateCheckoutSessionRequest.guest_email`
+2. **Auth headings** — `CardTitle` now renders `<h3>` so Playwright `getByRole('heading')` works
+3. **Resend email strict mode** — `id="resend-email"` + aria-label; auth-smoke asserts `#resend-email`
+4. **Checkout stub** — `fillCheckoutShipping` fills «Email для подтверждения заказа» when present
+
+**Local E2E:** not run (Docker Desktop unavailable). Rely on CI after push.
+
+**Files changed:** `openapi.yaml`, `apps/web/src/components/ui/card.tsx`, `apps/web/src/components/auth/login-form.tsx`, `apps/web/e2e/test-helpers.ts`, `apps/web/e2e/auth-smoke.spec.ts`
+
+**Next:** confirm CI green → merge to master → deploy + prod SMTP.
+
+---
+
+## Previous Session
+
+Composer 2.5 — Register prod diagnosis + form UX confirmation (2026-08-10)
+
+## Completed Work
+
+**Production register failure root cause (verified on https://сухопут-кмв.рф):**
+- `POST /api/v1/auth/register` returns **500** on master even with valid `first_name`/`last_name`/`email`/`password`
+- User **is created** (second attempt → 409 Email already registered) — failure happens after user insert, during verification email send (SMTP error on master; send is not wrapped in try/except)
+- Fix already in `daf16fe`: commit token before send + catch email failures → registration returns 201
+
+**Register form UX (already in `daf16fe`, not yet on prod):**
+- Removed `Имя` / `Фамилия` fields
+- Added `Повторите пароль` with server-side match validation in `registerAction`
+
+**Next:** merge `feat/wave-a-l3-guest-email-adr016` → `master`, deploy, configure prod SMTP
+
+---
+
+## Previous Session
+
+Composer 2.5 — Commit auth Waves A–C + Mobile Wave 5 (2026-08-10)
+
+## Completed Work
+
+**Git commit `daf16fe` on `feat/wave-a-l3-guest-email-adr016`:**
+- Auth Waves A–C (API + web), migration 023, auth review doc, Mobile Wave 5
+- Pushed to `origin/feat/wave-a-l3-guest-email-adr016`
+- **Deploy to prod pending** — merge to `master` blocked by local approval UI; user must merge/push manually
+
+**Deploy checklist after merge:**
+1. CI green → Deploy workflow runs `scripts/deploy.sh` (includes `alembic upgrade head`)
+2. Set prod `.env.production`: `EMAIL_PROVIDER=smtp`, `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM`, `STOREFRONT_URL` (HTTPS) — API validator rejects console in production
+3. Smoke: register → verify email, forgot → reset password, login after reset (old JWT invalid)
+
+---
+
+## Previous Session
+
 Composer 2.5 — Auth Wave C UX + E2E (2026-08-10)
 
 ## Completed Work
@@ -28,9 +86,9 @@ Composer 2.5 — Auth Wave C UX + E2E (2026-08-10)
 
 ## Next Recommended Action
 
-1. Deploy API migration 023 + web auth UX; set prod SMTP
-2. Run `npx playwright test e2e/auth-smoke.spec.ts` with E2E stack up
-3. Commit when user asks
+1. **Merge `feat/wave-a-l3-guest-email-adr016` → `master` and push** (triggers CI + Deploy)
+2. Configure prod SMTP in `.env.production` on VPS before or immediately after deploy
+3. Run `npx playwright test e2e/auth-smoke.spec.ts` against prod/staging
 
 ---
 

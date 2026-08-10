@@ -96,11 +96,13 @@ export function LoginForm() {
               Не получили письмо? Запросите повторную отправку на ваш email.
             </p>
             <input
+              id="resend-email"
               name="email"
               type="email"
               required
               defaultValue={resendEmail}
               placeholder="Email"
+              aria-label="Email для повторной отправки"
               className={authInputClassName}
             />
             <Button type="submit" variant="outline" disabled={resendPending} className="min-h-11">

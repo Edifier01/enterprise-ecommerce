@@ -71,6 +71,6 @@ test.describe("Customer auth smoke", () => {
 
     await expect(page.getByText("Подтвердите email перед входом")).toBeVisible();
     await expect(page.getByRole("button", { name: "Отправить письмо повторно" })).toBeVisible();
-    await expect(page.locator('input[name="email"]')).toHaveValue(email);
+    await expect(page.locator("#resend-email")).toHaveValue(email);
   });
 });
