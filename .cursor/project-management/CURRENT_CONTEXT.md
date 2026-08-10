@@ -6,34 +6,34 @@
 
 ## Current Module
 
-Parallel UX track: Mobile Wave 4–6  
+Temporary storefront auth lockdown (registration closed).  
 YooKassa prod gate remains release priority (other chat OK).
 
-**Mobile:** Wave 5 committed with auth (`daf16fe`) — **merge to master pending**  
+**Mobile:** Wave 5 + auth CI fixes on `feat/wave-a-l3-guest-email-adr016`  
 **YooKassa plan:** `docs/reviews/YOOKASSA-PROD-GATE-ACTION-PLAN-2026-08-08.md`
 
 ---
 
 ## Current Feature
 
-**CI green fix** for Auth/Wave A branch — OpenAPI + E2E committed/pushed.  
-**Branch:** `feat/wave-a-l3-guest-email-adr016`.  
-**Next:** confirm CI green → merge → deploy; prod SMTP required.
+**Temporary auth lockdown** — hide login/register CTAs + block API register.  
+Flags: `STOREFRONT_AUTH_UI_ENABLED` / `AUTH_REGISTRATION_ENABLED` (prod default false).  
+`/login` by URL still works for existing users.
 
 ---
 
 ## Active Agent
 
-Composer 2.5 (CI fix /start-feature)
+Composer 2.5 (/start-feature auth lockdown)
 
 ---
 
 ## Current Blockers
 
 1. **YooKassa** — 0% (ADR-004) — release gate (parallel chat)
-2. **Deploy** — merge to `master` (migrations 021–023); **prod register 500 = SMTP fail after user create on master**
-3. **SMTP** — prod `.env.production` must use real SMTP; fix in `daf16fe` lets register succeed even if send fails
-4. **Await CI** — OpenAPI + auth/checkout E2E fixes pushed; confirm green before merge
+2. **Deploy** — merge branch → `master` (migrations 021–023 + lockdown)
+3. **SMTP** — prod `.env.production` must use real SMTP
+4. **Reopen auth later** — set both flags `true` (+ redeploy)
 
 ---
 
@@ -41,19 +41,15 @@ Composer 2.5 (CI fix /start-feature)
 
 | Area | Status |
 |------|--------|
-| ADR-015 / Wave A | ✅ done (deploy 021–022 pending) |
-| Mobile UX Wave 4 audit | ✅ |
-| Mobile UX Wave 5 P0/P1 code | ✅ verifier ⚠️ NOTES |
-| Mobile UX Wave 5 prod | ⏳ merge to master + smoke |
-| Auth Waves A–C commit | ✅ `daf16fe` — deploy pending |
-| Mobile UX Wave 6 P2 | ⏳ backlog |
+| Auth lockdown | ✅ implemented (commit pending) |
+| Auth Waves A–C | ✅ on feature branch |
+| Mobile UX Wave 5 | ⏳ merge + smoke |
 | YooKassa | ❌ not started |
-| Auth flows review | ✅ verifier ⚠️ NOTES |
 
-**AI routing:** Opus 5 (`claude-opus-5-thinking-high`) on reserved agents — architect, checkout, security (2026-08-10).
+**AI routing:** Opus 5 on reserved agents — architect, checkout, security.
 
 ---
 
 ## Last Updated
 
-2026-08-10 (CI OpenAPI + auth/checkout E2E fixes — commit/push)
+2026-08-10 (temporary storefront auth lockdown)

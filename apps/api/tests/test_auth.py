@@ -593,3 +593,24 @@ async def test_auth_login_rate_limit_returns_429(
     )
     assert blocked.status_code == 429
     assert blocked.headers.get("Retry-After") is not None
+
+@pytest.mark.asyncio
+async def test_register_disabled_returns_403(
+    auth_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "auth_registration_enabled", False)
+    response = await auth_client.post(
+        "/api/v1/auth/register",
+        json=retail_register_payload("locked-out@example.com"),
+    )
+    assert response.status_code == 403
+    assert "temporarily disabled" in response.json()["detail"]
+
+    wholesale = await auth_client.post(
+        "/api/v1/auth/register/wholesaler",
+        json=wholesaler_register_payload("locked-wholesale@example.com"),
+    )
+    assert wholesale.status_code == 403
+

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { CheckEmailCard } from "@/components/auth/check-email-card";
 import { PageContainer } from "@/components/store/layout/page-container";
@@ -11,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { isStorefrontAuthUiEnabled } from "@/lib/auth/storefront-auth";
 
 export const metadata: Metadata = {
   title: "Подтверждение email",
@@ -22,6 +24,10 @@ type CheckEmailPageProps = {
 };
 
 export default async function CheckEmailPage({ searchParams }: CheckEmailPageProps) {
+  if (!isStorefrontAuthUiEnabled()) {
+    redirect("/");
+  }
+
   const { email } = await searchParams;
 
   return (

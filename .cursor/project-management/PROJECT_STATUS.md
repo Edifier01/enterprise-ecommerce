@@ -47,6 +47,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
+- [x] **Temporary storefront auth lockdown** — CTAs hidden + API register 403 (2026-08-10); reopen via env flags
 - [x] **CI green (OpenAPI + auth/checkout E2E)** — fixed 2026-08-10; await CI after push
 - [x] **Mobile UX Wave 4 audit** — code + prod @390px (2026-08-08)
 - [x] **Mobile UX Wave 5 P0/P1 code** — CSP, PDP sticky, filters, touch targets; verifier ⚠️ PASSED WITH NOTES

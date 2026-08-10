@@ -642,7 +642,8 @@ The third duplicate Sprint E section was removed during full project review. All
 - [x] **Wave B (2026-08-10):** JWT `token_version` revoke on reset, atomic token consume, migration 023
 - [x] **Wave C (2026-08-10):** password confirm wholesale/reset, verify-email UX, auth min-h-11, auth-smoke E2E
 - [x] **CI fix (2026-08-10):** OpenAPI `guest_email`; CardTitle→h3; resend `#resend-email`; E2E fill guest email
-- [ ] **Follow-up:** Confirm CI green; merge to master; Prod ops — SMTP + deploy migration 023
+- [x] **Temporary auth lockdown (2026-08-10):** hide CTAs + redirect `/register*` + API 403; flags to reopen
+- [ ] **Follow-up:** Confirm CI green; merge to master; Prod ops — SMTP + deploy migration 023; reopen auth flags when ready
 
 ---
 

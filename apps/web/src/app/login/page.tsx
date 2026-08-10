@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { PageContainer } from "@/components/store/layout/page-container";
-import { Suspense } from "react";
+import { isStorefrontAuthUiEnabled } from "@/lib/auth/storefront-auth";
 
 export const metadata: Metadata = {
   title: "Вход",
@@ -16,7 +17,7 @@ export default function LoginPage() {
       className="flex min-h-[50vh] items-center justify-center"
     >
       <Suspense>
-        <LoginForm />
+        <LoginForm showRegisterLink={isStorefrontAuthUiEnabled()} />
       </Suspense>
     </PageContainer>
   );

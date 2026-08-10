@@ -45,6 +45,7 @@ export default defineConfig({
         ENVIRONMENT: "test",
         JWT_SECRET_KEY: E2E_JWT_SECRET,
         CORS_ORIGINS: `["http://localhost:${webPort}"]`,
+        AUTH_REGISTRATION_ENABLED: "true",
       },
     },
     {
@@ -56,6 +57,7 @@ export default defineConfig({
         NEXT_PUBLIC_API_URL: apiBaseUrl,
         NEXT_PUBLIC_PAYMENT_MODE: "stub",
         JWT_SECRET_KEY: E2E_JWT_SECRET,
+        STOREFRONT_AUTH_UI_ENABLED: "true",
       },
     },
   ],

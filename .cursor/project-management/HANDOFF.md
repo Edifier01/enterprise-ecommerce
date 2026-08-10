@@ -2,6 +2,31 @@
 
 ## Latest Session
 
+Composer 2.5 — Temporary hide storefront login/register (2026-08-10)
+
+## Completed Work
+
+Per recommendation: UI hide + `/register*` redirect + API 403; `/login` URL kept.
+
+**Flags (prod default off):**
+- `STOREFRONT_AUTH_UI_ENABLED=true` — show header/footer/topBar auth CTAs + allow `/register*`
+- `AUTH_REGISTRATION_ENABLED=true` — allow `POST /api/v1/auth/register*`
+
+**UI:** hide guest «Личный кабинет»→login, «ОПТОВИКАМ», footer «Вход»; login form drops register link when off; verify-email «Зарегистрироваться» gated.  
+**API:** `_ensure_registration_enabled()` → 403; pytest `test_register_disabled_returns_403` (26 auth tests pass).  
+**E2E:** playwright enables both flags.  
+**Compose/examples:** prod defaults false; `.env.example` local true.
+
+**Restore later:** set both env vars to `true` on VPS and redeploy (web needs runtime env for server components).
+
+**Next:** merged to master + deploy; confirm CTAs gone on prod; set SMTP on VPS.
+
+**Verifier:** ⚠️ PASSED WITH NOTES — verify-email CTA fixed; indirect `/account` → login paths left intentionally.
+
+---
+
+## Previous Session
+
 Composer 2.5 — Fix mobile admin-orders E2E (2026-08-10)
 
 ## Completed Work

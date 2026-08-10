@@ -57,6 +57,7 @@ jobs:
           DATABASE_URL: "sqlite+aiosqlite:///:memory:"
           INVENTORY_RESERVATION_SWEEP_ENABLED: "false"
           ENVIRONMENT: "test"
+          AUTH_REGISTRATION_ENABLED: "true"
         run: pytest tests/ -q
 
   frontend:

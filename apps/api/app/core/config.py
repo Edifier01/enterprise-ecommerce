@@ -71,6 +71,8 @@ class Settings(BaseSettings):
     smtp_use_tls: bool = True
     auth_verification_token_expire_hours: int = 24
     auth_reset_token_expire_hours: int = 1
+    # Temporary lockdown: set AUTH_REGISTRATION_ENABLED=true to allow register again
+    auth_registration_enabled: bool = False
     inventory_reservation_ttl_minutes: int = 15
     inventory_reservation_sweep_enabled: bool = True
     inventory_reservation_sweep_interval_seconds: int = 60

@@ -7,7 +7,11 @@ import { siteConfig } from "@/lib/store/site-config";
 import { getMobileFooterPaddingClass } from "@/lib/store/mobile-layout";
 import { cn } from "@/lib/utils";
 
-export function SiteFooter() {
+type SiteFooterProps = {
+  showAuthLinks?: boolean;
+};
+
+export function SiteFooter({ showAuthLinks = true }: SiteFooterProps) {
   const pathname = usePathname();
   const { footer, contact, name, description } = siteConfig;
 
@@ -34,25 +38,35 @@ export function SiteFooter() {
             </div>
           </div>
 
-          {footer.columns.map((column) => (
-            <div key={column.title}>
-              <h2 className="text-sm font-semibold uppercase tracking-wide">
-                {column.title}
-              </h2>
-              <ul className="mt-3 space-y-2">
-                {column.links.map((link) => (
-                  <li key={`${column.title}-${link.label}`}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-primary-foreground/75 transition-colors hover:text-primary-foreground"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {footer.columns.map((column) => {
+            const links = showAuthLinks
+              ? column.links
+              : column.links.filter(
+                  (link) => link.href !== "/login" && !link.href.startsWith("/register"),
+                );
+            if (links.length === 0) {
+              return null;
+            }
+            return (
+              <div key={column.title}>
+                <h2 className="text-sm font-semibold uppercase tracking-wide">
+                  {column.title}
+                </h2>
+                <ul className="mt-3 space-y-2">
+                  {links.map((link) => (
+                    <li key={`${column.title}-${link.label}`}>
+                      <Link
+                        href={link.href}
+                        className="text-sm text-primary-foreground/75 transition-colors hover:text-primary-foreground"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </div>
 
         <p className="mt-10 border-t border-primary-foreground/15 pt-6 text-center text-xs text-primary-foreground/60">

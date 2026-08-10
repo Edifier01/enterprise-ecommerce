@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from app.core.config import settings
 from app.features.auth.application.use_cases.forgot_password import ForgotPasswordUseCase
 from app.features.auth.application.use_cases.login_user import (
     EmailNotVerifiedError,
@@ -73,6 +74,14 @@ from app.features.checkout.presentation.dependencies import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _ensure_registration_enabled() -> None:
+    if not settings.auth_registration_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="Registration is temporarily disabled",
+        )
+
+
 def _register_response(user: User) -> RegisterResponse:
     return RegisterResponse(
         id=user.id,
@@ -93,6 +102,7 @@ async def register(
     token_repo: IAuthTokenRepository = Depends(get_auth_token_repository),
     email_service: IEmailService = Depends(get_email_service),
 ) -> RegisterResponse:
+    _ensure_registration_enabled()
     use_case = RegisterUserUseCase(repo, hasher, uow)
     try:
         user = await use_case.execute(
@@ -121,6 +131,7 @@ async def register_wholesaler(
     token_repo: IAuthTokenRepository = Depends(get_auth_token_repository),
     email_service: IEmailService = Depends(get_email_service),
 ) -> RegisterResponse:
+    _ensure_registration_enabled()
     use_case = RegisterWholesalerUseCase(repo, hasher, uow)
     try:
         user = await use_case.execute(

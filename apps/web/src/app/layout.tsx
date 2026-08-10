@@ -9,6 +9,7 @@ import { SiteFooter } from "@/components/store/layout/site-footer";
 import { StoreHeader } from "@/components/store/layout/store-header";
 import { StoreMain } from "@/components/store/layout/store-main";
 import { ToastProvider } from "@/components/store/ui/toast-provider";
+import { isStorefrontAuthUiEnabled } from "@/lib/auth/storefront-auth";
 import { siteConfig } from "@/lib/store/site-config";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +54,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const showAuthLinks = isStorefrontAuthUiEnabled();
+
   return (
     <html lang="ru" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
       <body
@@ -66,7 +69,7 @@ export default function RootLayout({
               <>
                 <StoreHeader />
                 <StoreMain>{children}</StoreMain>
-                <SiteFooter />
+                <SiteFooter showAuthLinks={showAuthLinks} />
                 <MobileBottomNav />
               </>
             }

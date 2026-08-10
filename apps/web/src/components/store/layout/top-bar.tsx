@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 
+import { isStorefrontAuthUiEnabled } from "@/lib/auth/storefront-auth";
 import { siteConfig } from "@/lib/store/site-config";
 
 export function TopBar() {
   const { contact, topBar } = siteConfig;
+  const authUiEnabled = isStorefrontAuthUiEnabled();
+  const links = authUiEnabled
+    ? topBar.links
+    : topBar.links.filter((item) => !item.href.startsWith("/register"));
 
   return (
     <div className="bg-primary text-primary-foreground text-xs sm:text-sm">
@@ -14,7 +19,7 @@ export function TopBar() {
             className="flex min-w-0 items-center gap-3 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-5 [&::-webkit-scrollbar]:hidden"
             aria-label="Информация для покупателей"
           >
-            {topBar.links.map((item) => (
+            {links.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

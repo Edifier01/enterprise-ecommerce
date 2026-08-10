@@ -5,6 +5,7 @@ import { User } from "lucide-react";
 import { CatalogSearchForm } from "@/components/store/catalog/catalog-search-form";
 import { CartHeaderSummary } from "@/components/store/layout/cart-header-summary";
 import { MobileCategoryDrawer } from "@/components/store/layout/mobile-category-drawer";
+import { isStorefrontAuthUiEnabled } from "@/lib/auth/storefront-auth";
 import { getCurrentUser } from "@/lib/auth/session";
 import type {
   HeaderCategory,
@@ -20,6 +21,8 @@ export async function MainHeader({
   categoryTree: HeaderCategoryNode[];
 }) {
   const user = await getCurrentUser();
+  const authUiEnabled = isStorefrontAuthUiEnabled();
+  const showAccountLink = Boolean(user) || authUiEnabled;
   const accountHref = user ? "/account" : "/login";
 
   return (
@@ -43,15 +46,17 @@ export async function MainHeader({
               <span className="truncate">{siteConfig.name}</span>
             </Link>
             <div className="flex shrink-0 items-center gap-2 sm:gap-4 md:col-start-3 md:justify-end">
-              <Link
-                href={accountHref}
-                className="inline-flex min-h-11 items-center gap-2 text-xs font-medium uppercase tracking-wide text-foreground transition-colors hover:text-primary sm:text-sm"
-              >
-                <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground sm:size-9">
-                  <User className="size-4" aria-hidden />
-                </span>
-                <span className="hidden sm:inline">Личный кабинет</span>
-              </Link>
+              {showAccountLink ? (
+                <Link
+                  href={accountHref}
+                  className="inline-flex min-h-11 items-center gap-2 text-xs font-medium uppercase tracking-wide text-foreground transition-colors hover:text-primary sm:text-sm"
+                >
+                  <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground sm:size-9">
+                    <User className="size-4" aria-hidden />
+                  </span>
+                  <span className="hidden sm:inline">Личный кабинет</span>
+                </Link>
+              ) : null}
               <CartHeaderSummary />
             </div>
           </div>
