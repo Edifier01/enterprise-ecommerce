@@ -112,7 +112,7 @@ export function AdminOrderDetail({ order, canWrite, canExport = false }: AdminOr
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <div className="space-y-6">
         <section className="rounded-lg border border-border p-4">
-          <h2 className="mb-4 text-sm font-medium uppercase tracking-wide text-muted-foreground">
+          <h2 className="mb-4 text-sm font-medium tracking-wide text-muted-foreground">
             Доставка и клиент
           </h2>
           <dl className="grid gap-3 text-sm sm:grid-cols-2">

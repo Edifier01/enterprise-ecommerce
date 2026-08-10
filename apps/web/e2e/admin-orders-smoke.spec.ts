@@ -14,11 +14,16 @@ test.describe("Admin orders smoke", () => {
     await expect(page.getByRole("heading", { name: "Заказы" })).toBeVisible();
     await expect(page.getByLabel("Поиск по заказам")).toBeVisible();
 
-    const orderLink = page.getByRole("link", { name: /^ORD-/ }).first();
-    const hasOrders = await orderLink.count();
-    if (hasOrders > 0) {
-      await orderLink.click();
-      await expect(page.getByText("Доставка и клиент")).toBeVisible();
+    const orderLink = page.locator('main a[href*="/admin/orders/ORD-"]').first();
+    if ((await orderLink.count()) === 0) {
+      return;
     }
+
+    await orderLink.click();
+    await expect(page).toHaveURL(/\/admin\/orders\/ORD-/, { timeout: 15_000 });
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(/Заказ ORD-/);
+    await expect(
+      page.getByRole("heading", { name: /Доставка и клиент/i }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 });
