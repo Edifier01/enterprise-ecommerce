@@ -628,18 +628,46 @@ The third duplicate Sprint E section was removed during full project review. All
 
 ### Feature: Email Verification & Password Reset
 
-**Status:** COMPLETED (2026-07-15)
+**Status:** COMPLETED (2026-07-15); review 2026-08-10
 
 - [x] Migration 012 — `email_verified_at` + `auth_tokens`
 - [x] Email verification for retail + wholesale registration
 - [x] Login blocked until email verified (403)
 - [x] Password reset flow (forgot + reset)
-- [x] ConsoleEmailService for dev; SMTP stub for prod
+- [x] ConsoleEmailService for dev; SmtpEmailService for prod (Wave A 2026-08-10)
 - [x] Frontend pages + server actions (RU)
-- [x] OpenAPI + 19 auth pytest tests
-- [ ] **Follow-up:** SMTP production delivery (next step)
+- [x] OpenAPI + 20 auth pytest tests
+- [x] **Review:** `docs/reviews/AUTH-FLOWS-REVIEW-2026-08-10.md` — verifier ⚠️ PASSED WITH NOTES
+- [x] **Wave A (2026-08-10):** SMTP adapter, prod email validator, register single-TX, commit-before-send, email failure → 201/200
+- [x] **Wave B (2026-08-10):** JWT `token_version` revoke on reset, atomic token consume, migration 023
+- [x] **Wave C (2026-08-10):** password confirm wholesale/reset, verify-email UX, auth min-h-11, auth-smoke E2E
+- [ ] **Follow-up:** Prod ops — set real SMTP credentials + deploy migration 023
 
 ---
+
+### Feature: Mobile UX Audit (Wave 4 Round 1)
+
+**Status:** COMPLETED (2026-08-08)
+
+- [x] Code pattern audit — `docs/reviews/MOBILE-UX-CODE-AUDIT-WAVE4-2026-08-08.md`
+- [x] Production audit @390px — `docs/reviews/MOBILE-UX-AUDIT-WAVE4-2026-08-08.md`
+- [x] Synthesis — `docs/reviews/MOBILE-UX-WAVE4-SYNTHESIS-2026-08-08.md`
+- [x] Wave 5 fix order + «do not redesign» constraints
+
+### Feature: Mobile UX Wave 5 (P0/P1 fixes)
+
+**Status:** IN_PROGRESS (code ✅ 2026-08-08; deploy pending)
+
+**Verifier:** ⚠️ PASSED WITH NOTES
+
+- [x] P0 MOB-001 checkout CSP `'unsafe-inline'`
+- [x] P0 MOB-002 PDP sticky / hide bottom nav
+- [x] P0 RISK-002 admin edit sticky padding
+- [x] P1 filters z-[60], touch targets (header/cart/login/PLP/variants)
+- [x] E2E mobile-storefront PDP / login / filter sheet
+- [ ] Commit + prod deploy + smoke `/checkout` + PDP @390px
+- [ ] Optional: register-form + mini-cart touch targets
+- [ ] Wave 6 P2 — compact header, breadcrumbs, viewport-fit (BACKLOG)
 
 ### Feature: Mobile Storefront Optimization (Wave 3)
 

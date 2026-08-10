@@ -43,6 +43,30 @@ class AuthTokenRepository(IAuthTokenRepository):
             return None
         return self._to_entity(row)
 
+    async def consume_valid_by_hash(
+        self,
+        token_hash: str,
+        token_type: str,
+        *,
+        used_at: datetime,
+    ) -> AuthToken | None:
+        stmt = (
+            update(AuthTokenModel)
+            .where(
+                AuthTokenModel.token_hash == token_hash,
+                AuthTokenModel.token_type == token_type,
+                AuthTokenModel.used_at.is_(None),
+                AuthTokenModel.expires_at > used_at,
+            )
+            .values(used_at=used_at)
+            .returning(AuthTokenModel)
+        )
+        row = (await self._session.scalars(stmt)).first()
+        if row is None:
+            return None
+        await self._session.flush()
+        return self._to_entity(row)
+
     async def mark_used(self, token_id: UUID, *, used_at: datetime) -> None:
         await self._session.execute(
             update(AuthTokenModel)

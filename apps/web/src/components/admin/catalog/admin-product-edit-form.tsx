@@ -182,7 +182,7 @@ export function AdminProductEditForm({
 
   return (
 
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-0">
 
       <MoySkladProductBanner product={product} />
 
@@ -590,11 +590,11 @@ export function AdminProductEditForm({
 
 
 
-      <div className="sticky bottom-0 z-20 -mx-4 border-t bg-background/95 p-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-0 sm:rounded-lg sm:border md:sticky md:top-4 md:bottom-auto">
+      <div className="sticky bottom-0 z-20 -mx-4 border-t bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-0 sm:rounded-lg sm:border md:sticky md:top-4 md:bottom-auto md:pb-3">
 
         <div className="flex flex-wrap gap-3">
 
-          <Button type="submit" form="admin-product-form" name="intent" value="stay" disabled={pending}>
+          <Button type="submit" form="admin-product-form" name="intent" value="stay" disabled={pending} className="min-h-11">
 
             {pending ? "Сохранение..." : "Сохранить"}
 
@@ -614,6 +614,8 @@ export function AdminProductEditForm({
 
             disabled={pending}
 
+            className="min-h-11"
+
           >
 
             Сохранить и закрыть
@@ -624,7 +626,7 @@ export function AdminProductEditForm({
 
             href={returnTo}
 
-            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium hover:bg-muted"
 
           >
 

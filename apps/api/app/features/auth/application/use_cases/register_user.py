@@ -42,6 +42,4 @@ class RegisterUserUseCase:
             created_at=datetime.now(timezone.utc),
             email_verified_at=None,
         )
-        saved_user = await self._repository.create(user)
-        await self._unit_of_work.commit()
-        return saved_user
+        return await self._repository.create(user)

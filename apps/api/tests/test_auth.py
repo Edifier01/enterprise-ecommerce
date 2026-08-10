@@ -12,7 +12,10 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.database import Base, get_db_session
-from app.features.auth.infrastructure.email.recording_email_service import RecordingEmailService
+from app.features.auth.infrastructure.email.recording_email_service import (
+    FailingEmailService,
+    RecordingEmailService,
+)
 from app.features.auth.presentation.dependencies import get_email_service
 from app.features.catalog.infrastructure.persistence.models import ProductModel, ProductVariantModel
 from app.features.inventory.infrastructure.persistence.models import InventoryItemModel
@@ -105,6 +108,24 @@ async def test_register_success(auth_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_register_email_send_failure_still_returns_201(
+    auth_client: AsyncClient,
+) -> None:
+    app.dependency_overrides[get_email_service] = lambda: FailingEmailService()
+    response = await auth_client.post(
+        "/api/v1/auth/register",
+        json=retail_register_payload("email-fail@example.com"),
+    )
+    assert response.status_code == 201
+
+    login_response = await auth_client.post(
+        "/api/v1/auth/login",
+        json=retail_register_payload("email-fail@example.com"),
+    )
+    assert login_response.status_code == 403
+
+
+@pytest.mark.asyncio
 async def test_register_duplicate_email_returns_409(auth_client: AsyncClient) -> None:
     payload = retail_register_payload("duplicate@example.com")
     await auth_client.post("/api/v1/auth/register", json=payload)
@@ -191,6 +212,113 @@ async def test_forgot_and_reset_password(auth_client: AsyncClient) -> None:
         json={"email": "reset@example.com", "password": "newpassword123"},
     )
     assert new_login.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_reset_password_invalidates_existing_access_token(
+    auth_client: AsyncClient,
+) -> None:
+    await auth_client.post(
+        "/api/v1/auth/register",
+        json=retail_register_payload("revoke@example.com"),
+    )
+    await _verify_user_from_last_email(auth_client)
+
+    login_response = await auth_client.post(
+        "/api/v1/auth/login",
+        json=retail_register_payload("revoke@example.com"),
+    )
+    assert login_response.status_code == 200
+    old_token = login_response.json()["access_token"]
+
+    me_before = await auth_client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {old_token}"},
+    )
+    assert me_before.status_code == 200
+
+    await auth_client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "revoke@example.com"},
+    )
+    reset_token = _extract_token_from_email(_recording_email.last.body_text)
+    reset_response = await auth_client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": reset_token, "password": "newpassword123"},
+    )
+    assert reset_response.status_code == 200
+
+    me_after = await auth_client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {old_token}"},
+    )
+    assert me_after.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_verify_email_token_cannot_be_reused(auth_client: AsyncClient) -> None:
+    await auth_client.post(
+        "/api/v1/auth/register",
+        json=retail_register_payload("reuse-verify@example.com"),
+    )
+    raw_token = _extract_token_from_email(_recording_email.last.body_text)
+
+    first = await auth_client.post(
+        "/api/v1/auth/verify-email",
+        json={"token": raw_token},
+    )
+    assert first.status_code == 200
+
+    second = await auth_client.post(
+        "/api/v1/auth/verify-email",
+        json={"token": raw_token},
+    )
+    assert second.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_reset_password_token_cannot_be_reused(auth_client: AsyncClient) -> None:
+    await auth_client.post(
+        "/api/v1/auth/register",
+        json=retail_register_payload("reuse-reset@example.com"),
+    )
+    await _verify_user_from_last_email(auth_client)
+
+    await auth_client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "reuse-reset@example.com"},
+    )
+    raw_token = _extract_token_from_email(_recording_email.last.body_text)
+
+    first = await auth_client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": raw_token, "password": "newpassword123"},
+    )
+    assert first.status_code == 200
+
+    second = await auth_client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": raw_token, "password": "anotherpass99"},
+    )
+    assert second.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_forgot_password_email_send_failure_still_returns_200(
+    auth_client: AsyncClient,
+) -> None:
+    await auth_client.post(
+        "/api/v1/auth/register",
+        json=retail_register_payload("forgot-fail@example.com"),
+    )
+    await _verify_user_from_last_email(auth_client)
+
+    app.dependency_overrides[get_email_service] = lambda: FailingEmailService()
+    response = await auth_client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "forgot-fail@example.com"},
+    )
+    assert response.status_code == 200
 
 
 @pytest.mark.asyncio

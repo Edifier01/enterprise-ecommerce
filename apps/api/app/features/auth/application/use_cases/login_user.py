@@ -39,4 +39,5 @@ class LoginUserUseCase:
         return self._token_service.create_access_token(
             user_id=str(user.id),
             email=user.email,
+            token_version=user.token_version,
         )

@@ -78,6 +78,11 @@
     --store-coyote: oklch(0.72 0.06 75);
     --store-max-width: 80rem;
     --store-mobile-nav-height: 4rem;
+    /* Nav row + home-indicator; sticky CTAs sit above this offset */
+    --store-mobile-nav-offset: calc(
+      var(--store-mobile-nav-height) + env(safe-area-inset-bottom, 0px)
+    );
+    --store-mobile-sticky-cta-height: 4.75rem;
     --secondary: oklch(0.96 0.008 85);
     --secondary-foreground: oklch(0.25 0.03 130);
     --muted: oklch(0.955 0.01 85);
@@ -173,7 +178,7 @@
   }
 
   .store-main-padding {
-    padding-bottom: var(--store-mobile-nav-height);
+    padding-bottom: var(--store-mobile-nav-offset);
   }
 
   @media (min-width: 768px) {

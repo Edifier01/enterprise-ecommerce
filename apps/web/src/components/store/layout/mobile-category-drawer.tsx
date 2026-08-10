@@ -50,7 +50,7 @@ export function MobileCategoryDrawer({
     <>
       <button
         type="button"
-        className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-foreground transition-colors hover:bg-muted md:hidden"
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 text-xs font-semibold uppercase tracking-wide text-foreground transition-colors hover:bg-muted md:hidden"
         aria-expanded={open}
         aria-controls="mobile-category-drawer"
         onClick={() => setOpen(true)}
@@ -60,7 +60,7 @@ export function MobileCategoryDrawer({
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className="fixed inset-0 z-[60] md:hidden">
           <button
             type="button"
             className="absolute inset-0 bg-black/50"
@@ -80,7 +80,7 @@ export function MobileCategoryDrawer({
               </p>
               <button
                 type="button"
-                className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                 aria-label="Закрыть"
                 onClick={() => setOpen(false)}
               >

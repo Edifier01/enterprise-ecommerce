@@ -45,9 +45,9 @@ export async function MainHeader({
             <div className="flex shrink-0 items-center gap-2 sm:gap-4 md:col-start-3 md:justify-end">
               <Link
                 href={accountHref}
-                className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-foreground transition-colors hover:text-primary sm:text-sm"
+                className="inline-flex min-h-11 items-center gap-2 text-xs font-medium uppercase tracking-wide text-foreground transition-colors hover:text-primary sm:text-sm"
               >
-                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground sm:size-9">
                   <User className="size-4" aria-hidden />
                 </span>
                 <span className="hidden sm:inline">Личный кабинет</span>

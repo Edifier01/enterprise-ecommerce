@@ -16,6 +16,7 @@ class User:
     first_name: str = ""
     last_name: str = ""
     email_verified_at: datetime | None = None
+    token_version: int = 0
 
     @property
     def is_email_verified(self) -> bool:

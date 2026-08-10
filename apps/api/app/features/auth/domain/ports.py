@@ -78,6 +78,17 @@ class IAuthTokenRepository(ABC):
         ...
 
     @abstractmethod
+    async def consume_valid_by_hash(
+        self,
+        token_hash: str,
+        token_type: str,
+        *,
+        used_at: datetime,
+    ) -> AuthToken | None:
+        """Atomically mark a valid token used; return None if missing/expired/already used."""
+        ...
+
+    @abstractmethod
     async def mark_used(self, token_id: UUID, *, used_at: datetime) -> None:
         """Mark a token as consumed."""
         ...
@@ -122,7 +133,7 @@ class IPasswordHasher(ABC):
 
 class ITokenService(ABC):
     @abstractmethod
-    def create_access_token(self, user_id: str, email: str) -> str:
+    def create_access_token(self, user_id: str, email: str, *, token_version: int) -> str:
         """Issue a signed access token for the given identity."""
         ...
 

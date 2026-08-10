@@ -15,13 +15,14 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Current Objective
 
-**Wave A then YooKassa** — ADR-015 ✅; Wave A (L3/guest email/ADR-016) ✅; next YooKassa.
+**Parallel:** YooKassa prod gate (primary) + Mobile UX Wave 5 deploy (secondary).
 
 ---
 
 ## Current Sprint
 
-**Final Project Gate — YooKassa** ⏳ **PLANNED** (Wave A ✅; deploy 021–022 pending)
+**Final Project Gate — YooKassa** ⏳ **PLANNED** (Wave A ✅; deploy 021–022 pending)  
+**Mobile UX Wave 5** — code ✅; verifier ⚠️ PASSED WITH NOTES; deploy pending
 
 ---
 
@@ -46,11 +47,10 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
-- [x] **Prod readiness audit 2026-08-08** — verifier ⚠️ PASSED WITH NOTES; `docs/reviews/PROD-READINESS-AUDIT-2026-08-08.md`
-- [x] **ADR-015 ERP stock reconciliation** — Option D implemented; verifier ⚠️ PASSED WITH NOTES (deploy `021` pending)
-- [x] **Wave A remainder** — L3 retry lifecycle; guest email; ADR-016 outbox (deploy `022` pending)
-- [x] **AI system bootstrap docs** — HOW-THE-SYSTEM-WORKS, SKILLS-TO-AGENTS-PIPELINE, REFERENCE-IMPLEMENTATION, RU overview (2026-08-08)
-- [x] **AI-003 agent cherry-pick** — silent-failure-hunter, diff-reviewer, YooKassa checkout rules, post-edit hook (2026-08-08)
+- [x] **Mobile UX Wave 4 audit** — code + prod @390px (2026-08-08)
+- [x] **Mobile UX Wave 5 P0/P1 code** — CSP, PDP sticky, filters, touch targets; verifier ⚠️ PASSED WITH NOTES
+- [ ] **Mobile UX Wave 5 deploy** — commit + prod smoke `/checkout` + PDP
+- [ ] **Mobile UX Wave 6 P2** — compact header, breadcrumbs (BACKLOG)
 - [ ] **Retail registration** — email + password + confirm; commit + deploy pending (2026-07-30)
 - [ ] **PLP card photo fills frame** — `object-cover` on branch `cursor/plp-card-photo-object-cover`; deploy pending
 - [x] **Storefront PLP/PDP photo SSR URL fix** — deployed ac0bbf1; prod smoke ✅ (2026-07-30)
@@ -142,19 +142,19 @@ None.
 
 ## Next Actions
 
-1. Deploy migrations `021`–`022` on staging/prod; smoke guest checkout + MS export
-2. `/start-feature YooKassa payment integration` (ADR-004)
-3. Optional: Wave A tail (L4 idempotency, A5 security fail-fast)
-4. Parallel: Wave 0 ops + ~329 categories + SMTP + contacts + SEO
+1. Commit + deploy Mobile UX Wave 5; prod smoke `/checkout` + PDP @390px
+2. Deploy migrations `021`–`022` on staging/prod; smoke guest checkout + MS export
+3. `/start-feature YooKassa payment integration` (ADR-004)
+4. Optional: Wave 6 mobile P2; Wave A tail (L4/A5)
 
 ---
 
 ## Last Updated
 
-2026-08-08 (ADR-015 verifier PASSED WITH NOTES)
+2026-08-10 (Auth flows review — registration, verify, reset, email)
 
 ---
 
 ## Last Agent
 
-Grok 4.5 (ADR-015 closeout)
+Composer 2.5 (Auth flows review)

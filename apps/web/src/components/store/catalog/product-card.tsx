@@ -146,12 +146,13 @@ export function ProductCard({
                 variantId={defaultVariantId}
                 productName={product.name}
                 disabled={!product.in_stock}
-                size="sm"
+                size="default"
+                className="min-h-11"
               />
             ) : (
               <Link
                 href={`/products/${product.slug}`}
-                className="inline-flex h-8 items-center justify-center rounded-md bg-store-cta px-3 text-xs font-medium text-store-cta-foreground hover:bg-store-cta/90"
+                className="inline-flex min-h-11 items-center justify-center rounded-md bg-store-cta px-3 text-xs font-medium text-store-cta-foreground hover:bg-store-cta/90"
               >
                 Купить
               </Link>

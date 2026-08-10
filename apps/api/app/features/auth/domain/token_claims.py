@@ -8,3 +8,4 @@ from uuid import UUID
 class TokenClaims:
     user_id: UUID
     email: str
+    token_version: int

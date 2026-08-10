@@ -1,5 +1,6 @@
 """Issue and deliver email verification links."""
 
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -13,6 +14,8 @@ from app.features.auth.domain.ports import (
     IEmailService,
     IUnitOfWork,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SendEmailVerificationUseCase:
@@ -45,20 +48,27 @@ class SendEmailVerificationUseCase:
             created_at=now,
         )
         await self._token_repository.create(token)
+        await self._unit_of_work.commit()
 
         verify_url = (
             f"{settings.storefront_url.rstrip('/')}/verify-email?token={raw_token}"
         )
-        await self._email_service.send(
-            EmailMessage(
-                to=user.email,
-                subject="Подтвердите email — Сухопут",
-                body_text=(
-                    "Здравствуйте!\n\n"
-                    "Для завершения регистрации подтвердите ваш email по ссылке:\n"
-                    f"{verify_url}\n\n"
-                    "Если вы не регистрировались, проигнорируйте это письмо."
-                ),
+        try:
+            await self._email_service.send(
+                EmailMessage(
+                    to=user.email,
+                    subject="Подтвердите email — Сухопут",
+                    body_text=(
+                        "Здравствуйте!\n\n"
+                        "Для завершения регистрации подтвердите ваш email по ссылке:\n"
+                        f"{verify_url}\n\n"
+                        "Если вы не регистрировались, проигнорируйте это письмо."
+                    ),
+                )
             )
-        )
-        await self._unit_of_work.commit()
+        except Exception:
+            logger.exception(
+                "Failed to send verification email user_id=%s email=%s",
+                user.id,
+                user.email,
+            )

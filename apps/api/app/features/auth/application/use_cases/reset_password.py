@@ -30,19 +30,19 @@ class ResetPasswordUseCase:
         self._unit_of_work = unit_of_work
 
     async def execute(self, raw_token: str, new_password: str) -> None:
-        token = await self._token_repository.get_valid_by_hash(
+        now = datetime.now(timezone.utc)
+        token = await self._token_repository.consume_valid_by_hash(
             hash_token(raw_token),
             PASSWORD_RESET,
+            used_at=now,
         )
         if token is None:
             raise InvalidResetTokenError()
 
-        now = datetime.now(timezone.utc)
         hashed_password = self._hasher.hash(new_password)
         user = await self._user_repository.update_password(token.user_id, hashed_password)
         if user is None:
             raise InvalidResetTokenError()
 
-        await self._token_repository.mark_used(token.id, used_at=now)
         await self._token_repository.revoke_active_for_user(token.user_id, PASSWORD_RESET)
         await self._unit_of_work.commit()

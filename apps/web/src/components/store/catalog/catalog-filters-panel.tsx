@@ -207,19 +207,24 @@ export function CatalogFiltersPanel({
 
   if (isMobileDrawer && mobileOpen) {
     return (
-      <div className="fixed inset-0 z-50 lg:hidden">
+      <div className="fixed inset-0 z-[60] lg:hidden">
         <button
           type="button"
           className="absolute inset-0 bg-black/50"
           aria-label="Закрыть фильтры"
           onClick={() => onMobileOpenChange?.(false)}
         />
-        <aside className="absolute inset-y-0 left-0 flex w-[min(100%,20rem)] flex-col bg-background shadow-xl">
+        <aside
+          className="absolute inset-y-0 left-0 flex w-[min(100%,20rem)] flex-col bg-background shadow-xl"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Фильтры каталога"
+        >
           <div className="flex items-center justify-between border-b px-4 py-3">
             <p className="text-sm font-semibold">Фильтры</p>
             <button
               type="button"
-              className="rounded-md p-1 text-muted-foreground hover:bg-muted"
+              className="inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
               aria-label="Закрыть"
               onClick={() => onMobileOpenChange?.(false)}
             >
@@ -229,10 +234,10 @@ export function CatalogFiltersPanel({
           <div className="flex-1 overflow-y-auto p-4">
             <FilterContent facets={facets} value={value} onChange={onChange} />
           </div>
-          <div className="border-t p-4">
+          <div className="border-t p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
             <Button
               type="button"
-              className="w-full"
+              className="min-h-11 w-full"
               onClick={() => onMobileOpenChange?.(false)}
             >
               Показать результаты

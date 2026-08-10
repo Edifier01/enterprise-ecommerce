@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db_session
+from app.features.auth.application.access_token_policy import access_token_matches_user
 from app.features.auth.domain.entities import User
 from app.features.auth.domain.ports import (
     IAuthTokenRepository,
@@ -78,7 +79,7 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     user = await repo.get_by_id(claims.user_id)
-    if user is None or not user.is_active:
+    if user is None or not access_token_matches_user(user, claims):
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     return user
@@ -98,6 +99,6 @@ async def get_optional_current_user(
     except InvalidTokenError:
         return None
     user = await repo.get_by_id(claims.user_id)
-    if user is None or not user.is_active:
+    if user is None or not access_token_matches_user(user, claims):
         return None
     return user

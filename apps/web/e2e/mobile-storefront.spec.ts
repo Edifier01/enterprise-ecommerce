@@ -55,4 +55,41 @@ test.describe("Mobile storefront", () => {
     await expect(page).toHaveURL(/\/checkout/, { timeout: 15_000 });
     await expect(page.getByRole("navigation", { name: "Мобильная навигация" })).toBeHidden();
   });
+
+  test("PDP hides bottom nav and shows sticky purchase CTA", async ({ page }) => {
+    await page.goto("/catalog");
+    const productLink = page.locator('a[href^="/products/"]').first();
+    await expect(productLink).toBeVisible({ timeout: 15_000 });
+    await productLink.click();
+    await expect(page).toHaveURL(/\/products\//, { timeout: 15_000 });
+
+    await expect(page.getByRole("navigation", { name: "Мобильная навигация" })).toBeHidden();
+
+    const purchase = page.getByRole("button", { name: /В корзину|Купить/ }).first();
+    await expect(purchase).toBeVisible();
+    await purchase.scrollIntoViewIfNeeded();
+    // Scroll past purchase panel so sticky bar appears
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    const stickyCta = page.locator(".fixed").filter({ hasText: "В корзину" }).first();
+    await expect(stickyCta).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("login hides bottom navigation", async ({ page }) => {
+    await page.goto("/login");
+    await expect(page.getByRole("navigation", { name: "Мобильная навигация" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Войти" })).toBeVisible();
+  });
+
+  test("filter sheet sits above bottom nav", async ({ page }) => {
+    await page.goto("/catalog/odezhda");
+    await page.getByRole("button", { name: /^Фильтры/ }).click();
+    const apply = page.getByRole("button", { name: "Показать результаты" });
+    await expect(apply).toBeVisible();
+    const box = await apply.boundingBox();
+    expect(box).toBeTruthy();
+    if (box) {
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.y + box.height).toBeLessThanOrEqual(MOBILE_VIEWPORT.height);
+    }
+  });
 });

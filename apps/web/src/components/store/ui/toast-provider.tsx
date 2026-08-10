@@ -10,6 +10,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { shouldShowMobileBottomNav } from "@/lib/store/mobile-layout";
 import {
   AlertCircle,
   AlertTriangle,
@@ -81,6 +82,7 @@ function ToastViewport({
 }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
+  const showNavOffset = !isAdmin && shouldShowMobileBottomNav(pathname);
 
   if (toasts.length === 0) {
     return null;
@@ -91,7 +93,9 @@ function ToastViewport({
       className={
         isAdmin
           ? "pointer-events-none fixed inset-x-0 bottom-6 z-[60] flex flex-col items-center gap-2 px-4 md:items-end md:px-6"
-          : "pointer-events-none fixed inset-x-0 bottom-[calc(var(--store-mobile-nav-height)+0.75rem)] z-[60] flex flex-col items-center gap-2 px-4 md:bottom-6 md:items-end md:px-6"
+          : showNavOffset
+            ? "pointer-events-none fixed inset-x-0 bottom-[calc(var(--store-mobile-nav-offset)+0.75rem)] z-[60] flex flex-col items-center gap-2 px-4 md:bottom-6 md:items-end md:px-6"
+            : "pointer-events-none fixed inset-x-0 bottom-6 z-[60] flex flex-col items-center gap-2 px-4 md:items-end md:px-6"
       }
       aria-live="polite"
     >

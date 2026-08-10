@@ -66,7 +66,7 @@ export function CartHeaderSummary() {
           refresh();
         }}
       >
-        <span className="relative inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <span className="relative inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground sm:size-9">
           <ShoppingCart className="size-4" aria-hidden />
           {itemCount > 0 ? (
             <span

@@ -40,10 +40,10 @@ export default async function ResetPasswordPage({
             <CardDescription>Ссылка недействительна — токен не найден.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button className="w-full" render={<Link href="/forgot-password" />}>
+            <Button className="min-h-11 w-full" render={<Link href="/forgot-password" />}>
               Запросить сброс пароля
             </Button>
-            <Button variant="outline" className="w-full" render={<Link href="/login" />}>
+            <Button variant="outline" className="min-h-11 w-full" render={<Link href="/login" />}>
               Перейти ко входу
             </Button>
           </CardContent>

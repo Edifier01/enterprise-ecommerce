@@ -172,6 +172,22 @@ class Settings(BaseSettings):
             raise ValueError(
                 "cors_origins must not include '*' when credentials are enabled in production."
             )
+        if self.email_provider != "smtp":
+            raise ValueError(
+                "email_provider must be 'smtp' in production."
+            )
+        if not self.smtp_host.strip():
+            raise ValueError(
+                "smtp_host is required in production when email_provider=smtp."
+            )
+        if not self.email_from.strip() or "@" not in self.email_from:
+            raise ValueError(
+                "email_from must be a valid sender address in production."
+            )
+        if not self.storefront_url.startswith("https://"):
+            raise ValueError(
+                "storefront_url must use https in production."
+            )
         return self
 
 

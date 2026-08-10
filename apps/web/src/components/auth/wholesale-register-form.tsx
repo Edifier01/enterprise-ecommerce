@@ -12,9 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
-const inputClassName =
-  "h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+import { authInputClassName, authLinkClassName } from "@/lib/auth/form-styles";
 
 const initialState: AuthActionState = {};
 
@@ -42,7 +40,7 @@ export function WholesaleRegisterForm() {
               autoComplete="name"
               required
               maxLength={255}
-              className={inputClassName}
+              className={authInputClassName}
             />
           </div>
 
@@ -57,7 +55,7 @@ export function WholesaleRegisterForm() {
                 type="text"
                 required
                 maxLength={255}
-                className={inputClassName}
+                className={authInputClassName}
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -70,7 +68,7 @@ export function WholesaleRegisterForm() {
                 type="text"
                 required
                 maxLength={255}
-                className={inputClassName}
+                className={authInputClassName}
               />
             </div>
           </div>
@@ -86,7 +84,7 @@ export function WholesaleRegisterForm() {
               autoComplete="tel"
               required
               maxLength={32}
-              className={inputClassName}
+              className={authInputClassName}
             />
           </div>
 
@@ -105,7 +103,7 @@ export function WholesaleRegisterForm() {
                 required
                 minLength={12}
                 maxLength={12}
-                className={inputClassName}
+                className={authInputClassName}
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -122,7 +120,7 @@ export function WholesaleRegisterForm() {
                 required
                 minLength={15}
                 maxLength={15}
-                className={inputClassName}
+                className={authInputClassName}
               />
             </div>
           </div>
@@ -138,7 +136,7 @@ export function WholesaleRegisterForm() {
               autoComplete="street-address"
               required
               maxLength={500}
-              className={inputClassName}
+              className={authInputClassName}
             />
           </div>
 
@@ -152,7 +150,7 @@ export function WholesaleRegisterForm() {
               type="email"
               autoComplete="email"
               required
-              className={inputClassName}
+              className={authInputClassName}
             />
           </div>
 
@@ -168,9 +166,25 @@ export function WholesaleRegisterForm() {
               required
               minLength={8}
               maxLength={128}
-              className={inputClassName}
+              className={authInputClassName}
             />
             <p className="text-xs text-muted-foreground">Минимум 8 символов.</p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="password_confirm" className="text-sm font-medium">
+              Повторите пароль
+            </label>
+            <input
+              id="password_confirm"
+              name="password_confirm"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              maxLength={128}
+              className={authInputClassName}
+            />
           </div>
 
           {state.error && (
@@ -179,20 +193,20 @@ export function WholesaleRegisterForm() {
             </p>
           )}
 
-          <Button type="submit" disabled={pending} className="w-full">
+          <Button type="submit" disabled={pending} className="min-h-11 w-full">
             {pending ? "Регистрация..." : "Зарегистрироваться как оптовик"}
           </Button>
         </form>
 
         <p className="mt-4 text-sm text-muted-foreground">
           Уже есть аккаунт?{" "}
-          <Link href="/login" className="text-primary underline-offset-4 hover:underline">
+          <Link href="/login" className={authLinkClassName}>
             Войти
           </Link>
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
           Розничный покупатель?{" "}
-          <Link href="/register" className="text-primary underline-offset-4 hover:underline">
+          <Link href="/register" className={authLinkClassName}>
             Обычная регистрация
           </Link>
         </p>

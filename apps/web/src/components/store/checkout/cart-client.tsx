@@ -115,6 +115,7 @@ export function CartClient() {
                       type="button"
                       variant="ghost"
                       size="icon"
+                      className="size-11"
                       disabled={isPending}
                       onClick={() =>
                         mutateCart(() =>
@@ -130,6 +131,7 @@ export function CartClient() {
                       type="button"
                       variant="ghost"
                       size="icon"
+                      className="size-11"
                       disabled={isPending}
                       onClick={() => mutateCart(() => updateCartLine(line.id, line.quantity + 1))}
                       aria-label="Увеличить количество"
@@ -141,6 +143,7 @@ export function CartClient() {
                     type="button"
                     variant="ghost"
                     size="icon"
+                    className="size-11"
                     disabled={isPending}
                     onClick={() => mutateCart(() => deleteCartLine(line.id))}
                     aria-label="Удалить товар"
@@ -195,7 +198,7 @@ export function CartClient() {
             type="button"
             size="lg"
             disabled={isPending}
-            className="shrink-0 bg-store-cta px-5 text-store-cta-foreground hover:bg-store-cta/90"
+            className="min-h-11 shrink-0 bg-store-cta px-5 text-store-cta-foreground hover:bg-store-cta/90"
             onClick={() => router.push("/checkout")}
           >
             Оформить

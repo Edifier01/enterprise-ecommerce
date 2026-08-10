@@ -99,6 +99,7 @@ class UserRepository(IUserRepository):
             first_name=row.first_name or "",
             last_name=row.last_name or "",
             email_verified_at=row.email_verified_at,
+            token_version=row.token_version,
         )
 
     async def mark_email_verified(self, user_id: UUID, *, verified_at: datetime) -> User | None:
@@ -115,6 +116,7 @@ class UserRepository(IUserRepository):
         if row is None:
             return None
         row.hashed_password = hashed_password
+        row.token_version = row.token_version + 1
         await self._session.flush()
         await self._session.refresh(row)
         return self._to_entity(row)

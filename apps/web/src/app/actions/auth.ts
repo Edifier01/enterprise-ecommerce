@@ -14,6 +14,8 @@ const CART_SESSION_COOKIE = "cart_session_id";
 export type AuthActionState = {
   error?: string;
   success?: string;
+  needsEmailVerification?: boolean;
+  resendEmail?: string;
 };
 
 function readRequiredString(formData: FormData, key: string): string | null {
@@ -49,7 +51,13 @@ export async function loginAction(
     return {
       error:
         "Подтвердите email перед входом. Проверьте почту или запросите повторную отправку.",
+      needsEmailVerification: true,
+      resendEmail: email,
     };
+  }
+
+  if (res.status === 429) {
+    return { error: "Слишком много попыток. Подождите и попробуйте снова." };
   }
 
   if (!res.ok) {
@@ -115,6 +123,7 @@ export async function registerWholesaleAction(
     legal_address: readRequiredString(formData, "legal_address"),
     email: readRequiredString(formData, "email"),
     password: formData.get("password"),
+    passwordConfirm: formData.get("password_confirm"),
   };
 
   if (
@@ -126,15 +135,30 @@ export async function registerWholesaleAction(
     !payload.ogrnip ||
     !payload.legal_address ||
     !payload.email ||
-    typeof payload.password !== "string"
+    typeof payload.password !== "string" ||
+    typeof payload.passwordConfirm !== "string"
   ) {
     return { error: "Заполните все обязательные поля." };
+  }
+
+  if (payload.password !== payload.passwordConfirm) {
+    return { error: "Пароли не совпадают." };
   }
 
   const res = await fetch(`${API_BASE}/api/v1/auth/register/wholesaler`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      full_name: payload.full_name,
+      edo_provider: payload.edo_provider,
+      edo_id: payload.edo_id,
+      phone: payload.phone,
+      inn: payload.inn,
+      ogrnip: payload.ogrnip,
+      legal_address: payload.legal_address,
+      email: payload.email,
+      password: payload.password,
+    }),
   });
 
   if (res.status === 409) {
@@ -190,9 +214,14 @@ export async function resetPasswordAction(
 ): Promise<AuthActionState> {
   const token = readRequiredString(formData, "token");
   const password = formData.get("password");
+  const passwordConfirm = formData.get("password_confirm");
 
-  if (!token || typeof password !== "string") {
+  if (!token || typeof password !== "string" || typeof passwordConfirm !== "string") {
     return { error: "Некорректные данные формы." };
+  }
+
+  if (password !== passwordConfirm) {
+    return { error: "Пароли не совпадают." };
   }
 
   const res = await fetch(`${API_BASE}/api/v1/auth/reset-password`, {
@@ -230,6 +259,10 @@ export async function resendVerificationAction(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
   });
+
+  if (res.status === 429) {
+    return { error: "Слишком много запросов. Подождите и попробуйте снова." };
+  }
 
   if (!res.ok) {
     return { error: "Не удалось отправить письмо. Попробуйте снова." };

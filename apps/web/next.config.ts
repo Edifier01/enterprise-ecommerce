@@ -42,12 +42,15 @@ function buildRemoteImagePatterns() {
   return patterns;
 }
 
+// ponytail: Next App Router needs inline bootstrap scripts; without nonce CSP,
+// 'unsafe-inline' is required or /checkout is a blank page in production.
+// Upgrade path: middleware nonces + YooKassa script hosts (ADR-004).
 const checkoutSecurityHeaders = [
   {
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      `script-src 'self' https://js.stripe.com${isProduction ? "" : " 'unsafe-eval' 'unsafe-inline'"}`,
+      `script-src 'self' 'unsafe-inline' https://js.stripe.com${isProduction ? "" : " 'unsafe-eval'"}`,
 
       "style-src 'self' 'unsafe-inline'",
 

@@ -20,6 +20,13 @@ def _base_production_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ADMIN_DEV_PASSWORD", "strong-admin-password")
     monkeypatch.setenv("MOYSKLAD_API_TOKEN", "")
     monkeypatch.setenv("MOYSKLAD_WEBHOOK_SECRET", "")
+    monkeypatch.setenv("EMAIL_PROVIDER", "smtp")
+    monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
+    monkeypatch.setenv("SMTP_PORT", "587")
+    monkeypatch.setenv("SMTP_USER", "noreply@shop.example.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "smtp-secret")
+    monkeypatch.setenv("EMAIL_FROM", "noreply@shop.example.com")
+    monkeypatch.setenv("STOREFRONT_URL", "https://shop.example.com")
 
 
 def test_production_settings_valid_with_local_media(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -83,3 +90,24 @@ def test_settings_parses_admin_login_allowed_ips_csv(monkeypatch: pytest.MonkeyP
     monkeypatch.setenv("ADMIN_LOGIN_ALLOWED_IPS", "203.0.113.1, 198.51.100.2")
     settings = Settings()
     assert settings.admin_login_allowed_ips == ["203.0.113.1", "198.51.100.2"]
+
+
+def test_production_rejects_console_email_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_production_env(monkeypatch)
+    monkeypatch.setenv("EMAIL_PROVIDER", "console")
+    with pytest.raises(ValidationError, match="email_provider"):
+        Settings()
+
+
+def test_production_rejects_missing_smtp_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_production_env(monkeypatch)
+    monkeypatch.setenv("SMTP_HOST", "")
+    with pytest.raises(ValidationError, match="smtp_host"):
+        Settings()
+
+
+def test_production_rejects_http_storefront_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_production_env(monkeypatch)
+    monkeypatch.setenv("STOREFRONT_URL", "http://shop.example.com")
+    with pytest.raises(ValidationError, match="storefront_url"):
+        Settings()

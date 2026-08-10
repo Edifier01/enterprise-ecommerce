@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { adminInputClass } from "@/lib/admin/form-styles";
+import { adminInputClassLg } from "@/lib/admin/form-styles";
 
 const initialState: AdminAuthActionState = {};
 
@@ -44,7 +44,7 @@ export function AdminLoginForm({ redirectTo = "/admin" }: AdminLoginFormProps) {
               type="email"
               autoComplete="username"
               required
-              className={adminInputClass}
+              className={adminInputClassLg}
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -58,7 +58,7 @@ export function AdminLoginForm({ redirectTo = "/admin" }: AdminLoginFormProps) {
               autoComplete="current-password"
               required
               minLength={8}
-              className={adminInputClass}
+              className={adminInputClassLg}
             />
           </div>
           {loginState.error ? (
@@ -66,7 +66,7 @@ export function AdminLoginForm({ redirectTo = "/admin" }: AdminLoginFormProps) {
               {loginState.error}
             </p>
           ) : null}
-          <Button type="submit" disabled={loginPending} className="w-full">
+          <Button type="submit" disabled={loginPending} className="min-h-11 w-full">
             {loginPending ? "Вход..." : "Войти"}
           </Button>
         </form>

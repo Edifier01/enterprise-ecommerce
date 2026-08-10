@@ -1,5 +1,6 @@
 """Request a password reset email."""
 
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -14,6 +15,8 @@ from app.features.auth.domain.ports import (
     IUnitOfWork,
     IUserRepository,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ForgotPasswordUseCase:
@@ -48,19 +51,26 @@ class ForgotPasswordUseCase:
             created_at=now,
         )
         await self._token_repository.create(token)
+        await self._unit_of_work.commit()
 
         reset_url = f"{settings.storefront_url.rstrip('/')}/reset-password?token={raw_token}"
-        await self._email_service.send(
-            EmailMessage(
-                to=user.email,
-                subject="Восстановление пароля — Сухопут",
-                body_text=(
-                    "Здравствуйте!\n\n"
-                    "Для сброса пароля перейдите по ссылке:\n"
-                    f"{reset_url}\n\n"
-                    "Ссылка действует ограниченное время. "
-                    "Если вы не запрашивали сброс, проигнорируйте это письмо."
-                ),
+        try:
+            await self._email_service.send(
+                EmailMessage(
+                    to=user.email,
+                    subject="Восстановление пароля — Сухопут",
+                    body_text=(
+                        "Здравствуйте!\n\n"
+                        "Для сброса пароля перейдите по ссылке:\n"
+                        f"{reset_url}\n\n"
+                        "Ссылка действует ограниченное время. "
+                        "Если вы не запрашивали сброс, проигнорируйте это письмо."
+                    ),
+                )
             )
-        )
-        await self._unit_of_work.commit()
+        except Exception:
+            logger.exception(
+                "Failed to send password reset email user_id=%s email=%s",
+                user.id,
+                user.email,
+            )

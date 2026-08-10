@@ -50,7 +50,7 @@ export function ProductStickyBar({
   return (
     <div
       className={cn(
-        "fixed inset-x-0 bottom-[calc(var(--store-mobile-nav-height))] z-40 border-t bg-background/95 p-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur transition-transform duration-200 md:hidden",
+        "fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 p-3 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur transition-transform duration-200 md:hidden",
         visible ? "translate-y-0" : "translate-y-full",
       )}
       aria-hidden={!visible}
@@ -67,8 +67,8 @@ export function ProductStickyBar({
             variantId={selected.id}
             productName={product.name}
             disabled={!inStock}
-            size="default"
-            className="shrink-0"
+            size="lg"
+            className="min-h-11 shrink-0 px-5"
             label="В корзину"
           />
         ) : null}

@@ -69,6 +69,4 @@ class RegisterWholesalerUseCase:
             legal_address=legal_address.strip(),
             created_at=datetime.now(timezone.utc),
         )
-        saved_user = await self._repository.create_wholesaler(user, profile)
-        await self._unit_of_work.commit()
-        return saved_user
+        return await self._repository.create_wholesaler(user, profile)

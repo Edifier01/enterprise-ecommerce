@@ -187,7 +187,7 @@ export function FlatVariantSelector({
               onClick={() => onSelect(variant.id)}
               disabled={!variant.in_stock}
               className={cn(
-                "rounded-md border px-3 py-1.5 text-sm transition-colors",
+                "inline-flex min-h-11 items-center justify-center rounded-md border px-3 py-1.5 text-sm transition-colors",
                 isActive
                   ? "border-primary bg-primary/10 text-foreground"
                   : "border-input bg-background text-muted-foreground hover:border-ring",

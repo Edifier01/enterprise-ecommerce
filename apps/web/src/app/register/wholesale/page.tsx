@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { WholesaleRegisterForm } from "@/components/auth/wholesale-register-form";
+import { PageContainer } from "@/components/store/layout/page-container";
 import { siteConfig } from "@/lib/store/site-config";
 
 export const metadata: Metadata = {
@@ -10,8 +11,11 @@ export const metadata: Metadata = {
 
 export default function WholesaleRegisterPage() {
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-4 py-10">
+    <PageContainer
+      as="main"
+      className="flex min-h-[50vh] items-center justify-center"
+    >
       <WholesaleRegisterForm />
-    </div>
+    </PageContainer>
   );
 }

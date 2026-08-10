@@ -10,8 +10,9 @@ logger = logging.getLogger(__name__)
 class ConsoleEmailService(IEmailService):
     async def send(self, message: EmailMessage) -> None:
         logger.info(
-            "EMAIL to=%s subject=%s\n%s",
+            "EMAIL to=%s subject=%s body_len=%d",
             message.to,
             message.subject,
-            message.body_text,
+            len(message.body_text),
         )
+        logger.debug("EMAIL body=%s", message.body_text)

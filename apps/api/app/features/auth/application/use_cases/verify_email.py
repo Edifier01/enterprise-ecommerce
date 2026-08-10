@@ -24,14 +24,15 @@ class VerifyEmailUseCase:
         self._unit_of_work = unit_of_work
 
     async def execute(self, raw_token: str) -> User:
-        token = await self._token_repository.get_valid_by_hash(
+        now = datetime.now(timezone.utc)
+        token = await self._token_repository.consume_valid_by_hash(
             hash_token(raw_token),
             EMAIL_VERIFICATION,
+            used_at=now,
         )
         if token is None:
             raise InvalidVerificationTokenError()
 
-        now = datetime.now(timezone.utc)
         user = await self._user_repository.mark_email_verified(
             token.user_id,
             verified_at=now,
@@ -39,6 +40,5 @@ class VerifyEmailUseCase:
         if user is None:
             raise InvalidVerificationTokenError()
 
-        await self._token_repository.mark_used(token.id, used_at=now)
         await self._unit_of_work.commit()
         return user

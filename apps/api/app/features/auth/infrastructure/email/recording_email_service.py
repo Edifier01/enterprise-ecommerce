@@ -16,3 +16,8 @@ class RecordingEmailService(IEmailService):
     @property
     def last(self) -> EmailMessage | None:
         return self.messages[-1] if self.messages else None
+
+
+class FailingEmailService(IEmailService):
+    async def send(self, message: EmailMessage) -> None:
+        raise RuntimeError("simulated email delivery failure")

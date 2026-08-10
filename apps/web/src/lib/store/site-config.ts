@@ -120,7 +120,7 @@ export const siteConfig = {
     /** Tailwind class — max-w-7xl (80rem) */
     containerClass: "mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8",
     /** Padding for fixed mobile bottom nav */
-    mainPaddingClass: "pb-16 md:pb-0",
+    mainPaddingClass: "pb-[var(--store-mobile-nav-offset)] md:pb-0",
     productGridClass: "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5",
   },
 
