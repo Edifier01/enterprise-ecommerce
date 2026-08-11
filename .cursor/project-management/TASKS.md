@@ -71,6 +71,23 @@ Sources reviewed: agentic-awesome-skills, ECC, agency-agents. No wholesale insta
 
 **Status:** IN_PROGRESS
 
+### Feature: Admin UX v2 — Operational Control Center
+
+**Status:** IN_PROGRESS (Phase 0 COMPLETE 2026-08-11)
+
+**Plan:** `.cursor/plans/admin_ux_orchestration_5a14290e.plan.md`  
+**Audit:** `docs/ux/admin-ux-audit.md`  
+**ADR:** none for Phase 0 (docs-only); ADR-012 amendment possible in Phase 1
+
+- [x] Phase 0 — Repository + UX audit (`docs/ux/admin-ux-audit.md`)
+- [x] Phase 0 verifier — APPROVED WITH NOTES (2026-08-11)
+- [ ] Phase 1 — IA v2 doc (`docs/ux/admin-ia-v2.md`) — **NEXT**
+- [ ] Phase 2 — Shared admin primitives (ReadinessPanel, StatusBadge, NextItem, SyncedField, BulkToolbar)
+- [ ] Phases 3–12 — Shell → dashboard → catalog → workflow → editor → gallery → variants → orders/inventory → mobile → polish
+
+**Phase 0 top gaps (P1):** readiness on edit, next-product nav, unsaved guard, workflow action queue, proactive publish blockers.  
+**Backend:** no blocking API gaps — reuse existing `/api/v1/admin/*`.
+
 ### Feature: stich.su UX Parity Without Redesign
 
 **Status:** IN_PROGRESS (P0/P1 code done 2026-07-24; deploy + optional E2E pending)
