@@ -15,13 +15,14 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Current Objective
 
-**Active this chat:** Admin UX v2 Phase 0 audit ✅ → next Phase 1 IA doc.  
+**Active this chat:** ECOMMERCE UX V2 Phase 0 audit ✅ → next Phase 1 architecture doc after user approval.  
 **Parallel release:** YooKassa prod gate (primary) + Mobile UX Wave 5 / auth deploy (secondary).
 
 ---
 
 ## Current Sprint
 
+**ECOMMERCE UX V2** — Phase 0 COMPLETE (`docs/ux/ecommerce-ux-audit.md`; verifier APPROVED WITH NOTES); Phase 1 architecture pending approval  
 **Admin UX v2** — Phase 0 COMPLETE (verifier APPROVED WITH NOTES); Phase 1 IA pending  
 **Final Project Gate — YooKassa** ⏳ **PLANNED** (Wave A ✅; deploy 021–022 pending)  
 **Mobile UX Wave 5** — code ✅; verifier ⚠️ PASSED WITH NOTES; deploy pending
@@ -50,6 +51,7 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 ## Active Work
 
 - [x] **Admin UX v2 Phase 0** — `docs/ux/admin-ux-audit.md`; verifier APPROVED WITH NOTES (2026-08-11)
+- [x] **ECOMMERCE UX V2 Phase 0** — `docs/ux/ecommerce-ux-audit.md`; verifier APPROVED WITH NOTES (2026-08-11)
 - [ ] **Admin UX v2 Phase 1** — `docs/ux/admin-ia-v2.md` (NEXT; docs only)
 - [x] **Temporary storefront auth lockdown** — CTAs hidden + API register 403 (2026-08-10); reopen via env flags
 - [x] **CI green (OpenAPI + auth/checkout E2E)** — fixed 2026-08-10; await CI after push
@@ -148,19 +150,20 @@ None.
 
 ## Next Actions
 
-1. **Admin UX v2 Phase 1** — write `docs/ux/admin-ia-v2.md` (sidebar reorder/labels, saved-view taxonomy, `from` contract) then verifier
-2. Commit + deploy Mobile UX Wave 5; prod smoke `/checkout` + PDP @390px
-3. Deploy migrations `021`–`022` on staging/prod; smoke guest checkout + MS export
-4. `/start-feature YooKassa payment integration` (ADR-004)
+1. **ECOMMERCE UX V2 Phase 1** — write `docs/ux/ecommerce-ux-v2-architecture.md` only after user approval
+2. Admin UX v2 Phase 1 — write `docs/ux/admin-ia-v2.md` if user chooses admin-only continuation
+3. Commit + deploy Mobile UX Wave 5; prod smoke `/checkout` + PDP @390px
+4. Deploy migrations `021`–`022` on staging/prod; smoke guest checkout + MS export
+5. `/start-feature YooKassa payment integration` (ADR-004)
 
 ---
 
 ## Last Updated
 
-2026-08-11 (Admin UX v2 Phase 0 audit)
+2026-08-11 (ECOMMERCE UX V2 Phase 0 audit)
 
 ---
 
 ## Last Agent
 
-Grok 4.5 (Admin UX v2 Phase 0)
+GPT-5.5 (ECOMMERCE UX V2 Phase 0)

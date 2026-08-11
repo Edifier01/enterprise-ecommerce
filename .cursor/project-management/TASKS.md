@@ -71,6 +71,22 @@ Sources reviewed: agentic-awesome-skills, ECC, agency-agents. No wholesale insta
 
 **Status:** IN_PROGRESS
 
+### Feature: ECOMMERCE UX V2 — Storefront + Admin Merchandising
+
+**Status:** IN_PROGRESS (Phase 0 COMPLETE 2026-08-11)
+
+**Plan:** `.cursor/plans/ecommerce_ux_v2_bdc2c25c.plan.md`  
+**Audit:** `docs/ux/ecommerce-ux-audit.md`  
+**ADR:** none for Phase 0 (docs-only); architecture decisions may be needed in Phase 1 for preview/payment/search API changes
+
+- [x] Phase 0 — Ecommerce-wide UX audit (`docs/ux/ecommerce-ux-audit.md`)
+- [x] Phase 0 verifier — APPROVED WITH NOTES (2026-08-11)
+- [ ] Phase 1 — Architecture doc (`docs/ux/ecommerce-ux-v2-architecture.md`) — **PENDING USER APPROVAL**
+- [ ] Phase 2+ — Design system, storefront shell, home, catalog, PDP, cart/checkout, admin integration, mobile, a11y/perf, final audit
+
+**Phase 0 top gaps (P1/P0):** checkout still Stripe/stub vs YooKassa target, placeholder contacts/info IA, cart images/SKU/currency, fake PDP fallback description, search suggestions, draft storefront preview, admin merchandising loop import from `admin-ux-audit`.  
+**Backend:** likely required for YooKassa, search suggestions, cart line image snapshot, draft preview, optional low-stock/quantity display.
+
 ### Feature: Admin UX v2 — Operational Control Center
 
 **Status:** IN_PROGRESS (Phase 0 COMPLETE 2026-08-11)
