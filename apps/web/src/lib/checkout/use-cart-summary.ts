@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { subscribeCartUpdated } from "@/lib/checkout/cart-events";
 import { getCart, type Cart } from "@/lib/checkout/api";
+import { resolveCartCurrency } from "@/lib/checkout/cart-line-display";
 import { formatPrice } from "@/lib/store/format";
 
 type CartSummary = {
@@ -26,7 +27,7 @@ export function useCartSummary(): CartSummary {
     getCart()
       .then((cart) => {
         const count = cart.lines.reduce((sum, line) => sum + line.quantity, 0);
-        const currency = cart.currency ?? cart.lines[0]?.currency ?? "RUB";
+        const currency = resolveCartCurrency(cart.currency, cart.lines[0]?.currency);
         setSummary({
           itemCount: count,
           totalLabel: formatPrice(cart.total_cents, currency),

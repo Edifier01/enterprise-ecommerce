@@ -8,7 +8,7 @@ test.describe("Admin UX Wave 6 smoke", () => {
     await page.goto("/admin/integrations/moysklad/import");
 
     const bulkTitle = page.getByText("Массовое назначение");
-    const hasQueue = await page.getByText("Очередь импорта").count();
+    const hasQueue = await page.getByText("Импорт товаров").count();
     expect(hasQueue).toBeGreaterThan(0);
 
     const hasBulk = await bulkTitle.count();

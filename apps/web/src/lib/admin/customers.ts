@@ -18,6 +18,7 @@ export type AdminCustomerList = {
 export async function listAdminCustomers(
   page = 1,
   query?: string,
+  options?: { wholesaler?: boolean },
 ): Promise<AdminFetchResult<AdminCustomerList>> {
   const params = new URLSearchParams({
     page: String(page),
@@ -25,6 +26,11 @@ export async function listAdminCustomers(
   });
   if (query?.trim()) {
     params.set("q", query.trim());
+  }
+  if (options?.wholesaler === true) {
+    params.set("is_wholesaler", "true");
+  } else if (options?.wholesaler === false) {
+    params.set("is_wholesaler", "false");
   }
   return adminFetchResult<AdminCustomerList>(`/api/v1/admin/customers?${params}`);
 }

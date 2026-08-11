@@ -15,15 +15,15 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Current Objective
 
-**Active this chat:** ECOMMERCE UX V2 Phase 0 audit ✅ → next Phase 1 architecture doc after user approval.  
+**Active this chat:** Admin UX v2 Phase 12 ✅ — plan complete. Release: YooKassa + deploy.  
 **Parallel release:** YooKassa prod gate (primary) + Mobile UX Wave 5 / auth deploy (secondary).
 
 ---
 
 ## Current Sprint
 
-**ECOMMERCE UX V2** — Phase 0 COMPLETE (`docs/ux/ecommerce-ux-audit.md`; verifier APPROVED WITH NOTES); Phase 1 architecture pending approval  
-**Admin UX v2** — Phase 0 COMPLETE (verifier APPROVED WITH NOTES); Phase 1 IA pending  
+**ECOMMERCE UX V2** — Phase 8 COMPLETE (draft PDP preview EUX-011; tsc clean)  
+**Admin UX v2** — Phase 12 COMPLETE (a11y + E2E GAP-17; **Phases 0–12 done**)  
 **Final Project Gate — YooKassa** ⏳ **PLANNED** (Wave A ✅; deploy 021–022 pending)  
 **Mobile UX Wave 5** — code ✅; verifier ⚠️ PASSED WITH NOTES; deploy pending
 
@@ -52,7 +52,26 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 - [x] **Admin UX v2 Phase 0** — `docs/ux/admin-ux-audit.md`; verifier APPROVED WITH NOTES (2026-08-11)
 - [x] **ECOMMERCE UX V2 Phase 0** — `docs/ux/ecommerce-ux-audit.md`; verifier APPROVED WITH NOTES (2026-08-11)
-- [ ] **Admin UX v2 Phase 1** — `docs/ux/admin-ia-v2.md` (NEXT; docs only)
+- [x] **Admin UX v2 Phase 1** — `docs/ux/admin-ia-v2.md`; verifier APPROVED WITH NOTES (2026-08-11)
+- [x] **ECOMMERCE UX V2 Phase 1** — `docs/ux/ecommerce-ux-v2-architecture.md`; verifier APPROVED WITH NOTES (2026-08-11)
+- [x] **ECOMMERCE UX V2 Phase 2** — storefront empty/error/skeleton/status primitives; tsc clean (2026-08-11)
+- [x] **Admin UX v2 Phase 2** — admin shared primitives + edit wiring; tsc clean (2026-08-11)
+- [x] **ECOMMERCE UX V2 Phase 3** — info routes, footer/top-bar links, search suggestions, mobile header search; tsc clean (2026-08-11)
+- [x] **Admin UX v2 Phase 3** — sidebar IA v2, page headers, label migration, ADR-012 §1a; tsc clean (2026-08-11)
+- [x] **ECOMMERCE UX V2 Phase 4** — homepage intro, section tab polish, promos gated; tsc clean (2026-08-11)
+- [x] **Admin UX v2 Phase 4** — dashboard Action Center GAP-13; tsc clean (2026-08-11)
+- [x] **ECOMMERCE UX V2 Phase 5** — 4:5 cards, EUX-009 fallback policy; tsc clean (2026-08-11)
+- [x] **Admin UX v2 Phase 5** — catalog bulk toolbar + quick-edit GAP-11/12; tsc clean (2026-08-11)
+- [x] **ECOMMERCE UX V2 Phase 6** — PDP description/specs/trust/delivery; tsc clean (2026-08-11)
+- [x] **Admin UX v2 Phase 6** — workflow action queue GAP-05; tsc clean (2026-08-11)
+- [x] **ECOMMERCE UX V2 Phase 7** — cart thumbnails, RUB, hide SKU; tsc clean (2026-08-11)
+- [x] **Admin UX v2 Phase 7** — product edit section nav + publish guard; tsc clean (2026-08-11)
+- [x] **Admin UX v2 Phase 8** — gallery color matrix GAP-08; tsc clean (2026-08-11)
+- [x] **Admin UX v2 Phase 9** — variants MS display GAP-06; tsc clean (2026-08-11)
+- [x] **Admin UX v2 Phase 10** — orders/inventory/customers parity GAP-16; tsc clean (2026-08-11)
+- [x] **Admin UX v2 Phase 11** — mobile edit IA GAP-15; tsc clean (2026-08-11)
+- [x] **Admin UX v2 Phase 12** — polish, a11y, E2E expansion GAP-17; tsc clean (2026-08-11)
+- [x] **ECOMMERCE UX V2 Phase 8** — draft PDP preview EUX-011; tsc clean (2026-08-11)
 - [x] **Temporary storefront auth lockdown** — CTAs hidden + API register 403 (2026-08-10); reopen via env flags
 - [x] **CI green (OpenAPI + auth/checkout E2E)** — fixed 2026-08-10; await CI after push
 - [x] **Mobile UX Wave 4 audit** — code + prod @390px (2026-08-08)
@@ -150,20 +169,20 @@ None.
 
 ## Next Actions
 
-1. **ECOMMERCE UX V2 Phase 1** — write `docs/ux/ecommerce-ux-v2-architecture.md` only after user approval
-2. Admin UX v2 Phase 1 — write `docs/ux/admin-ia-v2.md` if user chooses admin-only continuation
-3. Commit + deploy Mobile UX Wave 5; prod smoke `/checkout` + PDP @390px
-4. Deploy migrations `021`–`022` on staging/prod; smoke guest checkout + MS export
-5. `/start-feature YooKassa payment integration` (ADR-004)
+1. **Phase 3** — storefront info routes + header; admin sidebar rename/reorder (ADR-012 amendment)
+2. Commit + deploy Mobile UX Wave 5; prod smoke `/checkout` + PDP @390px
+3. Deploy migrations `021`–`022` on staging/prod; smoke guest checkout + MS export
+4. `/start-feature YooKassa payment integration` (ADR-004)
+5. Ops: real contacts/delivery/returns copy for Phase 3 info pages
 
 ---
 
 ## Last Updated
 
-2026-08-11 (ECOMMERCE UX V2 Phase 0 audit)
+2026-08-11 (UX V2 Phase 6 — PDP sections + workflow action queue)
 
 ---
 
 ## Last Agent
 
-GPT-5.5 (ECOMMERCE UX V2 Phase 0)
+Composer 2.5 (UX V2 Phase 2)

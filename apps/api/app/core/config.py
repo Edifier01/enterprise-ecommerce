@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     jwt_secret_key: SecretStr = SecretStr(_JWT_DEV_DEFAULT)
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
+    product_preview_token_expire_minutes: int = 15
     storefront_url: str = "http://localhost:3000"
     email_provider: str = "console"
     email_from: str = "noreply@example.com"

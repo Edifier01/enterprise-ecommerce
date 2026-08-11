@@ -11,7 +11,7 @@ test.describe("Admin catalog smoke", () => {
 
     await page.goto("/admin/catalog/new");
     await expect(page).toHaveURL(/\/admin\/integrations\/moysklad/, { timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: "Интеграция МойСклад" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Синхронизация МойСклад" })).toBeVisible();
   });
 
   test("catalog sidebar opens product list directly", async ({ page }) => {
@@ -36,7 +36,7 @@ test.describe("Admin catalog smoke", () => {
 
     await page.goto("/admin/catalog?view=categories");
     await openAdminNavIfMobile(page);
-    await expect(page.getByRole("link", { name: "Очередь импорта" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Импорт" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Новый товар" })).toHaveCount(0);
   });
 

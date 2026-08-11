@@ -1,6 +1,7 @@
 """Pydantic schemas for admin catalog API."""
 
 import re
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -262,3 +263,9 @@ class AdminUpdateCategoryRequest(BaseModel):
         if not _SLUG_RE.match(normalized):
             raise ValueError("slug must be lowercase alphanumeric with hyphens")
         return normalized
+
+
+class AdminProductPreviewTokenResponse(BaseModel):
+    token: str
+    expires_at: datetime
+    slug: str

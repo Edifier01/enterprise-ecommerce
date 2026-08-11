@@ -2,10 +2,11 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db_session
 from app.features.auth.domain.entities import User
 from app.features.auth.presentation.dependencies import get_optional_current_user
@@ -20,6 +21,10 @@ from app.features.catalog.infrastructure.persistence.product_image_repository im
     ProductImageRepository,
 )
 from app.features.catalog.infrastructure.persistence.repository import ProductRepository
+from app.features.catalog.infrastructure.security.product_preview_token_service import (
+    InvalidProductPreviewTokenError,
+    ProductPreviewTokenService,
+)
 from app.features.catalog.presentation.schemas import (
     ProductFacetsResponse,
     ProductListResponse,
@@ -52,6 +57,34 @@ def get_product_image_repository(
     session: AsyncSession = Depends(get_db_session),
 ) -> ProductImageRepository:
     return ProductImageRepository(session)
+
+
+def get_product_preview_token_service() -> ProductPreviewTokenService:
+    return ProductPreviewTokenService(
+        secret_key=settings.jwt_secret_key.get_secret_value(),
+        algorithm=settings.jwt_algorithm,
+        expire_minutes=settings.product_preview_token_expire_minutes,
+    )
+
+
+async def _resolve_product_for_request(
+    slug: str,
+    preview: str | None,
+    repo: IProductRepository,
+    preview_service: ProductPreviewTokenService,
+) -> Product | None:
+    if preview:
+        try:
+            claims = preview_service.verify_token(preview)
+        except InvalidProductPreviewTokenError:
+            return None
+        if claims.slug != slug:
+            return None
+        use_case = GetProductUseCase(repo)
+        return await use_case.execute_for_preview(slug)
+
+    use_case = GetProductUseCase(repo)
+    return await use_case.execute(slug)
 
 
 def _show_wholesale(user: User | None) -> bool:
@@ -245,11 +278,12 @@ async def search_products(
 @router.get("/{slug}/erp-image", operation_id="getProductErpImage")
 async def get_product_erp_image(
     slug: str,
+    preview: str | None = Query(default=None, description="Admin draft preview token"),
     repo: IProductRepository = Depends(get_product_repository),
+    preview_service: ProductPreviewTokenService = Depends(get_product_preview_token_service),
 ) -> Response:
     """Proxy MoySklad product image for browser display (MS download URLs require auth)."""
-    use_case = GetProductUseCase(repo)
-    product = await use_case.execute(slug)
+    product = await _resolve_product_for_request(slug, preview, repo, preview_service)
     if product is None or not product.erp_image_url or not product.erp_image_url.strip():
         raise HTTPException(status_code=404, detail="Product image not found")
 
@@ -268,24 +302,32 @@ async def get_product_erp_image(
     finally:
         await client.close()
 
+    headers = {"Cache-Control": "public, max-age=86400"}
+    if preview:
+        headers["Cache-Control"] = "private, no-store"
+
     return Response(
         content=content,
         media_type=content_type,
-        headers={"Cache-Control": "public, max-age=86400"},
+        headers=headers,
     )
 
 
 @router.get("/{slug}", response_model=ProductSchema, response_model_exclude_none=True, operation_id="getProduct")
 async def get_product(
     slug: str,
+    response: Response,
+    preview: str | None = Query(default=None, description="Admin draft preview token"),
     repo: IProductRepository = Depends(get_product_repository),
     image_repo: ProductImageRepository = Depends(get_product_image_repository),
     user: User | None = Depends(get_optional_current_user),
+    preview_service: ProductPreviewTokenService = Depends(get_product_preview_token_service),
 ) -> ProductSchema:
-    use_case = GetProductUseCase(repo)
-    product = await use_case.execute(slug)
+    product = await _resolve_product_for_request(slug, preview, repo, preview_service)
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
+    if preview:
+        response.headers["Cache-Control"] = "private, no-store"
     images = await image_repo.list_for_product(product.id)
     return product_to_schema(
         product,

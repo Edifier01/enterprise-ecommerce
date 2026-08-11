@@ -33,7 +33,7 @@ const QUICK_VIEWS: readonly AdminCommandItem[] = [
   },
   {
     id: "view-import-queue",
-    label: "Очередь импорта",
+    label: "Импорт",
     description: "Товары без категории",
     group: "views",
     href: "/admin/integrations/moysklad/import",
@@ -63,6 +63,24 @@ const QUICK_VIEWS: readonly AdminCommandItem[] = [
     group: "views",
     href: "/admin/orders?export_pending=1",
     keywords: ["экспорт", "заказы"],
+  },
+  {
+    id: "view-wholesale-customers",
+    label: "Оптовые клиенты",
+    description: "Список клиентов · тип Опт",
+    group: "views",
+    href: "/admin/customers?wholesaler=true",
+    permissions: ["customers:read"],
+    keywords: ["опт", "клиенты", "wholesale"],
+  },
+  {
+    id: "view-retail-customers",
+    label: "Розничные клиенты",
+    description: "Список клиентов · тип Розница",
+    group: "views",
+    href: "/admin/customers?wholesaler=false",
+    permissions: ["customers:read"],
+    keywords: ["розница", "клиенты", "retail"],
   },
 ];
 

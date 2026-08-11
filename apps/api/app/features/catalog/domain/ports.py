@@ -38,6 +38,11 @@ class IProductRepository(ABC):
         ...
 
     @abstractmethod
+    async def get_by_slug_for_preview(self, slug: str) -> Product | None:
+        """Return product by slug for admin preview (ignores storefront visibility)."""
+        ...
+
+    @abstractmethod
     async def search_products(
         self,
         query: str,

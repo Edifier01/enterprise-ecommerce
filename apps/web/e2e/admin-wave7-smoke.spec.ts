@@ -37,7 +37,7 @@ test.describe("Admin UX Wave 7 smoke", () => {
     await page.goto("/admin/integrations/moysklad/import");
 
     await expect(
-      page.getByRole("main").getByText("Очередь импорта", { exact: true }),
+      page.getByRole("main").getByText("Импорт товаров", { exact: true }),
     ).toBeVisible();
     const bulkPublish = page.getByRole("button", { name: "Опубликовать выбранным" });
     const hasBulk = await bulkPublish.count();

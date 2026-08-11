@@ -60,3 +60,7 @@ export function summarizePublishSkips(
 
   return parts.length > 0 ? parts.join(", ") : "";
 }
+
+export function formatPublishBlockerLabels(blockers: PublishBlocker[]): string {
+  return blockers.map((blocker) => BLOCKER_LABELS[blocker]).join(", ");
+}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { MoySkladImportPanel } from "@/components/admin/integrations/moysklad-import-panel";
 import { AdminFetchErrorState, AdminForbiddenState } from "@/components/admin/admin-error-state";
 import { buttonVariants } from "@/components/ui/button";
@@ -42,18 +43,18 @@ export default async function MoySkladImportPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          href="/admin/integrations/moysklad"
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← К интеграции
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">Импорт из МойСклад</h1>
-        <p className="text-sm text-muted-foreground">
-          Товары без категории не отображаются на витрине. Назначьте категорию и опубликуйте товар.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Импорт из МойСклад"
+        description="Товары без категории не отображаются на витрине. Назначьте категорию и опубликуйте товар."
+        breadcrumb={
+          <Link
+            href="/admin/integrations/moysklad"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← К синхронизации
+          </Link>
+        }
+      />
 
       <div className="flex flex-wrap gap-2 border-b border-border pb-4">
         <Link

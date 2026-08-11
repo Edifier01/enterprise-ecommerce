@@ -10,3 +10,6 @@ class GetProductUseCase:
 
     async def execute(self, slug: str) -> Product | None:
         return await self._repository.get_by_slug(slug)
+
+    async def execute_for_preview(self, slug: str) -> Product | None:
+        return await self._repository.get_by_slug_for_preview(slug)

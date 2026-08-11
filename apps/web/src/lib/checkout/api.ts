@@ -9,9 +9,11 @@ export type CartLine = {
   currency: string;
   product_snapshot: {
     product_name?: string;
+    product_slug?: string;
     name?: string;
     variant_name?: string;
     sku?: string;
+    image_url?: string | null;
     attributes?: Record<string, string>;
   };
 };

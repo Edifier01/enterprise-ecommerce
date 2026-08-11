@@ -73,33 +73,51 @@ Sources reviewed: agentic-awesome-skills, ECC, agency-agents. No wholesale insta
 
 ### Feature: ECOMMERCE UX V2 — Storefront + Admin Merchandising
 
-**Status:** IN_PROGRESS (Phase 0 COMPLETE 2026-08-11)
+**Status:** IN_PROGRESS (Phase 8 COMPLETE 2026-08-11)
 
 **Plan:** `.cursor/plans/ecommerce_ux_v2_bdc2c25c.plan.md`  
 **Audit:** `docs/ux/ecommerce-ux-audit.md`  
-**ADR:** none for Phase 0 (docs-only); architecture decisions may be needed in Phase 1 for preview/payment/search API changes
+**Architecture:** `docs/ux/ecommerce-ux-v2-architecture.md`  
+**ADR:** none for Phase 0–1 (docs-only); preview/search API decisions documented in Phase 1 architecture
 
 - [x] Phase 0 — Ecommerce-wide UX audit (`docs/ux/ecommerce-ux-audit.md`)
 - [x] Phase 0 verifier — APPROVED WITH NOTES (2026-08-11)
-- [ ] Phase 1 — Architecture doc (`docs/ux/ecommerce-ux-v2-architecture.md`) — **PENDING USER APPROVAL**
-- [ ] Phase 2+ — Design system, storefront shell, home, catalog, PDP, cart/checkout, admin integration, mobile, a11y/perf, final audit
+- [x] Phase 1 — Architecture doc (`docs/ux/ecommerce-ux-v2-architecture.md`) — COMPLETE 2026-08-11; verifier APPROVED WITH NOTES
+- [x] Phase 2 — Storefront design-system primitives (empty/error/skeleton/status) — COMPLETE 2026-08-11; tsc clean
+- [x] Phase 3 — Storefront shell (info routes, header search, footer/top-bar links, search suggestions) — COMPLETE 2026-08-11; tsc clean; verifier APPROVED WITH NOTES
+- [x] Phase 4 — Home (intro, section tabs polish, promos gated) — COMPLETE 2026-08-11; tsc clean
+- [x] Phase 5 — Catalog (4:5 cards, fallback policy) — COMPLETE 2026-08-11; tsc clean
+- [x] Phase 6 — PDP (real description, specs, trust/delivery) — COMPLETE 2026-08-11; tsc clean
+- [x] Phase 7 — Cart (images, RUB, hide retail SKU) — COMPLETE 2026-08-11; tsc clean
+- [x] Phase 8 — Draft PDP preview (EUX-011) — COMPLETE 2026-08-11; tsc clean
+- [ ] Phase 9+ — mobile, a11y/perf, final audit
 
 **Phase 0 top gaps (P1/P0):** checkout still Stripe/stub vs YooKassa target, placeholder contacts/info IA, cart images/SKU/currency, fake PDP fallback description, search suggestions, draft storefront preview, admin merchandising loop import from `admin-ux-audit`.  
 **Backend:** likely required for YooKassa, search suggestions, cart line image snapshot, draft preview, optional low-stock/quantity display.
 
 ### Feature: Admin UX v2 — Operational Control Center
 
-**Status:** IN_PROGRESS (Phase 0 COMPLETE 2026-08-11)
+**Status:** COMPLETED (Phase 12 COMPLETE 2026-08-11 — Phases 0–12 done)
 
 **Plan:** `.cursor/plans/admin_ux_orchestration_5a14290e.plan.md`  
 **Audit:** `docs/ux/admin-ux-audit.md`  
-**ADR:** none for Phase 0 (docs-only); ADR-012 amendment possible in Phase 1
+**IA:** `docs/ux/admin-ia-v2.md`  
+**ADR:** ADR-012 §1a amendment (2026-08-11) in `docs/adr/ADR-012-admin-panel-ia.md`
 
 - [x] Phase 0 — Repository + UX audit (`docs/ux/admin-ux-audit.md`)
 - [x] Phase 0 verifier — APPROVED WITH NOTES (2026-08-11)
-- [ ] Phase 1 — IA v2 doc (`docs/ux/admin-ia-v2.md`) — **NEXT**
-- [ ] Phase 2 — Shared admin primitives (ReadinessPanel, StatusBadge, NextItem, SyncedField, BulkToolbar)
-- [ ] Phases 3–12 — Shell → dashboard → catalog → workflow → editor → gallery → variants → orders/inventory → mobile → polish
+- [x] Phase 1 — IA v2 doc (`docs/ux/admin-ia-v2.md`) — COMPLETE 2026-08-11; verifier APPROVED WITH NOTES
+- [x] Phase 2 — Shared admin primitives (ReadinessPanel, StatusBadge, NextItem, SyncedField, BulkToolbar, unsaved guard) — COMPLETE 2026-08-11; tsc clean
+- [x] Phase 3 — Shell chrome (sidebar IA v2 labels/order, page headers, label migration) — COMPLETE 2026-08-11; tsc clean; verifier APPROVED WITH NOTES
+- [x] Phase 4 — Dashboard Action Center polish (GAP-13) — COMPLETE 2026-08-11; tsc clean
+- [x] Phase 5 — Catalog list bulk/quick-edit (GAP-11, GAP-12) — COMPLETE 2026-08-11; tsc clean
+- [x] Phase 6 — Workflow → action queue (GAP-05) — COMPLETE 2026-08-11; tsc clean
+- [x] Phase 7 — Product editor section nav + publish guard (GAP-02, GAP-07) — COMPLETE 2026-08-11; tsc clean
+- [x] Phase 8 — Gallery color matrix (GAP-08) + draft preview admin button — COMPLETE 2026-08-11; tsc clean
+- [x] Phase 9 — Variants MS display (GAP-06) — COMPLETE 2026-08-11; tsc clean
+- [x] Phase 10 — Orders/inventory/customers parity (GAP-16, AdminStatusBadge rollout) — COMPLETE 2026-08-11; tsc clean
+- [x] Phase 11 — Mobile edit IA (GAP-15, section nav chips, fixed save bar) — COMPLETE 2026-08-11; tsc clean
+- [x] Phase 12 — Polish, a11y, E2E expansion (GAP-17) — COMPLETE 2026-08-11; tsc clean
 
 **Phase 0 top gaps (P1):** readiness on edit, next-product nav, unsaved guard, workflow action queue, proactive publish blockers.  
 **Backend:** no blocking API gaps — reuse existing `/api/v1/admin/*`.

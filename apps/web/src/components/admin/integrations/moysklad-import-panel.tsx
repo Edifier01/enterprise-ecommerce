@@ -15,6 +15,7 @@ import {
 import { AdminBulkJobProgress } from "@/components/admin/admin-bulk-job-progress";
 import { AdminDataTable, type AdminDataTableColumn } from "@/components/admin/admin-data-table";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
+import { AdminReadinessPanel } from "@/components/admin/admin-readiness-panel";
 import { AdminPagination, getAdminTotalPages } from "@/components/admin/admin-pagination";
 import {
   AdminMobileCard,
@@ -27,7 +28,6 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminCategory, AdminProduct } from "@/lib/admin/catalog-shared";
 import { PRODUCT_STATUS_LABELS } from "@/lib/admin/catalog-shared";
-import { getMerchandisingChecklistItems } from "@/lib/admin/merchandising-readiness";
 import type { AdminBulkJob } from "@/lib/admin/bulk-jobs-shared";
 import { cn } from "@/lib/utils";
 
@@ -41,20 +41,7 @@ type MoySkladImportPanelProps = {
 };
 
 function MerchandisingChecklist({ product }: { product: AdminProduct }) {
-  const items = getMerchandisingChecklistItems(product);
-
-  return (
-    <ul className="space-y-1 text-xs text-muted-foreground" aria-label="Чеклист оформления">
-      {items.map((item) => (
-        <li key={item.label} className="flex items-center gap-2">
-          <span aria-hidden className={item.done ? "text-green-600" : undefined}>
-            {item.done ? "☑" : "☐"}
-          </span>
-          <span className={item.done ? "text-foreground" : undefined}>{item.label}</span>
-        </li>
-      ))}
-    </ul>
-  );
+  return <AdminReadinessPanel product={product} variant="compact" />;
 }
 
 function getDefaultSku(product: AdminProduct): string {
@@ -309,7 +296,7 @@ export function MoySkladImportPanel({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Очередь импорта</CardTitle>
+          <CardTitle>Импорт товаров</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <p>
@@ -386,9 +373,9 @@ export function MoySkladImportPanel({
         onSelectionChange={setSelectedIds}
         emptyState={
           <AdminEmptyState
-            title="Очередь импорта пуста"
-            description="Нет товаров, ожидающих категорию. Запустите импорт на странице интеграции."
-            action={{ label: "Интеграция МойСклад", href: "/admin/integrations/moysklad" }}
+            title="Импорт пуст"
+            description="Нет товаров, ожидающих категорию. Запустите синхронизацию на странице МойСклад."
+            action={{ label: "Синхронизация МойСклад", href: "/admin/integrations/moysklad" }}
           />
         }
         renderMobileCard={(product) => (

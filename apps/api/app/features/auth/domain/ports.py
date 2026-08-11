@@ -46,6 +46,7 @@ class IUserRepository(ABC):
         limit: int,
         *,
         q: str | None = None,
+        is_wholesaler: bool | None = None,
     ) -> tuple[list[User], int]:
         """Return paginated customer users and total count."""
         ...

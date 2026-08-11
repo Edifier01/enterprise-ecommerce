@@ -5,7 +5,15 @@ import { useMemo, useState } from "react";
 import { Breadcrumbs } from "@/components/store/catalog/breadcrumbs";
 import type { BreadcrumbItem } from "@/components/store/catalog/breadcrumbs";
 import { ProductGallery } from "@/components/store/catalog/product-gallery";
+import {
+  ProductDeliveryInfo,
+  ProductTrustBlock,
+} from "@/components/store/catalog/product-info-sections";
 import { ProductPurchasePanel } from "@/components/store/catalog/product-purchase-panel";
+import {
+  ProductSpecsTable,
+  buildProductSpecRows,
+} from "@/components/store/catalog/product-specs-table";
 import type { Product, ProductImage } from "@/lib/api";
 import { siteConfig } from "@/lib/store/site-config";
 import { resolveProductGalleryImageSrc } from "@/lib/store/product-image";
@@ -15,11 +23,21 @@ export interface ProductDetailProps {
   product: Product;
   isWholesaler?: boolean;
   categoryBreadcrumb?: { name: string; href: string };
+  previewToken?: string;
+}
+
+function withPreviewQuery(src: string, previewToken?: string): string {
+  if (!previewToken || !src.includes("/erp-image")) {
+    return src;
+  }
+  const separator = src.includes("?") ? "&" : "?";
+  return `${src}${separator}preview=${encodeURIComponent(previewToken)}`;
 }
 
 function buildGalleryImages(
   product: Product,
   selectedColor: string | null,
+  previewToken?: string,
 ): { src: string; alt: string }[] {
   const placeholder = siteConfig.images.productPlaceholder;
   const fallback = resolveProductGalleryImageSrc(product.slug, product.image_url ?? placeholder);
@@ -38,11 +56,11 @@ function buildGalleryImages(
     tagged.length > 0 ? tagged : general.length > 0 ? general : product.images;
 
   if (ordered.length === 0) {
-    return [{ src: fallback, alt: product.name }];
+    return [{ src: withPreviewQuery(fallback, previewToken), alt: product.name }];
   }
 
   return ordered.map((image, index) => ({
-    src: resolveProductGalleryImageSrc(product.slug, image.url),
+    src: withPreviewQuery(resolveProductGalleryImageSrc(product.slug, image.url), previewToken),
     alt: image.alt_text?.trim() || `${product.name} — фото ${index + 1}`,
   }));
 }
@@ -51,6 +69,7 @@ export function ProductDetail({
   product,
   isWholesaler = false,
   categoryBreadcrumb,
+  previewToken,
 }: ProductDetailProps) {
   const structured = usesStructuredSelector(product.option_groups, product.variants.length);
   const initialColor = structured
@@ -59,8 +78,8 @@ export function ProductDetail({
   const [selectedColor, setSelectedColor] = useState<string | null>(initialColor);
 
   const galleryImages = useMemo(
-    () => buildGalleryImages(product, selectedColor),
-    [product, selectedColor],
+    () => buildGalleryImages(product, selectedColor, previewToken),
+    [product, selectedColor, previewToken],
   );
 
   const breadcrumbs: BreadcrumbItem[] = [
@@ -77,12 +96,14 @@ export function ProductDetail({
 
   breadcrumbs.push({ label: product.name });
 
-  const description =
-    product.description?.trim() ||
-    `Тактическое снаряжение с подбором по вашим задачам. Если нужна консультация по совместимости, размеру или комплектации — напишите на ${siteConfig.contact.supportEmail}.`;
+  const description = product.description?.trim();
+  const specRows = buildProductSpecRows(product);
+  const showSpecs =
+    product.variants.length > 1 ||
+    specRows.some((row) => row.label !== "Наличие");
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-8 sm:space-y-10">
       <Breadcrumbs items={breadcrumbs} />
 
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
@@ -101,11 +122,33 @@ export function ProductDetail({
             }}
           />
 
-          <div className="space-y-2 border-t pt-5">
-            <h2 className="text-sm font-semibold text-foreground">Описание</h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
-          </div>
+          {description ? (
+            <section aria-labelledby="product-description-heading" className="space-y-2 border-t pt-5">
+              <h2 id="product-description-heading" className="text-sm font-semibold text-foreground">
+                Описание
+              </h2>
+              <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                {description}
+              </p>
+            </section>
+          ) : (
+            <p className="border-t pt-5 text-sm text-muted-foreground">Описание уточняется.</p>
+          )}
         </div>
+      </div>
+
+      <div className="space-y-8 border-t pt-8">
+        {showSpecs ? (
+          <section aria-labelledby="product-specs-heading" className="space-y-3">
+            <h2 id="product-specs-heading" className="text-sm font-semibold text-foreground">
+              Характеристики
+            </h2>
+            <ProductSpecsTable product={product} />
+          </section>
+        ) : null}
+
+        <ProductDeliveryInfo />
+        <ProductTrustBlock />
       </div>
     </div>
   );

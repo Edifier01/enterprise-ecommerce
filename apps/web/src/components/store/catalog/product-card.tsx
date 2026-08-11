@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AddToCartButton } from "@/components/store/catalog/add-to-cart-button";
 import { ProductThumbnail } from "@/components/store/catalog/product-thumbnail";
+import { StoreStatusBadge, getStoreStockState } from "@/components/store/ui/store-status-badge";
 import type { Product } from "@/lib/api";
 import {
   formatCompareAtPrice,
@@ -57,7 +58,7 @@ export function ProductCard({
     >
       <Link
         href={`/products/${product.slug}`}
-        className="relative block aspect-square overflow-hidden bg-muted"
+        className="relative block aspect-[4/5] overflow-hidden bg-muted"
       >
         <ProductThumbnail
           src={imageSrc}
@@ -68,8 +69,8 @@ export function ProductCard({
           className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
         />
         {onSale ? (
-          <span className="absolute left-2 top-2 inline-flex items-center rounded-full bg-store-sale px-2 py-0.5 text-xs font-medium text-store-sale-foreground">
-            Скидка{discount ? ` −${discount}%` : ""}
+          <span className="absolute left-2 top-2">
+            <StoreStatusBadge state="sale" label={discount ? `Скидка −${discount}%` : "Скидка"} />
           </span>
         ) : null}
       </Link>
@@ -131,15 +132,7 @@ export function ProductCard({
           </div>
 
           <div className="flex items-center justify-between gap-2">
-            {product.in_stock ? (
-              <span className="inline-flex items-center rounded-full bg-store-success px-2 py-0.5 text-xs font-medium text-store-success-foreground">
-                В наличии
-              </span>
-            ) : (
-              <span className="inline-flex items-center rounded-full bg-store-muted-badge px-2 py-0.5 text-xs font-medium text-store-muted-badge-foreground">
-                Нет в наличии
-              </span>
-            )}
+            <StoreStatusBadge state={getStoreStockState(product.in_stock)} />
 
             {defaultVariantId ? (
               <AddToCartButton

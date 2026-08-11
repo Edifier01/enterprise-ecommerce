@@ -1,5 +1,6 @@
 import { getCategories } from "@/lib/api";
 import type { Category } from "@/lib/api";
+import { allowStaticCategoryFallback } from "@/lib/store/category-fallback";
 import { getRootCategories } from "@/lib/store/categories";
 import { siteConfig } from "@/lib/store/site-config";
 
@@ -17,7 +18,18 @@ export type HeaderCategoryNode = HeaderCategory & {
 export type HeaderCategoryData = {
   navItems: HeaderCategory[];
   tree: HeaderCategoryNode[];
+  usedStaticFallback: boolean;
 };
+
+const HOME_NAV_ITEM: HeaderCategory = { slug: "novinki", name: "Новинки", href: "/" };
+
+function emptyHeaderData(): HeaderCategoryData {
+  return {
+    tree: [],
+    navItems: [HOME_NAV_ITEM],
+    usedStaticFallback: false,
+  };
+}
 
 function mapStaticTree(): HeaderCategoryData {
   const roots = getRootCategories().map((category) => ({
@@ -28,10 +40,8 @@ function mapStaticTree(): HeaderCategoryData {
 
   return {
     tree: roots,
-    navItems: [
-      { slug: "novinki", name: "Новинки", href: "/" },
-      ...roots.filter((category) => category.slug !== "novinki"),
-    ],
+    navItems: [HOME_NAV_ITEM, ...roots.filter((category) => category.slug !== "novinki")],
+    usedStaticFallback: true,
   };
 }
 
@@ -64,7 +74,7 @@ function mapApiTree(items: Category[]): HeaderCategoryData {
         href: `/catalog/${child.slug}`,
       }));
 
-    const fallbackChildren = getStaticSubLinks(root.slug);
+    const fallbackChildren = allowStaticCategoryFallback() ? getStaticSubLinks(root.slug) : [];
 
     return {
       id: root.id,
@@ -77,10 +87,8 @@ function mapApiTree(items: Category[]): HeaderCategoryData {
 
   return {
     tree,
-    navItems: [
-      { slug: "novinki", name: "Новинки", href: "/" },
-      ...tree.filter((category) => category.slug !== "novinki"),
-    ],
+    navItems: [HOME_NAV_ITEM, ...tree.filter((category) => category.slug !== "novinki")],
+    usedStaticFallback: false,
   };
 }
 
@@ -88,11 +96,11 @@ export async function getHeaderCategoryData(): Promise<HeaderCategoryData> {
   try {
     const response = await getCategories();
     if (response.items.length === 0) {
-      return mapStaticTree();
+      return allowStaticCategoryFallback() ? mapStaticTree() : emptyHeaderData();
     }
     return mapApiTree(response.items);
   } catch {
-    return mapStaticTree();
+    return allowStaticCategoryFallback() ? mapStaticTree() : emptyHeaderData();
   }
 }
 

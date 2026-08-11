@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 
+import { CategoryFallbackNotice } from "@/components/store/catalog/category-fallback-notice";
 import { CategoryGrid } from "@/components/store/catalog/category-grid";
 import { ProductGrid } from "@/components/store/catalog/product-grid";
 import { PageContainer } from "@/components/store/layout/page-container";
 import { SeoContentBlock } from "@/components/store/marketing/seo-content-block";
+import { StoreEmptyState } from "@/components/store/ui/store-empty-state";
+import { StoreErrorState } from "@/components/store/ui/store-error-state";
 import { getCategories, listProducts } from "@/lib/api";
 import { getAccessToken, getCurrentUser } from "@/lib/auth/session";
+import { allowStaticCategoryFallback } from "@/lib/store/category-fallback";
 import { getRootCategories } from "@/lib/store/categories";
 import { toProductGridItems } from "@/lib/store/product-grid";
-import { siteConfig } from "@/lib/store/site-config";
 
 export const metadata: Metadata = {
   title: "Каталог",
@@ -21,26 +24,31 @@ export default async function CatalogPage() {
   const isWholesaler = user?.is_wholesaler ?? false;
 
   let products: Awaited<ReturnType<typeof listProducts>> | null = null;
-  let error: string | null = null;
+  let productsError: string | null = null;
 
   try {
     products = await listProducts(1, 48, undefined, token);
   } catch {
-    error =
+    productsError =
       "Не удалось загрузить товары. Убедитесь, что API запущен и доступен.";
   }
 
   let apiCategories: Awaited<ReturnType<typeof getCategories>> | null = null;
+  let categoriesError = false;
   try {
     apiCategories = await getCategories();
   } catch {
-    // Fall back to static categories when API is unavailable
+    categoriesError = true;
   }
 
   const items = products?.items ?? [];
+  const usedStaticFallback =
+    categoriesError || (apiCategories !== null && apiCategories.items.length === 0)
+      ? allowStaticCategoryFallback()
+      : false;
 
   const categoryCards =
-    apiCategories !== null
+    apiCategories !== null && apiCategories.items.length > 0
       ? apiCategories.items
           .filter((c) => c.parent_id === null)
           .map((c) => ({
@@ -49,12 +57,14 @@ export default async function CatalogPage() {
             description: c.description ?? undefined,
             productCount: c.product_count,
           }))
-      : getRootCategories().map((c) => ({
-          slug: c.slug,
-          name: c.name,
-          description: c.description,
-          productCount: 0,
-        }));
+      : usedStaticFallback
+        ? getRootCategories().map((c) => ({
+            slug: c.slug,
+            name: c.name,
+            description: c.description,
+            productCount: 0,
+          }))
+        : [];
 
   const popularProducts = [...toProductGridItems(items, isWholesaler)]
     .sort((a, b) => Number(b.in_stock) - Number(a.in_stock))
@@ -66,35 +76,51 @@ export default async function CatalogPage() {
         <h1 className="store-section-title">Каталог</h1>
         <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
           Тактическое и туристическое снаряжение — выберите раздел или просмотрите
-          популярные позиции. {siteConfig.catalogDisclaimer}
+          популярные позиции.
         </p>
       </header>
 
-      {error ? (
-        <div
-          role="alert"
-          className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive"
-        >
-          {error}
-        </div>
+      {usedStaticFallback ? <CategoryFallbackNotice /> : null}
+
+      {productsError ? (
+        <StoreErrorState
+          title="Не удалось загрузить товары"
+          description={productsError}
+          action={{ label: "На главную", href: "/" }}
+        />
       ) : null}
 
       <section aria-labelledby="catalog-categories-heading" className="space-y-4">
         <h2 id="catalog-categories-heading" className="text-lg font-semibold">
           Разделы
         </h2>
-        <CategoryGrid categories={categoryCards} />
+        {categoriesError && !usedStaticFallback ? (
+          <StoreErrorState
+            title="Не удалось загрузить разделы каталога"
+            description="Категории временно недоступны. Попробуйте обновить страницу позже."
+            action={{ label: "На главную", href: "/" }}
+          />
+        ) : categoryCards.length > 0 ? (
+          <CategoryGrid categories={categoryCards} />
+        ) : (
+          <StoreEmptyState
+            title="Разделы каталога пока не настроены"
+            description="Категории появятся после синхронизации с админ-панели."
+          />
+        )}
       </section>
 
-      <section aria-labelledby="popular-products-heading" className="space-y-4">
-        <h2 id="popular-products-heading" className="store-section-title">
-          Популярные товары
-        </h2>
-        <ProductGrid
-          products={popularProducts}
-          emptyMessage="Товары появятся после добавления данных в каталог."
-        />
-      </section>
+      {!productsError ? (
+        <section aria-labelledby="popular-products-heading" className="space-y-4">
+          <h2 id="popular-products-heading" className="store-section-title">
+            Популярные товары
+          </h2>
+          <ProductGrid
+            products={popularProducts}
+            emptyMessage="Товары появятся после добавления данных в каталог."
+          />
+        </section>
+      ) : null}
 
       <SeoContentBlock
         title="Тактическое снаряжение в Сухопут"

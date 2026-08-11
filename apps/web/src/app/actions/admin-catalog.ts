@@ -523,3 +523,38 @@ export async function deleteProductImageAction(
   revalidatePath(`/admin/catalog/${productId}/edit`);
   return { success: true };
 }
+
+export type ProductPreviewTokenResult =
+  | { ok: true; token: string; slug: string; expiresAt: string }
+  | { ok: false; error: string };
+
+export async function createProductPreviewTokenAction(
+  productId: string,
+): Promise<ProductPreviewTokenResult> {
+  const auth = await requireAdminPermission("admin:read");
+  if (!auth.ok) {
+    return { ok: false, error: auth.error };
+  }
+
+  const token = await getAdminAccessToken();
+  if (!token) {
+    return { ok: false, error: "Требуется вход в админ-панель." };
+  }
+
+  const res = await fetch(
+    `${API_BASE}/api/v1/admin/catalog/products/${productId}/preview-token`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    },
+  );
+
+  if (!res.ok) {
+    const parsed = parseAdminApiError(await res.json().catch(() => null));
+    return { ok: false, error: parsed.message };
+  }
+
+  const body = (await res.json()) as { token: string; slug: string; expires_at: string };
+  return { ok: true, token: body.token, slug: body.slug, expiresAt: body.expires_at };
+}

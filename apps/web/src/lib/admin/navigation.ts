@@ -40,10 +40,10 @@ export const ADMIN_NAV_SECTIONS: readonly AdminNavSection[] = [
   {
     title: "МойСклад",
     items: [
-      { href: "/admin/integrations/moysklad", label: "Интеграция", exact: false },
+      { href: "/admin/integrations/moysklad", label: "Синхронизация", exact: false },
       {
         href: "/admin/integrations/moysklad/import",
-        label: "Очередь импорта",
+        label: "Импорт",
         exact: false,
         permissions: ["catalog:write"],
       },
@@ -52,8 +52,8 @@ export const ADMIN_NAV_SECTIONS: readonly AdminNavSection[] = [
   {
     title: "Операции",
     items: [
-      { href: "/admin/inventory", label: "Склад", exact: false },
       { href: "/admin/orders", label: "Заказы", exact: false },
+      { href: "/admin/inventory", label: "Склад", exact: false },
       {
         href: "/admin/customers",
         label: "Клиенты",

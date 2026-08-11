@@ -4,8 +4,11 @@ import { notFound, redirect } from "next/navigation";
 
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminProductEditForm } from "@/components/admin/catalog/admin-product-edit-form";
-import { getAdminProduct, listAdminCategories } from "@/lib/admin/catalog";
-import { getAdminReturnLabel, parseAdminReturnPath } from "@/lib/admin/catalog-list-url";
+import { getAdminProduct, listAdminCategories, resolveAdminNextProductId } from "@/lib/admin/catalog";
+import {
+  getAdminReturnLabel,
+  parseAdminReturnPath,
+} from "@/lib/admin/catalog-list-url";
 import {
   ADMIN_PAGE_FORBIDDEN_MESSAGE,
   adminHasPermission,
@@ -44,6 +47,7 @@ export default async function AdminEditProductPage({ params, searchParams }: Pag
 
   const returnTo = parseAdminReturnPath(from);
   const backLabel = getAdminReturnLabel(returnTo);
+  const nextProductId = await resolveAdminNextProductId(product.id, returnTo);
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
@@ -65,6 +69,7 @@ export default async function AdminEditProductPage({ params, searchParams }: Pag
         product={product}
         categories={categoriesResult.ok ? categoriesResult.data : []}
         returnTo={returnTo}
+        nextProductId={nextProductId}
       />
     </div>
   );

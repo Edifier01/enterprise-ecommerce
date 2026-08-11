@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
+import { AdminStockAvailabilityBadge } from "@/components/admin/admin-status-badge";
 import { MoySkladBadge } from "@/components/admin/moysklad/moysklad-badge";
-import { Badge } from "@/components/ui/badge";
 import type {
   AdminInventoryItem,
   AdminInventoryProductGroup,
@@ -20,15 +20,18 @@ import { cn } from "@/lib/utils";
 type InventoryProductGroupProps = {
   group: AdminInventoryProductGroup;
   listParams: AdminInventoryListParams;
+  lowStockThreshold: number;
   defaultOpen?: boolean;
 };
 
 function VariantRow({
   item,
   listParams,
+  lowStockThreshold,
 }: {
   item: AdminInventoryItem;
   listParams: AdminInventoryListParams;
+  lowStockThreshold: number;
 }) {
   return (
     <div className="grid gap-2 border-t border-border/60 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,0.6fr))_auto] sm:items-center">
@@ -43,7 +46,13 @@ function VariantRow({
       <div className="sm:text-right">
         <span className="inline-flex items-center gap-2">
           {item.available}
-          {item.is_low_stock ? <Badge variant="destructive">Низкий</Badge> : null}
+          {item.is_low_stock || item.available <= 0 ? (
+            <AdminStockAvailabilityBadge
+              available={item.available}
+              lowThreshold={lowStockThreshold}
+              className="text-xs"
+            />
+          ) : null}
         </span>
       </div>
       <div className="sm:text-right">
@@ -61,6 +70,7 @@ function VariantRow({
 export function InventoryProductGroup({
   group,
   listParams,
+  lowStockThreshold,
   defaultOpen = false,
 }: InventoryProductGroupProps) {
   const [open, setOpen] = useState(defaultOpen);
@@ -82,7 +92,13 @@ export function InventoryProductGroup({
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{group.product_name}</span>
             {isMoySkladSynced(group.sync_source) ? <MoySkladBadge /> : null}
-            {group.is_low_stock ? <Badge variant="destructive">Низкий остаток</Badge> : null}
+            {group.is_low_stock || group.total_available <= 0 ? (
+              <AdminStockAvailabilityBadge
+                available={group.total_available}
+                lowThreshold={lowStockThreshold}
+                className="text-xs"
+              />
+            ) : null}
           </div>
           <p className="text-xs text-muted-foreground">
             {group.variant_count} вариант(ов) · доступно {group.total_available} · на складе{" "}
@@ -107,7 +123,12 @@ export function InventoryProductGroup({
           <span className="text-right">Действия</span>
         </div>
         {group.variants.map((variant) => (
-          <VariantRow key={variant.variant_id} item={variant} listParams={listParams} />
+          <VariantRow
+            key={variant.variant_id}
+            item={variant}
+            listParams={listParams}
+            lowStockThreshold={lowStockThreshold}
+          />
         ))}
       </div>
     </div>

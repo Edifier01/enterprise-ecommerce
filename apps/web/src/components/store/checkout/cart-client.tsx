@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
+import { CartLinePreview } from "@/components/store/checkout/cart-line-preview";
+import { StoreEmptyState } from "@/components/store/ui/store-empty-state";
+import { StoreErrorState } from "@/components/store/ui/store-error-state";
+import { StoreInlineSkeleton } from "@/components/store/ui/store-skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,6 +19,7 @@ import {
   updateCartLine,
 } from "@/lib/checkout/api";
 import { dispatchCartUpdated } from "@/lib/checkout/cart-events";
+import { resolveCartCurrency } from "@/lib/checkout/cart-line-display";
 import { formatPrice } from "@/lib/store/format";
 
 export function CartClient() {
@@ -51,11 +56,30 @@ export function CartClient() {
     });
   }
 
+  if (!cart && error) {
+    return (
+      <StoreErrorState
+        title="Не удалось загрузить корзину"
+        description={error}
+        onRetry={() => {
+          setError(null);
+          getCart()
+            .then(setCart)
+            .catch((err: unknown) => {
+              setError(err instanceof Error ? err.message : "Не удалось загрузить корзину");
+            });
+        }}
+        action={{ label: "В каталог", href: "/catalog" }}
+      />
+    );
+  }
+
   if (!cart) {
     return (
       <Card>
-        <CardContent className="py-10 text-sm text-muted-foreground">
-          Загружаем корзину...
+        <CardContent className="space-y-3 py-10">
+          <StoreInlineSkeleton className="mx-auto" />
+          <p className="text-center text-sm text-muted-foreground">Загружаем корзину...</p>
         </CardContent>
       </Card>
     );
@@ -63,51 +87,35 @@ export function CartClient() {
 
   if (cart.lines.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border bg-muted/20 px-6 py-16 text-center">
-        <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-muted">
-          <ShoppingCart className="size-8 text-muted-foreground" aria-hidden />
-        </div>
-        <h2 className="text-lg font-semibold text-foreground">Корзина пуста</h2>
-        <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-          Добавьте товары из каталога, чтобы перейти к оформлению заказа.
-        </p>
-        <Button
-          size="lg"
-          className="mt-6 bg-store-cta text-store-cta-foreground hover:bg-store-cta/90"
-          render={<Link href="/catalog" />}
-        >
-          Перейти в каталог
-        </Button>
-      </div>
+      <StoreEmptyState
+        title="Корзина пуста"
+        description="Добавьте товары из каталога, чтобы перейти к оформлению заказа."
+        action={{ label: "Перейти в каталог", href: "/catalog" }}
+      />
     );
   }
 
-  const currency = cart.currency ?? cart.lines[0]?.currency ?? "USD";
+  const currency = resolveCartCurrency(cart.currency, cart.lines[0]?.currency);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      {error ? (
+        <StoreErrorState
+          title="Ошибка корзины"
+          description={error}
+          className="lg:col-span-2"
+        />
+      ) : null}
       <div className="space-y-3">
-        {cart.lines.map((line) => {
-          const name =
-            line.product_snapshot.product_name ?? line.product_snapshot.sku ?? "Товар";
-          const variant = line.product_snapshot.name ?? line.product_snapshot.variant_name;
-          return (
-            <Card key={line.id}>
-              <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
-                  <h2 className="font-medium text-foreground">{name}</h2>
-                  {variant ? (
-                    <p className="text-sm text-muted-foreground">Вариант: {variant}</p>
-                  ) : null}
-                  {line.product_snapshot.sku ? (
-                    <p className="text-xs text-muted-foreground">
-                      SKU: {line.product_snapshot.sku}
-                    </p>
-                  ) : null}
-                  <p className="text-sm font-semibold">
-                    {formatPrice(line.unit_price_cents, line.currency)}
-                  </p>
-                </div>
+        {cart.lines.map((line) => (
+          <Card key={line.id}>
+            <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 flex-1 space-y-2">
+                <CartLinePreview snapshot={line.product_snapshot} />
+                <p className="text-sm font-semibold">
+                  {formatPrice(line.unit_price_cents, resolveCartCurrency(line.currency, currency))}
+                </p>
+              </div>
 
                 <div className="flex items-center justify-between gap-3 sm:justify-end">
                   <div className="flex items-center rounded-lg border">
@@ -153,8 +161,7 @@ export function CartClient() {
                 </div>
               </CardContent>
             </Card>
-          );
-        })}
+        ))}
       </div>
 
       <Card className="h-fit">

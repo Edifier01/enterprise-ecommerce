@@ -8,6 +8,7 @@ test.describe("Homepage", () => {
 
   test("shows storefront sections in Russian", async ({ page }) => {
     await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Сухопут", level: 1 })).toBeVisible();
     await expect(page.getByRole("heading", { name: /О магазине/ })).toBeVisible();
 
     const tablist = page.getByRole("tablist", { name: "Разделы каталога" });

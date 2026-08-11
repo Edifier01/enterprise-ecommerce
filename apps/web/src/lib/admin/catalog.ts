@@ -1,6 +1,7 @@
 import "server-only";
 
 import { adminFetch, adminFetchResult, type AdminFetchResult } from "@/lib/admin/admin-fetch";
+import { parseAdminCatalogListParams } from "@/lib/admin/catalog-list-url";
 
 import {
   ADMIN_CATALOG_PAGE_SIZE,
@@ -65,6 +66,65 @@ export async function getAdminCatalogOverview(): Promise<AdminFetchResult<AdminC
 
 export async function getAdminProduct(id: string): Promise<AdminProduct | null> {
   return adminFetch<AdminProduct>(`/api/v1/admin/catalog/products/${id}`);
+}
+
+function findNextProductIdInList(
+  items: AdminProduct[],
+  currentProductId: string,
+): string | null {
+  const index = items.findIndex((item) => item.id === currentProductId);
+  if (index < 0 || index >= items.length - 1) {
+    return null;
+  }
+  return items[index + 1]?.id ?? null;
+}
+
+export async function resolveAdminNextProductId(
+  currentProductId: string,
+  returnPath: string,
+): Promise<string | null> {
+  const params = parseAdminCatalogListParams(returnPath);
+  const page = params.page ?? 1;
+
+  const listOptions = params.moyskladPending
+    ? { moyskladPending: true as const }
+    : {
+        categoryId: params.categoryId,
+        uncategorized: params.uncategorized,
+        needsStyling: params.needsStyling,
+        needsColorPhotos: params.needsColorPhotos,
+      };
+
+  const result = await listAdminProducts(
+    page,
+    params.status,
+    params.q,
+    listOptions,
+  );
+  if (!result.ok) {
+    return null;
+  }
+
+  const nextOnPage = findNextProductIdInList(result.data.items, currentProductId);
+  if (nextOnPage) {
+    return nextOnPage;
+  }
+
+  const hasMore = result.data.page * result.data.limit < result.data.total;
+  if (!hasMore) {
+    return null;
+  }
+
+  const nextPage = await listAdminProducts(
+    page + 1,
+    params.status,
+    params.q,
+    listOptions,
+  );
+  if (!nextPage.ok || nextPage.data.items.length === 0) {
+    return null;
+  }
+  return nextPage.data.items[0]?.id ?? null;
 }
 
 export async function listAdminCategories(): Promise<AdminFetchResult<AdminCategory[]>> {

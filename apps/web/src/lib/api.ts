@@ -196,14 +196,24 @@ export async function searchProducts(
   return res.json();
 }
 
-export async function getProduct(slug: string, accessToken?: string): Promise<Product> {
+export async function getProduct(
+  slug: string,
+  accessToken?: string,
+  options?: { previewToken?: string },
+): Promise<Product> {
   const headers: HeadersInit = {};
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
   }
-  const res = await fetch(`${API_BASE}/api/v1/products/${slug}`, {
+  const params = new URLSearchParams();
+  if (options?.previewToken) {
+    params.set("preview", options.previewToken);
+  }
+  const query = params.toString();
+  const url = `${API_BASE}/api/v1/products/${slug}${query ? `?${query}` : ""}`;
+  const res = await fetch(url, {
     headers,
-    ...(accessToken ? { cache: "no-store" } : { next: { revalidate: 60 } }),
+    ...(accessToken || options?.previewToken ? { cache: "no-store" } : { next: { revalidate: 60 } }),
   });
   if (res.status === 404) throw new Error("NOT_FOUND");
   if (!res.ok) throw new Error("Failed to fetch product");

@@ -6,26 +6,23 @@
 
 ## Current Module
 
-**ECOMMERCE UX V2** (Phase 0 ecommerce-wide audit complete).  
-Parallel release work still open: YooKassa prod gate + auth/mobile deploy branch.
+**ECOMMERCE UX V2 + Admin UX v2** — Phase 12 shipped (2026-08-11).  
+Admin UX v2 plan complete (Phases 0–12). Parallel release: YooKassa prod gate + deploy.
 
 ---
 
 ## Current Feature
 
-**ECOMMERCE UX V2 — Phase 0 COMPLETE**  
-Deliverable: `docs/ux/ecommerce-ux-audit.md`  
-Verifier: **APPROVED WITH NOTES** (2026-08-11)
+**Admin UX v2 — Phase 12 COMPLETE (plan done)**  
+Polish, a11y, E2E expansion (GAP-17)
 
-**Next:** Phase 1 — `docs/ux/ecommerce-ux-v2-architecture.md` only after user approval.
-
-Top P1 gaps from audit: YooKassa/Stripe checkout mismatch, placeholder contacts/info IA, cart images/SKU/currency, PDP fake fallback content, search suggestions, draft preview.
+**Next:** Release gate work (YooKassa ADR-004, deploy Phases 3–12)
 
 ---
 
 ## Active Agent
 
-GPT-5.5 (ECOMMERCE UX V2 Phase 0)
+Composer 2.5 (UX V2 Phase 12)
 
 ---
 
@@ -34,7 +31,7 @@ GPT-5.5 (ECOMMERCE UX V2 Phase 0)
 1. **YooKassa** — 0% (ADR-004) — release gate (parallel chat)
 2. **Deploy** — merge branch → `master` (migrations 021–023 + lockdown)
 3. **SMTP** — prod `.env.production` must use real SMTP
-4. ECOMMERCE UX V2 Phase 1 not started until user approves
+4. **Business copy** — contacts/delivery/returns for Phase 3 info pages
 
 ---
 
@@ -42,16 +39,14 @@ GPT-5.5 (ECOMMERCE UX V2 Phase 0)
 
 | Area | Status |
 |------|--------|
-| ECOMMERCE UX V2 Phase 0 audit | ✅ APPROVED WITH NOTES |
-| Admin UX v2 Phase 0 audit | ✅ APPROVED WITH NOTES |
+| ECOMMERCE UX V2 Phases 0–8 | ✅ COMPLETE |
+| Admin UX v2 Phases 0–12 | ✅ COMPLETE |
 | Auth lockdown | ✅ implemented (deploy pending) |
 | Mobile UX Wave 5 | ⏳ merge + smoke |
 | YooKassa | ❌ not started |
-
-**AI routing:** Opus 5 on reserved agents — architect, checkout, security.
 
 ---
 
 ## Last Updated
 
-2026-08-11 (ECOMMERCE UX V2 Phase 0 audit)
+2026-08-11 (Admin UX v2 Phase 12 — a11y polish + E2E expansion)

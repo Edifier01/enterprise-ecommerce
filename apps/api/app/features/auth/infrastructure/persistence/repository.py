@@ -127,6 +127,7 @@ class UserRepository(IUserRepository):
         limit: int,
         *,
         q: str | None = None,
+        is_wholesaler: bool | None = None,
     ) -> tuple[list[User], int]:
         offset = (page - 1) * limit
         filters = []
@@ -139,6 +140,8 @@ class UserRepository(IUserRepository):
                     UserModel.last_name.ilike(term),
                 )
             )
+        if is_wholesaler is not None:
+            filters.append(UserModel.is_wholesaler.is_(is_wholesaler))
 
         count_stmt = select(func.count()).select_from(UserModel)
         stmt = select(UserModel).order_by(UserModel.created_at.desc()).offset(offset).limit(limit)

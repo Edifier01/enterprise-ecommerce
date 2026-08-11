@@ -156,3 +156,39 @@ export function getColorOptionsFromVariants(variants: ProductVariant[]): string[
   }
   return [...values];
 }
+
+const SUMMARY_LABELS: Record<string, string> = {
+  size: "Размер",
+  color: "Цвет",
+  waist: "Талия",
+};
+
+export function formatVariantSelectionSummary(
+  variant: ProductVariant,
+  structured: boolean,
+  selection: VariantSelection,
+): string {
+  const parts: string[] = [];
+
+  if (structured) {
+    for (const [key, label] of Object.entries(SUMMARY_LABELS)) {
+      const value = selection[key]?.trim();
+      if (value) {
+        parts.push(`${label}: ${value}`);
+      }
+    }
+  } else {
+    const attrs = variant.attributes ?? {};
+    if (attrs.size?.trim()) {
+      parts.push(`Размер: ${attrs.size.trim()}`);
+    }
+    if (attrs.color?.trim()) {
+      parts.push(`Цвет: ${attrs.color.trim()}`);
+    }
+    if (variant.name && variant.name !== "Default" && parts.length === 0) {
+      parts.push(variant.name);
+    }
+  }
+
+  return parts.join(" · ");
+}

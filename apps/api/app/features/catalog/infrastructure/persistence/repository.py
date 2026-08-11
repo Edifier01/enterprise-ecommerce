@@ -187,6 +187,17 @@ class ProductRepository(IProductRepository):
             return None
         return self._to_domain(row, include_variants=True)
 
+    async def get_by_slug_for_preview(self, slug: str) -> Product | None:
+        stmt = (
+            select(ProductModel)
+            .where(ProductModel.slug == slug)
+            .options(selectinload(ProductModel.variants))
+        )
+        row = (await self._session.scalars(stmt)).first()
+        if row is None:
+            return None
+        return self._to_domain(row, include_variants=True)
+
     @staticmethod
     def _search_filter(query: str):
         term = f"%{query.casefold()}%"

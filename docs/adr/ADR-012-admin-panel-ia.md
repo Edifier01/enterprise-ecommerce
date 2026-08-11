@@ -31,6 +31,17 @@ Organize admin nav into three sections:
 Categories get a dedicated sidebar link (`/admin/catalog/categories`) instead of
 being buried inside catalog-only flows.
 
+### 1a. Amendment (2026-08-11 — Admin UX v2 Phase 3)
+
+Sidebar labels and Operations order aligned with `docs/ux/admin-ia-v2.md`:
+
+| Section | Items (order) |
+|---------|----------------|
+| **МойСклад** | Синхронизация, Импорт |
+| **Операции** | Заказы, Склад, Клиенты |
+
+URLs unchanged. «Оформление» workflow lane remains under **Витрина**.
+
 ### 2. Dashboard action center
 
 Below metric cards, show an «Требует внимания» panel when any of:

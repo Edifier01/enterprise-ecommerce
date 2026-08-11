@@ -17,6 +17,7 @@ _ADMIN_EMAIL = "admin@example.com"
 _ADMIN_PASSWORD = "adminsecret1"
 _VIEWER_EMAIL = "viewer@example.com"
 _CUSTOMER_EMAIL = "customer@example.com"
+_WHOLESALER_EMAIL = "wholesaler@example.com"
 
 
 @pytest.fixture
@@ -59,6 +60,14 @@ async def admin_customers_client() -> AsyncGenerator[AsyncClient, None]:
                     hashed_password=hasher.hash("customer12"),
                     is_active=True,
                     is_wholesaler=False,
+                )
+            )
+            session.add(
+                UserModel(
+                    email=_WHOLESALER_EMAIL,
+                    hashed_password=hasher.hash("customer12"),
+                    is_active=True,
+                    is_wholesaler=True,
                 )
             )
             await session.commit()
@@ -185,6 +194,33 @@ async def test_admin_list_customers_search_by_email(admin_customers_client: Asyn
     )
     assert empty.status_code == 200
     assert empty.json()["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_admin_list_customers_filter_by_wholesaler(
+    admin_customers_client: AsyncClient,
+) -> None:
+    token = await _admin_token(admin_customers_client)
+
+    wholesale = await admin_customers_client.get(
+        "/api/v1/admin/customers?is_wholesaler=true",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert wholesale.status_code == 200
+    wholesale_data = wholesale.json()
+    assert wholesale_data["total"] == 1
+    assert wholesale_data["items"][0]["email"] == _WHOLESALER_EMAIL
+    assert wholesale_data["items"][0]["is_wholesaler"] is True
+
+    retail = await admin_customers_client.get(
+        "/api/v1/admin/customers?is_wholesaler=false",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert retail.status_code == 200
+    retail_data = retail.json()
+    assert retail_data["total"] == 1
+    assert retail_data["items"][0]["email"] == _CUSTOMER_EMAIL
+    assert retail_data["items"][0]["is_wholesaler"] is False
 
 
 @pytest.mark.asyncio

@@ -19,6 +19,7 @@ import {
   pickDefaultSelection,
   pickDefaultVariant,
   resolveVariant,
+  formatVariantSelectionSummary,
   usesStructuredSelector,
   type VariantSelection,
 } from "@/lib/store/variant-options";
@@ -148,6 +149,17 @@ export function ProductPurchasePanel({
             Выберите доступный вариант товара.
           </p>
         )}
+
+        {selected && selectionReady ? (
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            {[
+              formatVariantSelectionSummary(selected, structured, selection),
+              inStock ? "В наличии" : "Нет в наличии",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        ) : null}
       </div>
 
       <div id="product-purchase-sentinel" className="h-px w-full" aria-hidden />

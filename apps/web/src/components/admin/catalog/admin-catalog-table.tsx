@@ -10,6 +10,10 @@ import {
   AdminMobileCardRow,
 } from "@/components/admin/admin-mobile-card";
 import { AdminCatalogBulkToolbar } from "@/components/admin/catalog/admin-catalog-bulk-toolbar";
+import {
+  AdminCatalogCategoryQuickEdit,
+  AdminCatalogStatusQuickEdit,
+} from "@/components/admin/catalog/admin-catalog-quick-edit";
 import { AdminProductHideButton } from "@/components/admin/catalog/admin-product-hide-button";
 import { AdminProductPrices } from "@/components/admin/catalog/admin-product-prices";
 import { AdminProductStock } from "@/components/admin/catalog/admin-product-stock";
@@ -18,6 +22,7 @@ import {
   formatPrice,
   getAdminProductListPrices,
   PRODUCT_STATUS_LABELS,
+  type AdminCategory,
   type AdminProduct,
 } from "@/lib/admin/catalog-shared";
 import {
@@ -31,6 +36,7 @@ import { ProductThumbnail } from "@/components/store/catalog/product-thumbnail";
 type AdminCatalogTableProps = {
   products: AdminProduct[];
   canWrite: boolean;
+  categories: AdminCategory[];
   listParams: AdminCatalogListParams;
   categoryNames: Map<string, string> | null;
   searchQuery?: string;
@@ -40,6 +46,7 @@ function buildColumns(
   canWrite: boolean,
   listParams: AdminCatalogListParams,
   categoryNames: Map<string, string> | null,
+  categories: AdminCategory[],
 ): AdminDataTableColumn<AdminProduct>[] {
   const columns: AdminDataTableColumn<AdminProduct>[] = [
     {
@@ -82,17 +89,29 @@ function buildColumns(
       id: "status",
       header: "Статус",
       sortValue: (product) => product.status,
-      cell: (product) => PRODUCT_STATUS_LABELS[product.status] ?? product.status,
+      cell: (product) =>
+        canWrite ? (
+          <AdminCatalogStatusQuickEdit productId={product.id} status={product.status} />
+        ) : (
+          PRODUCT_STATUS_LABELS[product.status] ?? product.status
+        ),
     },
     {
       id: "category",
       header: "Категория",
       sortValue: (product) => getProductCategoryName(product.category_id, categoryNames),
-      cell: (product) => (
-        <span className="text-muted-foreground">
-          {getProductCategoryName(product.category_id, categoryNames)}
-        </span>
-      ),
+      cell: (product) =>
+        canWrite ? (
+          <AdminCatalogCategoryQuickEdit
+            productId={product.id}
+            categoryId={product.category_id}
+            categories={categories}
+          />
+        ) : (
+          <span className="text-muted-foreground">
+            {getProductCategoryName(product.category_id, categoryNames)}
+          </span>
+        ),
     },
     {
       id: "retail",
@@ -162,6 +181,7 @@ function buildColumns(
 export function AdminCatalogTable({
   products,
   canWrite,
+  categories,
   listParams,
   categoryNames,
   searchQuery,
@@ -173,13 +193,14 @@ export function AdminCatalogTable({
       {canWrite ? (
         <AdminCatalogBulkToolbar
           selectedIds={selectedIds}
+          categories={categories}
           onClearSelection={() => setSelectedIds(new Set())}
         />
       ) : null}
 
       <AdminDataTable
         tableId="admin-catalog-products"
-        columns={buildColumns(canWrite, listParams, categoryNames)}
+        columns={buildColumns(canWrite, listParams, categoryNames, categories)}
         rows={products}
         getRowId={(product) => product.id}
         stickyHeader
@@ -198,7 +219,7 @@ export function AdminCatalogTable({
             action={
               searchQuery
                 ? undefined
-                : { label: "Интеграция МойСклад", href: "/admin/integrations/moysklad" }
+                : { label: "Синхронизация МойСклад", href: "/admin/integrations/moysklad" }
             }
           />
         }
@@ -243,10 +264,25 @@ export function AdminCatalogTable({
                     <span className="break-all font-normal text-muted-foreground">{product.slug}</span>
                   </AdminMobileCardRow>
                   <AdminMobileCardRow label="Статус">
-                    {PRODUCT_STATUS_LABELS[product.status] ?? product.status}
+                    {canWrite ? (
+                      <AdminCatalogStatusQuickEdit
+                        productId={product.id}
+                        status={product.status}
+                      />
+                    ) : (
+                      PRODUCT_STATUS_LABELS[product.status] ?? product.status
+                    )}
                   </AdminMobileCardRow>
                   <AdminMobileCardRow label="Категория">
-                    {getProductCategoryName(product.category_id, categoryNames)}
+                    {canWrite ? (
+                      <AdminCatalogCategoryQuickEdit
+                        productId={product.id}
+                        categoryId={product.category_id}
+                        categories={categories}
+                      />
+                    ) : (
+                      getProductCategoryName(product.category_id, categoryNames)
+                    )}
                   </AdminMobileCardRow>
                   <AdminMobileCardRow label="Розница">
                     <AdminProductPrices product={product} compact />

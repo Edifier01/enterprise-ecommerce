@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  AdminStatusBadge,
+  getCustomerTypeBadge,
+} from "@/components/admin/admin-status-badge";
 import { AdminDataTable, type AdminDataTableColumn } from "@/components/admin/admin-data-table";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import {
@@ -14,20 +18,9 @@ type AdminCustomersTableProps = {
   searchQuery?: string;
 };
 
-function customerTypeLabel(isWholesaler: boolean): string {
-  return isWholesaler ? "Опт" : "Розница";
-}
-
 function CustomerTypeBadge({ isWholesaler }: { isWholesaler: boolean }) {
-  if (isWholesaler) {
-    return (
-      <span className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-        Опт
-      </span>
-    );
-  }
-
-  return <span className="text-muted-foreground">Розница</span>;
+  const badge = getCustomerTypeBadge(isWholesaler);
+  return <AdminStatusBadge label={badge.label} tone={badge.tone} className="text-xs" />;
 }
 
 const columns: AdminDataTableColumn<AdminCustomer>[] = [
@@ -40,7 +33,7 @@ const columns: AdminDataTableColumn<AdminCustomer>[] = [
   {
     id: "type",
     header: "Тип",
-    sortValue: (customer) => customerTypeLabel(customer.is_wholesaler),
+    sortValue: (customer) => (customer.is_wholesaler ? "Опт" : "Розница"),
     cell: (customer) => <CustomerTypeBadge isWholesaler={customer.is_wholesaler} />,
   },
   {
@@ -67,12 +60,10 @@ export function AdminCustomersTable({ customers, searchQuery }: AdminCustomersTa
       minWidthClassName="min-w-[480px]"
       emptyState={
         <AdminEmptyState
-          title={
-            searchQuery ? "Ничего не найдено" : "Зарегистрированных клиентов пока нет."
-          }
+          title={searchQuery ? "Ничего не найдено" : "Зарегистрированных клиентов пока нет."}
           description={
             searchQuery
-              ? "Попробуйте изменить поисковый запрос."
+              ? "Попробуйте изменить поисковый запрос или фильтр."
               : "Клиенты появятся после регистрации на витрине."
           }
         />

@@ -5,6 +5,7 @@ import uuid
 
 from app.features.catalog.domain.entities import ProductVariant
 from app.features.catalog.domain.pricing import resolve_variant_price
+from app.features.catalog.presentation.serializers import erp_image_proxy_path
 from app.features.checkout.domain.entities import Cart, CartStatus, ProductSnapshot
 from app.features.checkout.domain.ports import ICheckoutRepository
 from app.features.inventory.application.inventory_service import InventoryService
@@ -84,6 +85,18 @@ class CartService:
             is_wholesaler=is_wholesaler,
         )
 
+    @staticmethod
+    def _resolve_cart_image_url(product) -> str | None:
+        trimmed = (product.image_url or "").strip()
+        if trimmed:
+            lowered = trimmed.casefold()
+            if "moysklad.ru" in lowered and "/download/" in lowered:
+                return erp_image_proxy_path(product.slug)
+            return trimmed
+        if product.erp_image_url and product.erp_image_url.strip():
+            return erp_image_proxy_path(product.slug)
+        return None
+
     def _build_snapshot(self, variant, product, *, price_tier: str) -> ProductSnapshot:
         return ProductSnapshot(
             variant_id=variant.id,
@@ -96,6 +109,7 @@ class CartService:
             price_cents=variant.price_cents,
             currency=product.currency,
             price_tier=price_tier,
+            image_url=self._resolve_cart_image_url(product),
         )
 
     def _validate_purchasable(self, variant, product) -> None:

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CartLinePreview } from "@/components/store/checkout/cart-line-preview";
 import { StripePaymentForm } from "@/components/store/checkout/checkout-stripe-payment-form";
 import {
   CheckoutShippingForm,
@@ -21,6 +22,7 @@ import {
   simulateStubPaymentSuccess,
   type Cart,
 } from "@/lib/checkout/api";
+import { resolveCartCurrency } from "@/lib/checkout/cart-line-display";
 import { formatPrice } from "@/lib/store/format";
 
 const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
@@ -87,7 +89,7 @@ export function CheckoutPaymentClient({ requireGuestEmail = false }: CheckoutPay
     return stripeModule.loadStripe(publishableKey);
   }, [resolvedMode, stripeModule]);
 
-  const currency = cart?.currency ?? cart?.lines[0]?.currency ?? "USD";
+  const currency = resolveCartCurrency(cart?.currency, cart?.lines[0]?.currency);
 
   function preparePayment(form: HTMLFormElement) {
     setError(null);
@@ -258,15 +260,18 @@ export function CheckoutPaymentClient({ requireGuestEmail = false }: CheckoutPay
         <CardContent className="space-y-4">
           <div className="space-y-3">
             {cart.lines.map((line) => (
-              <div key={line.id} className="flex justify-between gap-3 text-sm">
-                <div>
-                  <p className="font-medium">
-                    {line.product_snapshot.product_name ?? line.product_snapshot.sku ?? "Товар"}
-                  </p>
-                  <p className="text-muted-foreground">× {line.quantity}</p>
+              <div key={line.id} className="flex items-start justify-between gap-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <CartLinePreview
+                    snapshot={line.product_snapshot}
+                    imageClassName="size-12"
+                    titleClassName="text-sm"
+                    variantClassName="text-xs"
+                  />
+                  <p className="mt-1 text-muted-foreground">× {line.quantity}</p>
                 </div>
-                <p className="font-medium">
-                  {formatPrice(line.line_total_cents, line.currency)}
+                <p className="shrink-0 font-medium">
+                  {formatPrice(line.line_total_cents, resolveCartCurrency(line.currency, currency))}
                 </p>
               </div>
             ))}

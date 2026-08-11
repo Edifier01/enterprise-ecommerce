@@ -2,20 +2,24 @@
 
 import Link from "next/link";
 
+import {
+  AdminOrderStatusBadge,
+  AdminStatusBadge,
+  getExportStatusBadge,
+} from "@/components/admin/admin-status-badge";
 import { AdminDataTable, type AdminDataTableColumn } from "@/components/admin/admin-data-table";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import {
   AdminMobileCard,
   AdminMobileCardRow,
 } from "@/components/admin/admin-mobile-card";
-import { Badge } from "@/components/ui/badge";
 import { formatAdminDate } from "@/lib/admin/format";
 import {
   buildAdminOrderDetailHref,
   type AdminOrdersListParams,
 } from "@/lib/admin/orders-list-url";
 import type { AdminOrderSummary } from "@/lib/admin/orders-shared";
-import { formatOrderMoney, getAdminOrderStatusLabel } from "@/lib/admin/orders-shared";
+import { formatOrderMoney } from "@/lib/admin/orders-shared";
 
 type AdminOrdersTableProps = {
   orders: AdminOrderSummary[];
@@ -26,19 +30,11 @@ type AdminOrdersTableProps = {
 function ExportStatusBadge({ order }: { order: AdminOrderSummary }) {
   if (order.status !== "confirmed") return null;
 
-  if (order.moysklad_order_id) {
-    return (
-      <Badge variant="outline" className="text-xs">
-        Экспортирован
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge variant="secondary" className="text-xs text-amber-800">
-      Ожидает экспорта
-    </Badge>
+  const badge = getExportStatusBadge(
+    Boolean(order.moysklad_order_id),
+    !order.moysklad_order_id,
   );
+  return <AdminStatusBadge label={badge.label} tone={badge.tone} className="text-xs" />;
 }
 
 export function AdminOrdersTable({
@@ -71,11 +67,7 @@ export function AdminOrdersTable({
       id: "status",
       header: "Статус",
       sortValue: (order) => order.status,
-      cell: (order) => (
-        <Badge variant={order.status === "canceled" ? "secondary" : "default"}>
-          {getAdminOrderStatusLabel(order.status)}
-        </Badge>
-      ),
+      cell: (order) => <AdminOrderStatusBadge status={order.status} />,
     },
     ...(showExportStatus
       ? [
@@ -136,9 +128,7 @@ export function AdminOrdersTable({
             </AdminMobileCardRow>
             <AdminMobileCardRow label="Статус">
               <span className="inline-flex flex-wrap items-center gap-2">
-                <Badge variant={order.status === "canceled" ? "secondary" : "default"}>
-                  {getAdminOrderStatusLabel(order.status)}
-                </Badge>
+                <AdminOrderStatusBadge status={order.status} />
                 {showExportStatus ? <ExportStatusBadge order={order} /> : null}
               </span>
             </AdminMobileCardRow>

@@ -1,3 +1,4 @@
+import { StoreEmptyState } from "@/components/store/ui/store-empty-state";
 import { siteConfig } from "@/lib/store/site-config";
 import { cn } from "@/lib/utils";
 
@@ -37,9 +38,11 @@ export function ProductGrid({
 }: ProductGridProps) {
   if (products.length === 0) {
     return (
-      <p className={cn("text-sm text-muted-foreground", className)}>
-        {emptyMessage}
-      </p>
+      <StoreEmptyState
+        title={emptyMessage}
+        className={className}
+        action={{ label: "Перейти в каталог", href: "/catalog" }}
+      />
     );
   }
 

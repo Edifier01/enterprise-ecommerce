@@ -11,13 +11,14 @@ import {
   exportMoySkladOrderAction,
   type IntegrationActionState,
 } from "@/app/actions/admin-moysklad";
-import { Badge } from "@/components/ui/badge";
+import {
+  AdminOrderStatusBadge,
+  AdminStatusBadge,
+  getExportStatusBadge,
+} from "@/components/admin/admin-status-badge";
 import { Button } from "@/components/ui/button";
 import type { AdminOrderDetail } from "@/lib/admin/orders-shared";
-import {
-  formatOrderMoney,
-  getAdminOrderStatusLabel,
-} from "@/lib/admin/orders-shared";
+import { formatOrderMoney } from "@/lib/admin/orders-shared";
 
 const inputClass =
   "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -179,9 +180,7 @@ export function AdminOrderDetail({ order, canWrite, canExport = false }: AdminOr
             {order.status_history.map((entry) => (
               <li key={entry.id} className="rounded-md bg-muted/30 px-3 py-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">
-                    {getAdminOrderStatusLabel(entry.to_status)}
-                  </Badge>
+                  <AdminOrderStatusBadge status={entry.to_status} />
                   <span className="text-muted-foreground">{entry.changed_by}</span>
                   <span className="text-muted-foreground">
                     {new Date(entry.changed_at).toLocaleString("ru-RU")}
@@ -200,7 +199,7 @@ export function AdminOrderDetail({ order, canWrite, canExport = false }: AdminOr
         <section className="rounded-lg border border-border p-4 text-sm">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-muted-foreground">Статус</span>
-            <Badge>{getAdminOrderStatusLabel(order.status)}</Badge>
+            <AdminOrderStatusBadge status={order.status} />
           </div>
           <div className="mb-3 flex justify-between">
             <span className="text-muted-foreground">Клиент</span>
@@ -219,14 +218,21 @@ export function AdminOrderDetail({ order, canWrite, canExport = false }: AdminOr
                 href={`https://online.moysklad.ru/app/#customerorder/edit?id=${order.moysklad_order_id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary hover:underline"
+                className="inline-flex items-center gap-1 text-primary hover:underline"
               >
-                Экспортирован ↗
+                <AdminStatusBadge
+                  {...getExportStatusBadge(true, false)}
+                  className="text-xs"
+                />
+                ↗
               </a>
             ) : order.status === "confirmed" ? (
-              <span className="text-amber-700">Ожидает экспорта</span>
+              <AdminStatusBadge
+                {...getExportStatusBadge(false, true)}
+                className="text-xs"
+              />
             ) : (
-              <span>—</span>
+              <AdminStatusBadge label="—" tone="neutral" className="text-xs" />
             )}
           </div>
           <div className="mb-3 flex justify-between">

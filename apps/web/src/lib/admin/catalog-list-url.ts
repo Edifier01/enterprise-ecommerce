@@ -7,6 +7,7 @@ export type AdminCatalogListParams = {
   showAll?: boolean;
   needsStyling?: boolean;
   needsColorPhotos?: boolean;
+  moyskladPending?: boolean;
 };
 
 export function buildAdminCatalogListHref(params: AdminCatalogListParams = {}): string {
@@ -54,6 +55,34 @@ export function parseAdminReturnPath(from: string | undefined, fallback = "/admi
     return fallback;
   }
   return from;
+}
+
+export function parseAdminCatalogListParams(href: string): AdminCatalogListParams {
+  try {
+    const url = new URL(href, "http://local");
+    const pageParam = url.searchParams.get("page");
+    const page = pageParam ? Number(pageParam) : undefined;
+
+    if (url.pathname.startsWith("/admin/integrations/moysklad/import")) {
+      return {
+        page: page && page > 0 ? page : 1,
+        moyskladPending: true,
+      };
+    }
+
+    return {
+      page: page && page > 0 ? page : undefined,
+      status: url.searchParams.get("status") ?? undefined,
+      q: url.searchParams.get("q") ?? undefined,
+      categoryId: url.searchParams.get("category_id") ?? undefined,
+      uncategorized: url.searchParams.get("uncategorized") === "1",
+      showAll: url.searchParams.get("all") === "1",
+      needsStyling: url.searchParams.get("needs_styling") === "1",
+      needsColorPhotos: url.searchParams.get("needs_color_photos") === "1",
+    };
+  } catch {
+    return {};
+  }
 }
 
 export function getAdminReturnLabel(href: string): string {

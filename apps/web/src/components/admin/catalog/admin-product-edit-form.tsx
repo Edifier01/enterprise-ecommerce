@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 
 
@@ -17,13 +17,17 @@ import {
 } from "@/app/actions/admin-catalog";
 
 import { AdminFormSection } from "@/components/admin/admin-form-section";
+import { AdminNextItemNavigation } from "@/components/admin/admin-next-item-navigation";
+import { AdminReadinessPanel } from "@/components/admin/admin-readiness-panel";
+import { AdminSyncedField } from "@/components/admin/admin-synced-field";
 
 import { AdminCategorySelect } from "@/components/admin/catalog/admin-category-select";
 
 import { AdminImageField } from "@/components/admin/catalog/admin-image-field";
 
 import { AdminProductGallery } from "@/components/admin/catalog/admin-product-gallery";
-
+import { AdminProductSectionNav } from "@/components/admin/catalog/admin-product-section-nav";
+import { AdminProductPreviewButton } from "@/components/admin/catalog/admin-product-preview-button";
 import { AdminSeoFields } from "@/components/admin/catalog/admin-seo-fields";
 
 import { AdminVariantPanel } from "@/components/admin/catalog/admin-variant-panel";
@@ -35,14 +39,17 @@ import { useToast } from "@/components/store/ui/toast-provider";
 import { Button } from "@/components/ui/button";
 
 import type { AdminCategory, AdminProduct } from "@/lib/admin/catalog-shared";
-
 import { formatPrice, getDefaultAdminVariant } from "@/lib/admin/catalog-shared";
-
 import { centsToRubles } from "@/lib/admin/money";
-
 import { isMoySkladSynced } from "@/lib/admin/moysklad";
-
+import {
+  formatPublishBlockerLabels,
+  getPublishBlockers,
+  isReadyToPublish,
+} from "@/lib/admin/merchandising-readiness";
 import { getColorOptionsFromVariants } from "@/lib/store/variant-options";
+import { cn } from "@/lib/utils";
+import { useAdminUnsavedGuard } from "@/hooks/use-admin-unsaved-guard";
 
 
 
@@ -53,16 +60,7 @@ const inputClass =
 
 
 const textareaClass =
-
   "min-h-32 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
-
-
-
-const readOnlyClass =
-
-  "h-9 w-full rounded-lg border border-input bg-muted px-3 text-sm text-muted-foreground";
-
-
 
 function FieldError({
 
@@ -97,25 +95,17 @@ function FieldError({
 
 
 type AdminProductEditFormProps = {
-
   product: AdminProduct;
-
   categories: AdminCategory[];
-
   returnTo?: string;
-
+  nextProductId?: string | null;
 };
 
-
-
 export function AdminProductEditForm({
-
   product,
-
   categories,
-
   returnTo = "/admin/catalog",
-
+  nextProductId = null,
 }: AdminProductEditFormProps) {
 
   const boundAction = updateProductAction.bind(null, product.id);
@@ -129,21 +119,16 @@ export function AdminProductEditForm({
   );
 
   const { showToast } = useToast();
-
   const lastSuccessRef = useRef(false);
-
-
+  const [dirty, setDirty] = useState(false);
+  const { confirmLeave } = useAdminUnsavedGuard(dirty);
 
   useEffect(() => {
-
     if (state.success && !lastSuccessRef.current) {
-
       showToast({ tone: "success", message: "Товар сохранён" });
-
+      setDirty(false);
     }
-
     lastSuccessRef.current = Boolean(state.success);
-
   }, [state.success, showToast]);
 
 
@@ -153,72 +138,80 @@ export function AdminProductEditForm({
   const defaultVariant = getDefaultAdminVariant(product);
 
   const colorOptions = getColorOptionsFromVariants(
-
     product.variants.map((variant) => ({
-
       id: variant.id,
-
       sku: variant.sku,
-
       name: variant.name,
-
       price_cents: variant.price_cents,
-
       wholesale_price_cents: variant.wholesale_price_cents ?? undefined,
-
       in_stock: variant.in_stock,
-
       is_default: variant.is_default,
-
       sort_order: variant.sort_order,
-
       attributes: variant.attributes ?? {},
-
     })),
-
   );
 
-
+  const publishBlockers = getPublishBlockers(product);
+  const canPublish = isReadyToPublish(product);
 
   return (
-
-    <div className="space-y-6 pb-24 md:pb-0">
+    <div className="min-w-0 space-y-6 overflow-x-hidden pb-36 md:pb-0">
 
       <MoySkladProductBanner product={product} />
 
+      <details
+        className="rounded-xl border border-border bg-muted/20 lg:hidden"
+        open={!canPublish}
+        aria-label="Готовность к публикации"
+      >
+        <summary className="cursor-pointer list-none px-4 py-3 marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-semibold text-foreground">Готовность к публикации</span>
+            <span
+              className={cn(
+                "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
+                canPublish
+                  ? "bg-emerald-100 text-emerald-800"
+                  : "bg-amber-100 text-amber-900",
+              )}
+            >
+              {canPublish ? "Готов" : "Не готов"}
+            </span>
+          </div>
+        </summary>
+        <div className="border-t border-border/60 px-2 pb-2">
+          <AdminReadinessPanel
+            product={product}
+            hideTitle
+            className="border-0 bg-transparent shadow-none"
+          />
+        </div>
+      </details>
+
+      <AdminReadinessPanel product={product} className="hidden lg:block" />
+
+      <AdminProductSectionNav />
 
 
-      {product.status === "active" && product.category_id ? (
 
-        <p className="text-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <AdminProductPreviewButton productId={product.id} slug={product.slug} />
 
+        {product.status === "active" && product.category_id ? (
           <a
-
             href={`/products/${product.slug}`}
-
             target="_blank"
-
             rel="noopener noreferrer"
-
-            className="font-medium text-primary underline-offset-4 hover:underline"
-
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
-
-            Посмотреть на витрине ↗
-
+            Опубликованная карточка ↗
           </a>
-
-        </p>
-
-      ) : (
-
-        <p className="text-sm text-muted-foreground">
-
-          Превью на витрине доступно после назначения категории и публикации (статус «Активен»).
-
-        </p>
-
-      )}
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Публичная ссылка появится после публикации (статус «Активен» и категория).
+          </p>
+        )}
+      </div>
 
 
 
@@ -227,7 +220,7 @@ export function AdminProductEditForm({
         <div className="space-y-6">
 
           <AdminFormSection
-
+            id="section-gallery"
             title="Галерея"
 
             description="Фото для витрины и привязка к цветам вариантов."
@@ -265,35 +258,20 @@ export function AdminProductEditForm({
             >
 
               <div className="grid gap-4 sm:grid-cols-2">
-
-                <div className="flex flex-col gap-2">
-
-                  <span className="text-sm font-medium">Розница, ₽</span>
-
-                  <div className={readOnlyClass}>
-
-                    {formatPrice(product.price_cents, product.currency)}
-
-                  </div>
-
-                </div>
-
-                <div className="flex flex-col gap-2">
-
-                  <span className="text-sm font-medium">Опт, ₽</span>
-
-                  <div className={readOnlyClass}>
-
-                    {defaultVariant?.wholesale_price_cents != null
-
+                <AdminSyncedField
+                  label="Розница, ₽"
+                  value={formatPrice(product.price_cents, product.currency)}
+                  synced
+                />
+                <AdminSyncedField
+                  label="Опт, ₽"
+                  value={
+                    defaultVariant?.wholesale_price_cents != null
                       ? formatPrice(defaultVariant.wholesale_price_cents, product.currency)
-
-                      : "—"}
-
-                  </div>
-
-                </div>
-
+                      : "—"
+                  }
+                  synced
+                />
               </div>
 
             </AdminFormSection>
@@ -304,7 +282,12 @@ export function AdminProductEditForm({
 
 
 
-        <form id="admin-product-form" action={formAction} className="space-y-6">
+        <form
+          id="admin-product-form"
+          action={formAction}
+          className="space-y-6"
+          onInput={() => setDirty(true)}
+        >
 
           <input type="hidden" name="sync_source" value={product.sync_source} />
 
@@ -312,10 +295,12 @@ export function AdminProductEditForm({
 
 
 
-          <AdminFormSection title="Основное" description="Название, категория и параметры витрины.">
-
+          <AdminFormSection
+            id="section-basics"
+            title="Основное"
+            description="Название, категория и параметры витрины."
+          >
             <div className="grid gap-4 sm:grid-cols-2">
-
               <div className="flex flex-col gap-2 sm:col-span-2">
 
                 <label htmlFor="name" className="text-sm font-medium">
@@ -392,11 +377,22 @@ export function AdminProductEditForm({
 
                   <option value="draft">Черновик</option>
 
-                  <option value="active">Активен</option>
+                  <option
+                    value="active"
+                    disabled={!canPublish && product.status !== "active"}
+                  >
+                    Активен
+                  </option>
 
                   <option value="archived">Архив</option>
 
                 </select>
+
+                {!canPublish && product.status !== "active" ? (
+                  <p className="text-xs text-muted-foreground">
+                    Публикация недоступна: {formatPublishBlockerLabels(publishBlockers)}
+                  </p>
+                ) : null}
 
               </div>
 
@@ -521,11 +517,9 @@ export function AdminProductEditForm({
 
 
           <AdminFormSection
-
+            id="section-description"
             title="Описание"
-
             description="Текст карточки товара. Переносы строк сохраняются на витрине."
-
           >
 
             <label htmlFor="description" className="sr-only">
@@ -558,7 +552,11 @@ export function AdminProductEditForm({
 
 
 
-          <AdminFormSection title="SEO" description="Заголовок и описание для поисковых систем.">
+          <AdminFormSection
+            id="section-seo"
+            title="SEO"
+            description="Заголовок и описание для поисковых систем."
+          >
 
             <AdminSeoFields
 
@@ -588,9 +586,11 @@ export function AdminProductEditForm({
 
       </div>
 
+      <div id="section-variants" className="scroll-mt-28 lg:scroll-mt-24">
+        <AdminVariantPanel product={product} />
+      </div>
 
-
-      <div className="sticky bottom-0 z-20 -mx-4 border-t bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-0 sm:rounded-lg sm:border md:sticky md:top-4 md:bottom-auto md:pb-3">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] backdrop-blur supports-[backdrop-filter]:bg-background/80 md:relative md:inset-auto md:z-20 md:-mx-0 md:rounded-lg md:border md:sticky md:top-4 md:bottom-auto md:pb-3">
 
         <div className="flex flex-wrap gap-3">
 
@@ -623,24 +623,23 @@ export function AdminProductEditForm({
           </Button>
 
           <Link
-
             href={returnTo}
-
+            onClick={(event) => {
+              if (!confirmLeave()) {
+                event.preventDefault();
+              }
+            }}
             className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium hover:bg-muted"
-
           >
-
             Отмена
-
           </Link>
-
         </div>
-
+        <AdminNextItemNavigation
+          nextProductId={nextProductId}
+          returnTo={returnTo}
+          className="mt-3 border-t border-border/60 pt-3"
+        />
       </div>
-
-
-
-      <AdminVariantPanel product={product} />
 
     </div>
 

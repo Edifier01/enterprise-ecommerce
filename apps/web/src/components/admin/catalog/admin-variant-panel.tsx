@@ -7,22 +7,34 @@ import {
   updateVariantAction,
   type CatalogActionState,
 } from "@/app/actions/admin-catalog";
+import {
+  AdminSyncedField,
+  adminReadOnlyValueClass,
+} from "@/components/admin/admin-synced-field";
+import { AdminStatusBadge, getStockStatusBadge } from "@/components/admin/admin-status-badge";
 import { Button } from "@/components/ui/button";
 import { AdminVariantStock } from "@/components/admin/catalog/admin-product-stock";
 import type { AdminProduct } from "@/lib/admin/catalog-shared";
 import { formatPrice } from "@/lib/admin/catalog-shared";
 import { centsToRubles } from "@/lib/admin/money";
 import { isMoySkladSynced } from "@/lib/admin/moysklad";
+import { cn } from "@/lib/utils";
 
 const inputClass =
   "h-8 w-full rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
-const readOnlyClass =
-  "h-8 w-full rounded-lg border border-input bg-muted px-2 text-sm text-muted-foreground";
+const VARIANT_ATTR_LABELS: Record<string, string> = {
+  size: "Размер",
+  color: "Цвет",
+  camouflage: "Камуфляж",
+  waist: "Талия",
+};
 
 type AdminVariantPanelProps = {
   product: AdminProduct;
 };
+
+type VariantRow = AdminProduct["variants"][number];
 
 function formatDimensions(dimensions: Record<string, number> | null | undefined): string | null {
   if (!dimensions) return null;
@@ -32,13 +44,160 @@ function formatDimensions(dimensions: Record<string, number> | null | undefined)
   return parts.length > 0 ? parts.map((v) => `${v} см`).join(" × ") : null;
 }
 
+function formatVariantAttributes(attributes: Record<string, string> | undefined): string | null {
+  if (!attributes) return null;
+  const parts = Object.entries(attributes)
+    .filter(([, value]) => value?.trim())
+    .map(([key, value]) => `${VARIANT_ATTR_LABELS[key] ?? key}: ${value.trim()}`);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+function VariantMsSyncedFields({
+  variant,
+  currency,
+}: {
+  variant: VariantRow;
+  currency: string;
+}) {
+  const attributes = formatVariantAttributes(variant.attributes);
+  const dimensions = formatDimensions(variant.dimensions_cm);
+  const stockBadge = getStockStatusBadge(variant.available ?? (variant.in_stock ? 1 : 0));
+
+  return (
+    <div className="space-y-3 rounded-md border border-dashed border-border/80 bg-muted/20 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Данные из МойСклад
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <AdminSyncedField label="SKU" value={variant.sku} synced className="text-xs" />
+        <AdminSyncedField
+          label="Название"
+          value={variant.name}
+          synced
+          className="text-xs sm:col-span-2"
+        />
+        <AdminSyncedField
+          label="Розница, ₽"
+          value={formatPrice(variant.price_cents, currency)}
+          synced
+          className="text-xs"
+        />
+        <AdminSyncedField
+          label="Опт, ₽"
+          value={
+            variant.wholesale_price_cents != null
+              ? formatPrice(variant.wholesale_price_cents, currency)
+              : "—"
+          }
+          synced
+          className="text-xs"
+        />
+        {attributes ? (
+          <AdminSyncedField
+            label="Атрибуты"
+            value={attributes}
+            synced
+            className="text-xs sm:col-span-2"
+          />
+        ) : null}
+        {variant.barcode ? (
+          <AdminSyncedField
+            label="Штрихкод"
+            value={variant.barcode}
+            synced
+            className="text-xs"
+          />
+        ) : null}
+        {variant.weight_grams != null ? (
+          <AdminSyncedField
+            label="Вес"
+            value={`${variant.weight_grams} г`}
+            synced
+            className="text-xs"
+          />
+        ) : null}
+        {dimensions ? (
+          <AdminSyncedField
+            label="Габариты"
+            value={dimensions}
+            synced
+            className="text-xs sm:col-span-2"
+          />
+        ) : null}
+        <AdminSyncedField
+          label="Наличие на витрине"
+          synced
+          className="text-xs"
+          value={
+            <AdminStatusBadge label={stockBadge.label} tone={stockBadge.tone} />
+          }
+        />
+        <AdminSyncedField
+          label="Остатки на складе"
+          synced
+          className="text-xs sm:col-span-2 lg:col-span-4"
+        >
+          <div className={cn(adminReadOnlyValueClass, "py-3")}>
+            <AdminVariantStock
+              quantityOnHand={variant.quantity_on_hand}
+              quantityReserved={variant.quantity_reserved}
+              available={variant.available}
+            />
+          </div>
+        </AdminSyncedField>
+      </div>
+    </div>
+  );
+}
+
+function VariantStorefrontSettings({
+  variant,
+  pending,
+}: {
+  variant: VariantRow;
+  pending: boolean;
+}) {
+  return (
+    <div className="space-y-3 rounded-md border border-border/60 bg-background p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Настройки витрины
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <label className="flex flex-col gap-1 text-xs">
+          Порядок
+          <input
+            name="sort_order"
+            type="number"
+            min={0}
+            defaultValue={variant.sort_order}
+            className={inputClass}
+            disabled={pending}
+          />
+        </label>
+        <label className="flex items-center gap-2 self-end text-xs">
+          <input
+            type="checkbox"
+            name="is_default"
+            value="true"
+            defaultChecked={variant.is_default}
+            disabled={pending}
+          />
+          Вариант по умолчанию
+        </label>
+      </div>
+    </div>
+  );
+}
+
 function VariantEditRow({
   productId,
+  productCurrency,
   variant,
   msSynced,
 }: {
   productId: string;
-  variant: AdminProduct["variants"][number];
+  productCurrency: string;
+  variant: VariantRow;
   msSynced: boolean;
 }) {
   const boundAction = updateVariantAction.bind(null, variant.id, productId);
@@ -47,38 +206,39 @@ function VariantEditRow({
     {},
   );
 
-  const attributeText = Object.entries(variant.attributes ?? {})
-    .map(([key, value]) => `${key}: ${value}`)
-    .join(", ");
-
-  const dimensions = formatDimensions(variant.dimensions_cm);
-
   return (
-    <form action={formAction} className="grid gap-2 rounded-md border border-border/60 p-3">
+    <form action={formAction} className="space-y-3 rounded-lg border border-border p-3">
       <input type="hidden" name="sync_source" value={msSynced ? "moysklad" : "manual"} />
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="flex flex-col gap-1 text-xs">
-          SKU
-          {msSynced ? (
-            <div className={readOnlyClass}>{variant.sku}</div>
-          ) : (
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium text-foreground">
+          {variant.name}
+          {variant.is_default ? (
+            <span className="ml-2 text-xs font-normal text-muted-foreground">(по умолчанию)</span>
+          ) : null}
+        </p>
+        {msSynced ? (
+          <span className="text-xs text-muted-foreground">SKU: {variant.sku}</span>
+        ) : null}
+      </div>
+
+      {msSynced ? (
+        <>
+          <VariantMsSyncedFields variant={variant} currency={productCurrency} />
+          <VariantStorefrontSettings variant={variant} pending={pending} />
+        </>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="flex flex-col gap-1 text-xs">
+            SKU
             <input name="sku" defaultValue={variant.sku} required className={inputClass} />
-          )}
-        </label>
-        <label className="flex flex-col gap-1 text-xs sm:col-span-2">
-          Название
-          {msSynced ? (
-            <div className={readOnlyClass}>{variant.name}</div>
-          ) : (
+          </label>
+          <label className="flex flex-col gap-1 text-xs sm:col-span-2">
+            Название
             <input name="name" defaultValue={variant.name} required className={inputClass} />
-          )}
-        </label>
-        <label className="flex flex-col gap-1 text-xs">
-          Розница, ₽
-          {msSynced ? (
-            <div className={readOnlyClass}>{formatPrice(variant.price_cents)}</div>
-          ) : (
+          </label>
+          <label className="flex flex-col gap-1 text-xs">
+            Розница, ₽
             <input
               name="price_rub"
               type="number"
@@ -88,17 +248,9 @@ function VariantEditRow({
               required
               className={inputClass}
             />
-          )}
-        </label>
-        <label className="flex flex-col gap-1 text-xs">
-          Опт, ₽
-          {msSynced ? (
-            <div className={readOnlyClass}>
-              {variant.wholesale_price_cents != null
-                ? formatPrice(variant.wholesale_price_cents)
-                : "—"}
-            </div>
-          ) : (
+          </label>
+          <label className="flex flex-col gap-1 text-xs">
+            Опт, ₽
             <input
               name="wholesale_price_rub"
               type="number"
@@ -111,45 +263,28 @@ function VariantEditRow({
               }
               className={inputClass}
             />
-          )}
-        </label>
-        <label className="flex flex-col gap-1 text-xs">
-          Порядок
-          <input
-            name="sort_order"
-            type="number"
-            min={0}
-            defaultValue={variant.sort_order}
-            className={inputClass}
-          />
-        </label>
-        <label className="flex items-center gap-2 self-end text-xs">
-          <input
-            type="checkbox"
-            name="is_default"
-            value="true"
-            defaultChecked={variant.is_default}
-          />
-          По умолчанию
-        </label>
-      </div>
-
-      {msSynced ? (
-        <div className="grid gap-2 text-xs text-muted-foreground">
-          <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-4">
-            {attributeText ? <p>Атрибуты: {attributeText}</p> : null}
-            {variant.barcode ? <p>Штрихкод: {variant.barcode}</p> : null}
-            {variant.weight_grams != null ? <p>Вес: {variant.weight_grams} г</p> : null}
-            {dimensions ? <p>Габариты: {dimensions}</p> : null}
-            <p>На витрине: {variant.in_stock ? "да" : "нет"}</p>
-          </div>
-          <AdminVariantStock
-            quantityOnHand={variant.quantity_on_hand}
-            quantityReserved={variant.quantity_reserved}
-            available={variant.available}
-          />
+          </label>
+          <label className="flex flex-col gap-1 text-xs">
+            Порядок
+            <input
+              name="sort_order"
+              type="number"
+              min={0}
+              defaultValue={variant.sort_order}
+              className={inputClass}
+            />
+          </label>
+          <label className="flex items-center gap-2 self-end text-xs">
+            <input
+              type="checkbox"
+              name="is_default"
+              value="true"
+              defaultChecked={variant.is_default}
+            />
+            По умолчанию
+          </label>
         </div>
-      ) : null}
+      )}
 
       {state.error ? (
         <p className="text-xs text-destructive" role="alert">
@@ -162,7 +297,7 @@ function VariantEditRow({
       ) : null}
       <div>
         <Button type="submit" size="sm" variant="outline" disabled={pending}>
-          {pending ? "Сохранение…" : "Сохранить вариант"}
+          {pending ? "Сохранение…" : msSynced ? "Сохранить настройки витрины" : "Сохранить вариант"}
         </Button>
       </div>
     </form>
@@ -178,12 +313,12 @@ export function AdminVariantPanel({ product }: AdminVariantPanelProps) {
   >(boundCreate, {});
 
   return (
-    <div className="space-y-4 rounded-lg border border-border p-4">
+    <div className="min-w-0 space-y-4 overflow-x-hidden rounded-lg border border-border p-4">
       <div>
         <p className="font-medium">Варианты товара</p>
         <p className="text-xs text-muted-foreground">
           {msSynced
-            ? "Модификации синхронизируются из МойСклад. Можно менять только порядок и вариант по умолчанию."
+            ? "Цены, SKU, остатки и атрибуты синхронизируются из МойСклад. Здесь можно менять только порядок и вариант по умолчанию."
             : "SKU, цены и признак варианта по умолчанию."}
         </p>
       </div>
@@ -193,6 +328,7 @@ export function AdminVariantPanel({ product }: AdminVariantPanelProps) {
           <VariantEditRow
             key={variant.id}
             productId={product.id}
+            productCurrency={product.currency}
             variant={variant}
             msSynced={msSynced}
           />

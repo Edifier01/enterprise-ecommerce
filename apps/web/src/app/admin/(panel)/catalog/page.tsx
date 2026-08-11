@@ -596,17 +596,12 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
 
 
       <AdminCatalogTable
-
         products={products.items}
-
         canWrite={canWrite}
-
+        categories={categories ?? []}
         listParams={listParams}
-
         categoryNames={categoryNames}
-
         searchQuery={searchQuery}
-
       />
 
 

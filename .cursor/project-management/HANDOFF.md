@@ -2,102 +2,46 @@
 
 ## Latest Session
 
-GPT-5.5 — ECOMMERCE UX V2 Phase 0 audit (2026-08-11)
+Composer 2.5 — Admin UX v2 Phase 12 (2026-08-11)
 
 ## Completed Work
 
-Implemented the attached `ECOMMERCE UX V2 Phase 0 Plan` as docs-only/read-only audit work.
+### Admin UX v2 Phase 12 — Polish, a11y, E2E expansion (GAP-17)
 
-1. Inventory: storefront routes/components, admin cross-surface, API/data model, design system, tests/tooling, existing UX evidence
-2. Dedupe: reused `docs/ux/admin-ux-audit.md`, Mobile Wave 4/5 docs, stich.su parity, and out-of-scope fake-feature constraints
-3. Created **`docs/ux/ecommerce-ux-audit.md`**
-4. Verifier: **APPROVED WITH NOTES**
-5. PM updated: CURRENT_CONTEXT, PROJECT_STATUS, TASKS, HANDOFF
+**A11y polish**
+- `admin-data-table.tsx` — column picker `aria-label`, `aria-controls`, Escape/outside dismiss, `aria-sort` on sortable headers, focus rings, `min-h-11` column button
+- `admin-next-item-navigation.tsx` — `min-h-11`, descriptive `aria-label`, focus ring
+- `admin-product-section-nav.tsx` — focus-visible rings, `prefers-reduced-motion` scroll
+- `admin-product-edit-form.tsx` — focus ring on readiness `<summary>`
 
-**Audit highlights:**
-- Strong foundations: MoySklad overlay model, structured variants, color gallery, admin Waves 8–14, existing tests
-- P0/P1 gaps: checkout still Stripe/stub vs YooKassa target, placeholder contacts/info IA, cart image/SKU/currency UX, fake PDP fallback description, search suggestions, draft storefront preview
-- Admin findings are not duplicated; `admin-ux-audit.md` remains the admin track
-- Backend likely required for YooKassa, search suggestions, cart line image snapshot, draft preview, optional low-stock/quantity display
+**Command palette (Phase 12 polish)**
+- `admin-commands.ts` — quick views: Оптовые клиенты, Розничные клиенты
 
-**Files changed:**
-| Path | Change |
-|------|--------|
-| `docs/ux/ecommerce-ux-audit.md` | New — ECOMMERCE UX V2 Phase 0 audit |
-| `.cursor/project-management/CURRENT_CONTEXT.md` | Current focus updated to ECOMMERCE UX V2 |
-| `.cursor/project-management/PROJECT_STATUS.md` | Phase 0 complete + next actions |
-| `.cursor/project-management/TASKS.md` | Added ECOMMERCE UX V2 feature entry |
-| `.cursor/project-management/HANDOFF.md` | This handoff |
+**E2E expansion**
+- `admin-wave16-smoke.spec.ts` — column picker, next-product queue, unsaved guard, workflow + wholesale customers via palette
 
-## Known Issues / residual
+**Validation:** `npx tsc --noEmit` clean
 
-- Verifier approved with notes; no blocking doc issues remain
-- PM/UX Phase 1 must not begin until user explicitly approves
-- No tests were run because Phase 0 is documentation-only
-- Production authenticated admin smoke remains blocked without credentials
+## Admin UX v2 status
+
+Phases 0–12 **COMPLETE** per `docs/ux/admin-ia-v2.md`. Deferred: GAP-18 event timeline, TipTap, persisted saved views DB.
+
+## Files Changed (key)
+
+- `apps/web/src/components/admin/admin-data-table.tsx`
+- `apps/web/src/components/admin/admin-next-item-navigation.tsx`
+- `apps/web/src/components/admin/catalog/admin-product-section-nav.tsx`
+- `apps/web/src/components/admin/catalog/admin-product-edit-form.tsx`
+- `apps/web/src/lib/admin/admin-commands.ts`
+- `apps/web/e2e/admin-wave16-smoke.spec.ts`
 
 ## Next Recommended Action
 
-1. Ask user approval for **ECOMMERCE UX V2 Phase 1**
-2. If approved, create `docs/ux/ecommerce-ux-v2-architecture.md` (docs only)
-3. Keep YooKassa release gate and Mobile Wave 5 deploy as parallel release priorities
+1. **Commit** Phases 3–12 when user approves
+2. **Deploy** + prod smoke on `https://сухопут-кмв.рф/admin`
+3. **YooKassa** prod gate (ADR-004) — parallel track
 
----
+## Blockers (unchanged)
 
-## Previous Session
-
-Grok 4.5 — Admin UX v2 Phase 0 audit (2026-08-11)
-
-## Completed Work
-
-`/start-feature` Phase 0 for Admin UX v2 (docs only; **no application code**).
-
-1. Feature Plan: HIGH complexity, ADR not required for Phase 0
-2. Parallel inventories: frontend-engineer, backend-engineer, qa-engineer
-3. Synthesized **`docs/ux/admin-ux-audit.md`**
-4. Verifier: **APPROVED WITH NOTES**
-5. PM updated: CURRENT_CONTEXT, PROJECT_STATUS, TASKS, HANDOFF
-
-**Audit highlights:**
-- Foundation strong (Waves 8–14 + Phase A/B/C)
-- P1 gaps: readiness on edit, next-product, unsaved guard, workflow action queue, proactive publish blockers
-- Backend: **no blocking API gaps** — reuse existing `/api/v1/admin/*`
-- Create (not duplicate): `AdminReadinessPanel`, `AdminNextItemNavigation`, `AdminSyncedField`, `AdminStatusBadge`; generalize bulk toolbar
-- 2026-07-22 improvement plan P0/quick wins are **stale** (already shipped)
-
-**Files changed:**
-| Path | Change |
-|------|--------|
-| `docs/ux/admin-ux-audit.md` | New — Phase 0 audit |
-| `.cursor/project-management/CURRENT_CONTEXT.md` | Admin UX v2 focus |
-| `.cursor/project-management/PROJECT_STATUS.md` | Phase 0 + next actions |
-| `.cursor/project-management/TASKS.md` | Epic Admin UX v2 feature entry |
-| `.cursor/project-management/HANDOFF.md` | This handoff |
-
-## Known Issues / residual
-
-- Prod authenticated admin smoke blocked (login wall; no creds invented)
-- E2E lags Waves 8–14 features (column picker, workflow board, etc.)
-- Verifier notes: schema uses aliases (`existing_component` etc.) — legend added
-
-## Next Recommended Action
-
-1. **`/start-feature` Admin UX Phase 1** — write `docs/ux/admin-ia-v2.md` (docs only)
-2. Do **not** start Phase 2 UI primitives until IA approved
-3. Parallel: deploy auth/mobile branch + YooKassa gate remain release priorities
-
----
-
-## Previous Session
-
-Composer 2.5 — Temporary hide storefront login/register (2026-08-10)
-
-## Completed Work
-
-Per recommendation: UI hide + `/register*` redirect + API 403; `/login` URL kept.
-
-**Flags (prod default off):**
-- `STOREFRONT_AUTH_UI_ENABLED=true` — show header/footer/topBar auth CTAs + allow `/register*`
-- `AUTH_REGISTRATION_ENABLED=true` — allow `POST /api/v1/auth/register*`
-
-**Next:** merged to master + deploy; confirm CTAs gone on prod; set SMTP on VPS.
+- YooKassa prod gate (ADR-004)
+- Mobile Wave 5 deploy pending

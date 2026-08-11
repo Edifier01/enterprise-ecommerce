@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
 
+import { AdminGalleryColorMatrix } from "@/components/admin/catalog/admin-gallery-color-matrix";
 import {
   addProductImageAction,
   deleteProductImageAction,
@@ -79,7 +80,7 @@ function ImageColorSelect({
   }
 
   return (
-    <label className="flex min-w-[12rem] flex-col gap-1 text-xs">
+    <label className="flex min-w-0 w-full flex-col gap-1 text-xs sm:min-w-[12rem] sm:w-auto">
       <span className="font-medium text-muted-foreground">Цвет на витрине</span>
       <div className="flex items-center gap-2">
         {image.option_color ? <ColorSwatch label={image.option_color} /> : null}
@@ -132,7 +133,7 @@ function ImageAltTextField({
   }
 
   return (
-    <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs">
+    <label className="flex min-w-0 w-full flex-1 flex-col gap-1 text-xs sm:min-w-[12rem]">
       <span className="font-medium text-muted-foreground">Alt-текст (SEO)</span>
       <input
         type="text"
@@ -157,37 +158,28 @@ function ColorCoveragePanel({
   tagged: string[];
   missing: string[];
 }) {
+  // Legacy summary chips — matrix below is the primary GAP-08 surface.
   if (colors.length < 2) return null;
 
   return (
-    <div className="space-y-2 rounded-md border border-dashed border-border/80 bg-muted/20 p-3">
-      <p className="text-sm font-medium">Покрытие цветов в галерее</p>
-      <ul className="flex flex-wrap gap-2 text-xs">
-        {colors.map((color) => {
-          const covered = tagged.includes(color);
-          return (
-            <li
-              key={color}
-              className={
-                covered
-                  ? "inline-flex items-center gap-1.5 rounded-full border border-green-600/30 bg-green-50 px-2 py-1 text-green-800 dark:bg-green-950/30 dark:text-green-200"
-                  : "inline-flex items-center gap-1.5 rounded-full border border-amber-600/30 bg-amber-50 px-2 py-1 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100"
-              }
-            >
-              <ColorSwatch label={color} />
-              {color}
-              <span aria-hidden>{covered ? "✓" : "✗"}</span>
-            </li>
-          );
-        })}
-      </ul>
-      {missing.length > 0 ? (
-        <p className="text-xs text-muted-foreground">
-          Нет фото для: {missing.join(", ")}. Привяжите или добавьте placeholder из МойСклад.
-        </p>
-      ) : (
-        <p className="text-xs text-muted-foreground">Все цвета покрыты фото в галерее.</p>
-      )}
+    <div className="flex flex-wrap gap-2 text-xs">
+      {colors.map((color) => {
+        const covered = tagged.includes(color);
+        return (
+          <span
+            key={color}
+            className={
+              covered
+                ? "inline-flex items-center gap-1.5 rounded-full border border-green-600/30 bg-green-50 px-2 py-1 text-green-800"
+                : "inline-flex items-center gap-1.5 rounded-full border border-amber-600/30 bg-amber-50 px-2 py-1 text-amber-900"
+            }
+          >
+            <ColorSwatch label={color} />
+            {color}
+            <span aria-hidden>{covered ? "✓" : "✗"}</span>
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -416,9 +408,23 @@ export function AdminProductGallery({
         missing={coverageFromOptions.missing}
       />
 
+      <AdminGalleryColorMatrix
+        productSlug={productSlug}
+        colors={coverageFromOptions.colors}
+        missing={coverageFromOptions.missing}
+        images={sortedImages}
+        erpImageUrl={erpImageUrl}
+        pending={pending}
+        onUploadForColor={(color) => {
+          setUploadColor(color);
+          fileRef.current?.click();
+        }}
+        onAddErpPlaceholder={(color) => handleUseErpPlaceholder(color)}
+      />
+
       {colorOptions.length > 0 ? (
         <div className="flex flex-wrap items-end gap-3 rounded-md border border-dashed border-border/80 bg-muted/20 p-3">
-          <label className="flex min-w-[12rem] flex-col gap-1 text-xs">
+          <label className="flex min-w-0 w-full flex-col gap-1 text-xs sm:min-w-[12rem] sm:w-auto">
             <span className="font-medium text-muted-foreground">Цвет для новых фото</span>
             <select
               className={selectClass}

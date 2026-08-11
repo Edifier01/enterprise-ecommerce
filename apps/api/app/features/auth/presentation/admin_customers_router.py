@@ -30,11 +30,17 @@ async def admin_list_customers(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
     q: str | None = Query(default=None, max_length=100),
+    is_wholesaler: bool | None = Query(default=None),
     _admin: AdminUser = Depends(require_permission("customers:read")),
     repo: IUserRepository = Depends(get_user_repository),
 ) -> AdminCustomerListResponse:
     query = q.strip() if q and q.strip() else None
-    users, total = await repo.list_customers(page=page, limit=limit, q=query)
+    users, total = await repo.list_customers(
+        page=page,
+        limit=limit,
+        q=query,
+        is_wholesaler=is_wholesaler,
+    )
     return AdminCustomerListResponse(
         items=[
             AdminCustomerSchema(

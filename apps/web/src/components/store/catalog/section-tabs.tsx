@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { ProductGridItem } from "@/components/store/catalog/product-grid";
 import { ProductGrid } from "@/components/store/catalog/product-grid";
@@ -29,15 +29,23 @@ export interface SectionTabsProps {
 }
 
 export function SectionTabs({ tabs, className }: SectionTabsProps) {
-  const [activeTab, setActiveTab] = useState<SectionTabId>(
-    tabs[0]?.id ?? "recommended",
+  const visibleTabs = useMemo(
+    () => tabs.filter((tab) => tab.products.length > 0),
+    [tabs],
   );
 
-  const active = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+  const [activeTab, setActiveTab] = useState<SectionTabId>(
+    visibleTabs[0]?.id ?? "recommended",
+  );
 
-  if (!active) {
+  const active =
+    visibleTabs.find((tab) => tab.id === activeTab) ?? visibleTabs[0] ?? null;
+
+  if (!active || visibleTabs.length === 0) {
     return null;
   }
+
+  const panelId = `homepage-section-${active.id}`;
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -47,24 +55,37 @@ export function SectionTabs({ tabs, className }: SectionTabsProps) {
           aria-label="Разделы каталога"
           className="flex gap-1 overflow-x-auto border-b [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {tabs.map((tab) => {
-            const isActive = tab.id === activeTab;
+          {visibleTabs.map((tab) => {
+            const isActive = tab.id === active.id;
+            const tabId = `homepage-tab-${tab.id}`;
 
             return (
               <button
                 key={tab.id}
+                id={tabId}
                 type="button"
                 role="tab"
                 aria-selected={isActive}
+                aria-controls={panelId}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors sm:px-4",
+                  "flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors sm:px-4",
                   isActive
                     ? "border-primary text-foreground"
                     : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >
-                {SECTION_TAB_LABELS[tab.id]}
+                <span>{SECTION_TAB_LABELS[tab.id]}</span>
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[11px] tabular-nums",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {tab.products.length}
+                </span>
               </button>
             );
           })}
@@ -75,7 +96,7 @@ export function SectionTabs({ tabs, className }: SectionTabsProps) {
         </Link>
       </div>
 
-      <div role="tabpanel">
+      <div role="tabpanel" id={panelId} aria-labelledby={`homepage-tab-${active.id}`}>
         <ProductGrid
           products={active.products}
           emptyMessage="В этом разделе пока нет товаров."

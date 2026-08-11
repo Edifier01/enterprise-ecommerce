@@ -52,8 +52,8 @@ export const siteConfig = {
   topBar: {
     links: [
       { label: "ОПТОВИКАМ", href: "/register/wholesale" },
-      { label: "КОНТАКТЫ", href: "/" },
-      { label: "ПОКУПАТЕЛЮ", href: "/catalog" },
+      { label: "КОНТАКТЫ", href: "/contacts" },
+      { label: "ПОКУПАТЕЛЮ", href: "/delivery" },
     ] satisfies SiteLink[],
     orderStatus: { label: "СТАТУС ЗАКАЗА", href: "/account/orders" },
   },
@@ -64,15 +64,16 @@ export const siteConfig = {
         title: "Покупателям",
         links: [
           { label: "Каталог", href: "/catalog" },
-          { label: "Доставка и оплата", href: "/catalog" },
-          { label: "Возврат", href: "/catalog" },
+          { label: "Доставка", href: "/delivery" },
+          { label: "Оплата", href: "/payment" },
+          { label: "Возврат", href: "/returns" },
         ],
       },
       {
         title: "Компания",
         links: [
-          { label: "О магазине", href: "/" },
-          { label: "Контакты", href: "/" },
+          { label: "О магазине", href: "/about" },
+          { label: "Контакты", href: "/contacts" },
         ],
       },
       {
@@ -127,6 +128,9 @@ export const siteConfig = {
   /** Static categories — offline fallback when API is unreachable */
   catalogDisclaimer:
     "Разделы каталога синхронизируются с API. При недоступности сервера показывается резервный список категорий.",
+
+  /** Set true only when marketing provides approved hero copy/images (no placeholders). */
+  homepagePromosEnabled: false,
 
   homepagePromos: [
     {

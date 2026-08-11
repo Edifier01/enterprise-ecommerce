@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
+import { CartLinePreview } from "@/components/store/checkout/cart-line-preview";
 import { Button } from "@/components/ui/button";
 import {
   deleteCartLine,
@@ -12,6 +13,7 @@ import {
   updateCartLine,
 } from "@/lib/checkout/api";
 import { dispatchCartUpdated } from "@/lib/checkout/cart-events";
+import { resolveCartCurrency } from "@/lib/checkout/cart-line-display";
 import { useCartSummary } from "@/lib/checkout/use-cart-summary";
 import { formatPrice } from "@/lib/store/format";
 import { cn } from "@/lib/utils";
@@ -109,26 +111,22 @@ export function CartHeaderSummary() {
             </p>
           ) : (
             <div className="max-h-80 space-y-3 overflow-y-auto">
-              {cart.lines.map((line) => {
-                const name =
-                  line.product_snapshot.product_name ??
-                  line.product_snapshot.sku ??
-                  "Товар";
-                const variant =
-                  line.product_snapshot.name ?? line.product_snapshot.variant_name;
-                return (
-                  <div key={line.id} className="space-y-2 border-b pb-3 last:border-b-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">{name}</p>
-                        {variant ? (
-                          <p className="text-xs text-muted-foreground">{variant}</p>
-                        ) : null}
-                      </div>
-                      <p className="shrink-0 text-sm font-medium">
-                        {formatPrice(line.line_total_cents, line.currency)}
-                      </p>
-                    </div>
+              {cart.lines.map((line) => (
+                <div key={line.id} className="space-y-2 border-b pb-3 last:border-b-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <CartLinePreview
+                      snapshot={line.product_snapshot}
+                      imageClassName="size-12"
+                      titleClassName="text-sm"
+                      variantClassName="text-xs"
+                    />
+                    <p className="shrink-0 text-sm font-medium">
+                      {formatPrice(
+                        line.line_total_cents,
+                        resolveCartCurrency(line.currency, cart.currency),
+                      )}
+                    </p>
+                  </div>
                     <div className="flex items-center justify-between gap-2">
                       <div className="inline-flex items-center gap-1 rounded-md border">
                         <button
@@ -165,9 +163,8 @@ export function CartHeaderSummary() {
                         <Trash2 className="size-3.5" aria-hidden />
                       </button>
                     </div>
-                  </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
 

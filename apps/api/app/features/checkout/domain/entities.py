@@ -45,9 +45,10 @@ class ProductSnapshot:
     price_cents: int
     currency: str
     price_tier: str = "retail"
+    image_url: str | None = None
 
     def to_dict(self) -> dict:
-        return {
+        payload = {
             "variant_id": str(self.variant_id),
             "sku": self.sku,
             "name": self.name,
@@ -59,6 +60,9 @@ class ProductSnapshot:
             "currency": self.currency,
             "price_tier": self.price_tier,
         }
+        if self.image_url:
+            payload["image_url"] = self.image_url
+        return payload
 
     @classmethod
     def from_dict(cls, data: dict) -> "ProductSnapshot":
@@ -73,6 +77,7 @@ class ProductSnapshot:
             price_cents=data["price_cents"],
             currency=data["currency"],
             price_tier=data.get("price_tier", "retail"),
+            image_url=data.get("image_url"),
         )
 
 

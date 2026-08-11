@@ -134,6 +134,32 @@ async function patchProduct(
   return { success: true };
 }
 
+export async function quickAssignProductCategoryAction(
+  productId: string,
+  categoryId: string | null,
+): Promise<IntegrationActionState> {
+  if (!categoryId) {
+    return patchProduct(productId, { category_id: null });
+  }
+  return assignMoySkladProductCategoryAction(productId, categoryId);
+}
+
+export async function quickUpdateProductStatusAction(
+  productId: string,
+  status: string,
+): Promise<IntegrationActionState> {
+  if (status === "active") {
+    return showProductAction(productId);
+  }
+  if (status === "archived") {
+    return hideProductAction(productId);
+  }
+  if (status === "draft") {
+    return patchProduct(productId, { status: "draft" });
+  }
+  return { error: "Недопустимый статус." };
+}
+
 export async function assignMoySkladProductCategoryAction(
   productId: string,
   categoryId: string,

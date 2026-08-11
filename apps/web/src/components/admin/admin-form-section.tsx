@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 type AdminFormSectionProps = {
+  id?: string;
   title: string;
   description?: string;
   children: ReactNode;
@@ -10,6 +11,7 @@ type AdminFormSectionProps = {
 };
 
 export function AdminFormSection({
+  id,
   title,
   description,
   children,
@@ -17,8 +19,9 @@ export function AdminFormSection({
 }: AdminFormSectionProps) {
   return (
     <section
+      id={id}
       className={cn(
-        "rounded-lg border border-border bg-card p-4 md:p-6",
+        "scroll-mt-28 rounded-lg border border-border bg-card p-4 lg:scroll-mt-24 md:p-6",
         className,
       )}
     >

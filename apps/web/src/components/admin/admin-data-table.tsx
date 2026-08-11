@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronUp, Columns3 } from "lucide-react";
 
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
@@ -82,6 +82,30 @@ export function AdminDataTable<T>({
   );
   const [sort, setSort] = useState<SortState | null>(null);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
+  const columnMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showColumnMenu) return;
+
+    function onPointerDown(event: MouseEvent) {
+      if (!columnMenuRef.current?.contains(event.target as Node)) {
+        setShowColumnMenu(false);
+      }
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setShowColumnMenu(false);
+      }
+    }
+
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [showColumnMenu]);
 
   useEffect(() => {
     if (!tableId) return;
@@ -165,18 +189,25 @@ export function AdminDataTable<T>({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 flex-1">{toolbar}</div>
           {tableId ? (
-            <div className="relative">
+            <div className="relative" ref={columnMenuRef}>
               <button
                 type="button"
-                className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium hover:bg-muted"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 aria-expanded={showColumnMenu}
+                aria-controls="admin-table-column-menu"
+                aria-label="Настройка колонок таблицы"
                 onClick={() => setShowColumnMenu((open) => !open)}
               >
                 <Columns3 className="size-4" aria-hidden />
                 Колонки
               </button>
               {showColumnMenu ? (
-                <div className="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-border bg-background p-2 shadow-lg">
+                <div
+                  id="admin-table-column-menu"
+                  role="group"
+                  aria-label="Видимость колонок"
+                  className="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-border bg-background p-2 shadow-lg"
+                >
                   {columns.map((column) => {
                     const visible = !hiddenColumnIds.has(column.id);
                     return (
@@ -241,7 +272,14 @@ export function AdminDataTable<T>({
                     {sortable ? (
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1 font-medium text-foreground"
+                        className="inline-flex items-center gap-1 font-medium text-foreground focus-visible:rounded focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-sort={
+                          activeSort
+                            ? sort.direction === "asc"
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                        }
                         onClick={() => toggleSort(column.id, sortable)}
                       >
                         {column.header}

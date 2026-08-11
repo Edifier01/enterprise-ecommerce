@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminOrderDetail } from "@/components/admin/orders/admin-order-detail";
 import { getAdminOrder } from "@/lib/admin/orders";
 import { getAdminOrdersReturnLabel, parseAdminReturnPath } from "@/lib/admin/orders-list-url";
@@ -52,17 +53,17 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pag
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          href={returnTo}
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          {backLabel}
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-          Заказ {order.order_number}
-        </h1>
-      </div>
+      <AdminPageHeader
+        title={`Заказ ${order.order_number}`}
+        breadcrumb={
+          <Link
+            href={returnTo}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            {backLabel}
+          </Link>
+        }
+      />
 
       <AdminOrderDetail
         order={order}

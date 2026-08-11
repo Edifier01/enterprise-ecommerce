@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { CatalogSearchForm } from "@/components/store/catalog/catalog-search-form";
+import { CatalogSearchWithSuggestions } from "@/components/store/catalog/catalog-search-with-suggestions";
 import { FilteredProductList } from "@/components/store/catalog/filtered-product-list";
 import { PageContainer } from "@/components/store/layout/page-container";
 import { getProductFacets, searchProducts } from "@/lib/api";
@@ -78,7 +78,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       </header>
 
       <div className="mx-auto max-w-xl">
-        <CatalogSearchForm defaultQuery={query} />
+        <CatalogSearchWithSuggestions defaultQuery={query} />
       </div>
 
       {error ? (

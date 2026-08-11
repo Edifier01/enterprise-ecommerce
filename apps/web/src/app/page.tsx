@@ -3,7 +3,11 @@ import type { Metadata } from "next";
 import { SectionTabs } from "@/components/store/catalog/section-tabs";
 import type { SectionTabData } from "@/components/store/catalog/section-tabs";
 import { PageContainer } from "@/components/store/layout/page-container";
+import { HomepageIntro } from "@/components/store/marketing/homepage-intro";
+import { PromoBanner } from "@/components/store/marketing/promo-banner";
 import { SeoContentBlock } from "@/components/store/marketing/seo-content-block";
+import { StoreEmptyState } from "@/components/store/ui/store-empty-state";
+import { StoreErrorState } from "@/components/store/ui/store-error-state";
 import { listProducts } from "@/lib/api";
 import { getAccessToken, getCurrentUser } from "@/lib/auth/session";
 import { toProductGridItems } from "@/lib/store/product-grid";
@@ -65,19 +69,30 @@ export default async function HomePage() {
 
   return (
     <PageContainer as="div" className="space-y-10 sm:space-y-12">
+      <HomepageIntro />
+
+      {siteConfig.homepagePromosEnabled ? <PromoBanner /> : null}
+
       {error ? (
-        <div
-          role="alert"
-          className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive"
-        >
-          {error}
-        </div>
+        <StoreErrorState
+          title="Не удалось загрузить товары"
+          description="Убедитесь, что API запущен и доступен."
+          action={{ label: "Перейти в каталог", href: "/catalog" }}
+        />
       ) : null}
 
-      {hasSections ? (
+      {!error && hasSections ? (
         <section aria-label="Разделы каталога">
           <SectionTabs tabs={sectionTabs} />
         </section>
+      ) : null}
+
+      {!error && !hasSections ? (
+        <StoreEmptyState
+          title="Каталог пока пуст"
+          description="Товары появятся после публикации в админ-панели."
+          action={{ label: "Перейти в каталог", href: "/catalog" }}
+        />
       ) : null}
 
       <SeoContentBlock />

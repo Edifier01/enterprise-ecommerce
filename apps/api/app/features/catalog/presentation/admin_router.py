@@ -43,6 +43,7 @@ from app.features.catalog.presentation.admin_schemas import (
     AdminCreateProductRequest,
     AdminCreateVariantRequest,
     AdminProductListResponse,
+    AdminProductPreviewTokenResponse,
     AdminProductSchema,
     AdminProductVariantSchema,
     AdminUpdateCategoryRequest,
@@ -55,6 +56,9 @@ from app.features.catalog.presentation.schemas import CategorySchema, ProductVar
 from app.features.catalog.infrastructure.persistence.product_image_repository import (
     ProductImageNotFoundError,
     ProductImageRepository,
+)
+from app.features.catalog.infrastructure.security.product_preview_token_service import (
+    ProductPreviewTokenService,
 )
 
 router = APIRouter(prefix="/admin/catalog", tags=["admin"])
@@ -70,6 +74,14 @@ def get_product_image_repository(
     session: AsyncSession = Depends(get_db_session),
 ) -> ProductImageRepository:
     return ProductImageRepository(session)
+
+
+def get_product_preview_token_service() -> ProductPreviewTokenService:
+    return ProductPreviewTokenService(
+        secret_key=settings.jwt_secret_key.get_secret_value(),
+        algorithm=settings.jwt_algorithm,
+        expire_minutes=settings.product_preview_token_expire_minutes,
+    )
 
 
 async def _load_product_schema(
@@ -247,6 +259,24 @@ async def admin_get_product(
     if schema is None:
         raise HTTPException(status_code=404, detail="Product not found")
     return schema
+
+
+@router.post(
+    "/products/{product_id}/preview-token",
+    response_model=AdminProductPreviewTokenResponse,
+    operation_id="adminCreateProductPreviewToken",
+)
+async def admin_create_product_preview_token(
+    product_id: UUID,
+    _admin: AdminUser = Depends(require_permission("admin:read")),
+    repo: IAdminCatalogRepository = Depends(get_admin_catalog_repository),
+    preview_service: ProductPreviewTokenService = Depends(get_product_preview_token_service),
+) -> AdminProductPreviewTokenResponse:
+    product = await repo.get_product_by_id(product_id)
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    token, expires_at = preview_service.create_token(product.id, product.slug)
+    return AdminProductPreviewTokenResponse(token=token, expires_at=expires_at, slug=product.slug)
 
 
 @router.patch(

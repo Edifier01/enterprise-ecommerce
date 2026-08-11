@@ -3,12 +3,15 @@ import { notFound } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/store/catalog/breadcrumbs";
 import type { BreadcrumbItem } from "@/components/store/catalog/breadcrumbs";
+import { CategoryFallbackNotice } from "@/components/store/catalog/category-fallback-notice";
 import { CategoryGrid } from "@/components/store/catalog/category-grid";
 import { CategoryProductList } from "@/components/store/catalog/category-product-list";
 import { PageContainer } from "@/components/store/layout/page-container";
+import { StoreErrorState } from "@/components/store/ui/store-error-state";
 import { getCategories, getProductFacets, listProducts } from "@/lib/api";
 import type { Category } from "@/lib/api";
 import { getAccessToken, getCurrentUser } from "@/lib/auth/session";
+import { allowStaticCategoryFallback } from "@/lib/store/category-fallback";
 import {
   getAllCategorySlugs,
   getBreadcrumbsForCategory,
@@ -32,10 +35,7 @@ export function generateStaticParams() {
   return getAllCategorySlugs().map((slug) => ({ slug }));
 }
 
-function buildApiBreadcrumbs(
-  slug: string,
-  all: Category[]
-): BreadcrumbItem[] {
+function buildApiBreadcrumbs(slug: string, all: Category[]): BreadcrumbItem[] {
   const category = all.find((c) => c.slug === slug);
   if (!category) return [{ label: "Каталог", href: "/catalog" }];
 
@@ -55,21 +55,41 @@ function buildApiBreadcrumbs(
   return items;
 }
 
-export async function generateMetadata({
-  params,
-}: CategoryPageProps): Promise<Metadata> {
+function resolveCategoryFromApiOrFallback(
+  slug: string,
+  apiCategories: Awaited<ReturnType<typeof getCategories>> | null,
+  categoriesFailed: boolean,
+) {
+  const apiCategory = apiCategories?.items.find((c) => c.slug === slug) ?? null;
+  if (apiCategory) {
+    return { category: apiCategory, usedStaticFallback: false };
+  }
+
+  if (categoriesFailed || apiCategories === null) {
+    if (allowStaticCategoryFallback()) {
+      const staticCategory = getCategoryBySlug(slug);
+      if (staticCategory) {
+        return { category: staticCategory, usedStaticFallback: true };
+      }
+    }
+    return { category: null, usedStaticFallback: false };
+  }
+
+  return { category: null, usedStaticFallback: false };
+}
+
+export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const { slug } = await params;
 
   let apiCategories: Awaited<ReturnType<typeof getCategories>> | null = null;
+  let categoriesFailed = false;
   try {
     apiCategories = await getCategories();
   } catch {
-    // Fall back to static categories
+    categoriesFailed = true;
   }
 
-  const category =
-    apiCategories?.items.find((c) => c.slug === slug) ??
-    getCategoryBySlug(slug);
+  const { category } = resolveCategoryFromApiOrFallback(slug, apiCategories, categoriesFailed);
 
   if (!category) {
     return { title: "Раздел не найден" };
@@ -78,15 +98,11 @@ export async function generateMetadata({
   return {
     title: category.name,
     description:
-      category.description ??
-      `Товары в разделе «${category.name}» — ${siteConfig.name}`,
+      category.description ?? `Товары в разделе «${category.name}» — ${siteConfig.name}`,
   };
 }
 
-export default async function CategoryPage({
-  params,
-  searchParams,
-}: CategoryPageProps) {
+export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
   const { slug } = await params;
   const resolvedSearchParams = await searchParams;
   const catalogQuery = parseCatalogSearchParams(resolvedSearchParams);
@@ -95,18 +111,24 @@ export default async function CategoryPage({
   const isWholesaler = user?.is_wholesaler ?? false;
 
   let apiCategories: Awaited<ReturnType<typeof getCategories>> | null = null;
+  let categoriesFailed = false;
   try {
     apiCategories = await getCategories();
   } catch {
-    // Fall back to static categories when API is unavailable
+    categoriesFailed = true;
   }
 
-  const apiCategory = apiCategories?.items.find((c) => c.slug === slug) ?? null;
-  const category = apiCategory ?? getCategoryBySlug(slug);
+  const { category, usedStaticFallback } = resolveCategoryFromApiOrFallback(
+    slug,
+    apiCategories,
+    categoriesFailed,
+  );
 
   if (!category) {
     notFound();
   }
+
+  const apiCategory = apiCategories?.items.find((c) => c.slug === slug) ?? null;
 
   let products: Awaited<ReturnType<typeof listProducts>> | null = null;
   let facets: Awaited<ReturnType<typeof getProductFacets>> | null = null;
@@ -132,9 +154,7 @@ export default async function CategoryPage({
 
   const allCategories = apiCategories?.items ?? [];
   const childCategories =
-    apiCategory !== null
-      ? allCategories.filter((c) => c.parent_id === apiCategory.id)
-      : [];
+    apiCategory !== null ? allCategories.filter((c) => c.parent_id === apiCategory.id) : [];
   const categoryProducts = toProductGridItems(products?.items ?? [], isWholesaler);
   const catalogFacets = facets
     ? apiFacetsToCatalogFacets(facets)
@@ -154,7 +174,7 @@ export default async function CategoryPage({
   }));
 
   const breadcrumbs =
-    apiCategories !== null
+    apiCategories !== null && apiCategory !== null
       ? buildApiBreadcrumbs(slug, apiCategories.items)
       : getBreadcrumbsForCategory(slug);
 
@@ -172,13 +192,14 @@ export default async function CategoryPage({
         </header>
       </div>
 
+      {usedStaticFallback ? <CategoryFallbackNotice /> : null}
+
       {error ? (
-        <div
-          role="alert"
-          className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive"
-        >
-          {error}
-        </div>
+        <StoreErrorState
+          title="Не удалось загрузить товары"
+          description={error}
+          action={{ label: "В каталог", href: "/catalog" }}
+        />
       ) : null}
 
       {childCategoryCards.length > 0 ? (
@@ -190,18 +211,19 @@ export default async function CategoryPage({
         </section>
       ) : null}
 
-      <section aria-labelledby="category-products-heading" className="space-y-4">
-        <h2 id="category-products-heading" className="text-lg font-semibold">
-          Товары раздела
-        </h2>
-        <p className="text-xs text-muted-foreground">{siteConfig.catalogDisclaimer}</p>
-        <CategoryProductList
-          products={categoryProducts}
-          total={products?.total ?? 0}
-          facets={catalogFacets}
-          query={catalogQuery}
-        />
-      </section>
+      {!error ? (
+        <section aria-labelledby="category-products-heading" className="space-y-4">
+          <h2 id="category-products-heading" className="text-lg font-semibold">
+            Товары раздела
+          </h2>
+          <CategoryProductList
+            products={categoryProducts}
+            total={products?.total ?? 0}
+            facets={catalogFacets}
+            query={catalogQuery}
+          />
+        </section>
+      ) : null}
     </PageContainer>
   );
 }

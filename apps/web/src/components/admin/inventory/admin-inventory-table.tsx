@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { AdminStockAvailabilityBadge } from "@/components/admin/admin-status-badge";
 import { AdminDataTable, type AdminDataTableColumn } from "@/components/admin/admin-data-table";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import {
@@ -10,7 +11,6 @@ import {
 } from "@/components/admin/admin-mobile-card";
 import { InventoryProductGroup } from "@/components/admin/inventory/inventory-product-group";
 import { MoySkladBadge } from "@/components/admin/moysklad/moysklad-badge";
-import { Badge } from "@/components/ui/badge";
 import type {
   AdminInventoryItem,
   AdminInventoryProductGroup,
@@ -31,6 +31,7 @@ type AdminInventoryTableProps = {
 
 const variantColumns = (
   listParams: AdminInventoryListParams,
+  lowStockThreshold: number,
 ): AdminDataTableColumn<AdminInventoryItem>[] => [
   {
     id: "sku",
@@ -71,7 +72,13 @@ const variantColumns = (
     cell: (item) => (
       <div className="flex items-center justify-end gap-2">
         <span>{item.available}</span>
-        {item.is_low_stock ? <Badge variant="destructive">Низкий</Badge> : null}
+        {item.is_low_stock || item.available <= 0 ? (
+          <AdminStockAvailabilityBadge
+            available={item.available}
+            lowThreshold={lowStockThreshold}
+            className="text-xs"
+          />
+        ) : null}
       </div>
     ),
   },
@@ -120,7 +127,7 @@ export function AdminInventoryTable({
           <AdminEmptyState
             title="Нет товаров на складе"
             description="Импортируйте товары из МойСклад или проверьте синхронизацию остатков."
-            action={{ label: "Интеграция МойСклад", href: "/admin/integrations/moysklad" }}
+            action={{ label: "Синхронизация МойСклад", href: "/admin/integrations/moysklad" }}
           />
         </div>
       );
@@ -135,6 +142,7 @@ export function AdminInventoryTable({
               key={group.product_id}
               group={group}
               listParams={listParams}
+              lowStockThreshold={lowStockThreshold}
             />
           ))}
         </div>
@@ -147,7 +155,7 @@ export function AdminInventoryTable({
       {intro}
       <AdminDataTable
         tableId="admin-inventory-variants"
-        columns={variantColumns(listParams)}
+        columns={variantColumns(listParams, lowStockThreshold)}
         rows={items}
         getRowId={(item) => item.variant_id}
         stickyHeader
@@ -156,7 +164,7 @@ export function AdminInventoryTable({
           <AdminEmptyState
             title="Нет записей склада"
             description="Импортируйте товары из МойСклад или проверьте синхронизацию остатков."
-            action={{ label: "Интеграция МойСклад", href: "/admin/integrations/moysklad" }}
+            action={{ label: "Синхронизация МойСклад", href: "/admin/integrations/moysklad" }}
           />
         }
         renderMobileCard={(item) => (
@@ -174,7 +182,13 @@ export function AdminInventoryTable({
               <AdminMobileCardRow label="Доступно">
                 <span className="inline-flex items-center gap-2">
                   {item.available}
-                  {item.is_low_stock ? <Badge variant="destructive">Низкий</Badge> : null}
+                  {item.is_low_stock || item.available <= 0 ? (
+                    <AdminStockAvailabilityBadge
+                      available={item.available}
+                      lowThreshold={lowStockThreshold}
+                      className="text-xs"
+                    />
+                  ) : null}
                 </span>
               </AdminMobileCardRow>
               <Link
