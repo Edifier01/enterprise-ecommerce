@@ -409,6 +409,16 @@ paths:
         schema:
           type: string
           title: Slug
+      - name: preview
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Admin draft preview token
+          title: Preview
+        description: Admin draft preview token
       responses:
         '200':
           description: Successful Response
@@ -436,6 +446,16 @@ paths:
         schema:
           type: string
           title: Slug
+      - name: preview
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Admin draft preview token
+          title: Preview
+        description: Admin draft preview token
       - name: access_token
         in: cookie
         required: false
@@ -853,6 +873,14 @@ paths:
             maxLength: 100
           - type: 'null'
           title: Q
+      - name: is_wholesaler
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Is Wholesaler
       responses:
         '200':
           description: Successful Response
@@ -1100,6 +1128,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminProductSchema'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/admin/catalog/products/{product_id}/preview-token:
+    post:
+      tags:
+      - admin
+      summary: Admin Create Product Preview Token
+      operationId: adminCreateProductPreviewToken
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Product Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProductPreviewTokenResponse'
         '422':
           description: Validation Error
           content:
@@ -3163,6 +3220,24 @@ components:
       - page
       - limit
       title: AdminProductListResponse
+    AdminProductPreviewTokenResponse:
+      properties:
+        token:
+          type: string
+          title: Token
+        expires_at:
+          type: string
+          format: date-time
+          title: Expires At
+        slug:
+          type: string
+          title: Slug
+      type: object
+      required:
+      - token
+      - expires_at
+      - slug
+      title: AdminProductPreviewTokenResponse
     AdminProductSchema:
       properties:
         id:

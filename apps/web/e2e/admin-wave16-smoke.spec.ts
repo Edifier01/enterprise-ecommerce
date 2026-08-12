@@ -71,13 +71,16 @@ test.describe("Admin UX Wave 16 smoke — Phase 12 polish, a11y, E2E expansion",
 
     const nameInput = page.getByLabel("Название (витрина)");
     await nameInput.fill(`${await nameInput.inputValue()} (тест)`);
+    // Ensure form-level onInput dirty flag is set (Playwright fill can race with React).
+    await nameInput.dispatchEvent("input");
 
-    page.once("dialog", (dialog) => {
-      expect(dialog.type()).toBe("confirm");
-      expect(dialog.message()).toContain("несохран");
-      void dialog.dismiss();
-    });
-    await page.getByRole("link", { name: "Отмена" }).click({ noWaitAfter: true });
+    const [dialog] = await Promise.all([
+      page.waitForEvent("dialog"),
+      page.getByRole("link", { name: "Отмена" }).click({ noWaitAfter: true }),
+    ]);
+    expect(dialog.type()).toBe("confirm");
+    expect(dialog.message()).toContain("несохран");
+    await dialog.dismiss();
     await expect(page).toHaveURL(/\/admin\/catalog\/.+\/edit/);
   });
 
