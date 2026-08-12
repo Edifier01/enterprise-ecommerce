@@ -6,31 +6,34 @@
 
 ## Current Module
 
-**ECOMMERCE UX V2 + Admin UX v2** — Phase 12 shipped (2026-08-11).  
-Admin UX v2 plan complete (Phases 0–12). Parallel release: YooKassa prod gate + deploy.
+**CORRECTIVE UX** — code complete locally; **not on production**.
 
 ---
 
 ## Current Feature
 
-**CI green-fix** — ruff F811 + 16 Playwright locator drifts (uncommitted, ready to push)
+**Prod Visual QA (2026-08-12):** FAIL — deploy lag.
 
-**Next:** Commit CI fixes → verify GitHub Actions → release gate (YooKassa ADR-004, deploy)
+Evidence on `https://сухопут-кмв.рф`:
+- Header still TrustBar + no `primaryNav` (Каталог/Новинки/Распродажа)
+- PDP sneakers: wrong camo image; variant pills = full ERP names; default 39 OOS
+- Corrective Phases 1–4 changes exist only as **uncommitted local** work on `master`
+
+**Next:** Commit Corrective UX → push/deploy → re-run Visual QA. Ops: fix sneakers media after deploy (or in admin now).
 
 ---
 
 ## Active Agent
 
-Composer 2.5 (UX V2 Phase 12)
+Composer (prod Visual QA)
 
 ---
 
 ## Current Blockers
 
-1. **YooKassa** — 0% (ADR-004) — release gate (parallel chat)
-2. **Deploy** — merge branch → `master` (migrations 021–023 + lockdown)
-3. **SMTP** — prod `.env.production` must use real SMTP
-4. **Business copy** — contacts/delivery/returns for Phase 3 info pages
+1. **Deploy lag** — Corrective UX not shipped
+2. **Ops:** wrong sneakers `/media/` image
+3. **YooKassa** — ADR-004
 
 ---
 
@@ -38,14 +41,12 @@ Composer 2.5 (UX V2 Phase 12)
 
 | Area | Status |
 |------|--------|
-| ECOMMERCE UX V2 Phases 0–8 | ✅ COMPLETE |
-| Admin UX v2 Phases 0–12 | ✅ COMPLETE |
-| Auth lockdown | ✅ implemented (deploy pending) |
-| Mobile UX Wave 5 | ⏳ merge + smoke |
-| YooKassa | ❌ not started |
+| Corrective UX code (0–4) | ✅ local |
+| Prod deploy / Visual QA | ❌ |
+| YooKassa | ❌ |
 
 ---
 
 ## Last Updated
 
-2026-08-12 (CI fix — ruff + E2E locators)
+2026-08-12 (prod Visual QA — not deployed)

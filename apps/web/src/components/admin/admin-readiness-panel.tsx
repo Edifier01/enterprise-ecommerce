@@ -14,8 +14,15 @@ const BLOCKER_MESSAGES: Record<PublishBlocker, string> = {
 };
 
 const BLOCKER_LINKS: Partial<Record<PublishBlocker, { href: string; label: string }>> = {
+  missing_category: { href: "#section-basics", label: "Назначить категорию" },
   missing_photo: { href: "#section-gallery", label: "Перейти к галерее" },
   missing_color_photos: { href: "#section-gallery", label: "Открыть матрицу цветов" },
+};
+
+const CHECKLIST_LINKS: Record<string, string> = {
+  Категория: "#section-basics",
+  Фото: "#section-gallery",
+  "Цвета в галерее": "#section-gallery",
 };
 
 type AdminReadinessPanelProps = {
@@ -34,6 +41,7 @@ export function AdminReadinessPanel({
   const items = getMerchandisingChecklistItems(product);
   const blockers = getPublishBlockers(product);
   const ready = isReadyToPublish(product);
+  const openCount = items.filter((item) => !item.done).length;
 
   if (variant === "compact") {
     return (
@@ -69,7 +77,9 @@ export function AdminReadinessPanel({
             <p className="mt-1 text-xs text-muted-foreground">
               {ready
                 ? "Товар можно опубликовать на витрине."
-                : "Завершите пункты ниже, чтобы опубликовать без ошибок."}
+                : openCount > 0
+                  ? `${openCount} пункт(ов) осталось — перейдите по ссылкам ниже.`
+                  : "Завершите пункты ниже, чтобы опубликовать без ошибок."}
             </p>
           </div>
         ) : null}
@@ -82,25 +92,37 @@ export function AdminReadinessPanel({
                 : "bg-amber-100 text-amber-900",
             )}
           >
-            {ready ? "Готов" : "Не готов"}
+            {ready ? "Готов" : openCount > 0 ? `${openCount} проблем` : "Не готов"}
           </span>
         ) : null}
       </div>
 
       <ul className={cn(hideTitle ? "space-y-2" : "mt-4 space-y-2")}>
-        {items.map((item) => (
-          <li key={item.label} className="flex items-center gap-2 text-sm">
-            <span
-              aria-hidden
-              className={item.done ? "text-emerald-600" : "text-muted-foreground"}
-            >
-              {item.done ? "☑" : "☐"}
-            </span>
-            <span className={item.done ? "text-foreground" : "text-muted-foreground"}>
-              {item.label}
-            </span>
-          </li>
-        ))}
+        {items.map((item) => {
+          const href = !item.done ? CHECKLIST_LINKS[item.label] : undefined;
+          return (
+            <li key={item.label} className="flex items-center gap-2 text-sm">
+              <span
+                aria-hidden
+                className={item.done ? "text-emerald-600" : "text-muted-foreground"}
+              >
+                {item.done ? "☑" : "☐"}
+              </span>
+              {href ? (
+                <a
+                  href={href}
+                  className="font-medium text-amber-950 underline underline-offset-2"
+                >
+                  {item.label}
+                </a>
+              ) : (
+                <span className={item.done ? "text-foreground" : "text-muted-foreground"}>
+                  {item.label}
+                </span>
+              )}
+            </li>
+          );
+        })}
       </ul>
 
       {blockers.length > 0 ? (

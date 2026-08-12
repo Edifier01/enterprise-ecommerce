@@ -48,15 +48,22 @@ export const siteConfig = {
     ],
   },
 
-  /** Row 1 — top info bar (без «О компании» и «Обратный звонок»). */
+  /** Row 1 — utility bar (desktop). */
   topBar: {
     links: [
-      { label: "ОПТОВИКАМ", href: "/register/wholesale" },
       { label: "КОНТАКТЫ", href: "/contacts" },
-      { label: "ПОКУПАТЕЛЮ", href: "/delivery" },
+      { label: "ПОКУПАТЕЛЯМ", href: "/delivery" },
+      { label: "ОПТОВИКАМ", href: "/register/wholesale" },
     ] satisfies SiteLink[],
     orderStatus: { label: "СТАТУС ЗАКАЗА", href: "/account/orders" },
   },
+
+  /** Row 2 — primary commerce links next to logo (Corrective UX Phase 2). */
+  primaryNav: [
+    { label: "Каталог", href: "/catalog" },
+    { label: "Новинки", href: "/catalog?sort=default" },
+    { label: "Распродажа", href: "/catalog?on_sale=1" },
+  ] satisfies SiteLink[],
 
   footer: {
     columns: [

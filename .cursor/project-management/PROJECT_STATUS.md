@@ -15,15 +15,16 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Current Objective
 
-**Active this chat:** Admin UX v2 Phase 12 ✅ — plan complete. Release: YooKassa + deploy.  
-**Parallel release:** YooKassa prod gate (primary) + Mobile UX Wave 5 / auth deploy (secondary).
+**Active this chat:** Prod Visual QA ❌ — Corrective UX not deployed (local uncommitted).  
+**Next:** Commit → push/deploy → re-QA. Ops: sneakers media. Then YooKassa.  
+**Parallel release:** YooKassa prod gate + CI/deploy + Mobile UX Wave 5.
 
 ---
 
 ## Current Sprint
 
-**ECOMMERCE UX V2** — Phase 8 COMPLETE (draft PDP preview EUX-011; tsc clean)  
-**Admin UX v2** — Phase 12 COMPLETE (a11y + E2E GAP-17; **Phases 0–12 done**)  
+**CORRECTIVE UX** — Phases 0–4 COMPLETE (2026-08-12); deploy/Visual QA pending  
+**ECOMMERCE UX V2 / Admin UX v2 foundations** — code shipped; **IA gaps reopened** by corrective audit  
 **Final Project Gate — YooKassa** ⏳ **PLANNED** (Wave A ✅; deploy 021–022 pending)  
 **Mobile UX Wave 5** — code ✅; verifier ⚠️ PASSED WITH NOTES; deploy pending
 
@@ -50,6 +51,12 @@ Sprint E (wholesale pricing) complete 2026-07-10.
 
 ## Active Work
 
+- [x] **Corrective UX UX-AUDIT-001** — `docs/ux/CORRECTIVE_UX_AUDIT.md` (2026-08-12)
+- [x] **Corrective UX Phase 1** — attribute normalize, in-stock default, cart gallery (2026-08-12); ops image replace pending
+- [x] **Corrective UX Phase 2** — compact header, homepage categories + stacked sections, flat variant labels (2026-08-12)
+- [x] **Corrective UX Phase 3** — admin operator workspace (Action Center first, Save&Next, compact variants) — 2026-08-12
+- [x] **Corrective UX Phase 4** — polish (loading/error, focus, gallery color context) — 2026-08-12
+- [ ] **Corrective UX deploy / Visual QA** — prod gate
 - [x] **Admin UX v2 Phase 0** — `docs/ux/admin-ux-audit.md`; verifier APPROVED WITH NOTES (2026-08-11)
 - [x] **ECOMMERCE UX V2 Phase 0** — `docs/ux/ecommerce-ux-audit.md`; verifier APPROVED WITH NOTES (2026-08-11)
 - [x] **Admin UX v2 Phase 1** — `docs/ux/admin-ia-v2.md`; verifier APPROVED WITH NOTES (2026-08-11)

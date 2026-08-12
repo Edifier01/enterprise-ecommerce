@@ -196,7 +196,9 @@ export function AdminProductGallery({
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadColor, setUploadColor] = useState("");
+  const [focusColor, setFocusColor] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const colorSelectRef = useRef<HTMLSelectElement>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -415,8 +417,21 @@ export function AdminProductGallery({
         images={sortedImages}
         erpImageUrl={erpImageUrl}
         pending={pending}
+        activeColor={focusColor ?? undefined}
+        onSelectColor={(color) => {
+          setFocusColor(color);
+          setUploadColor(color);
+          requestAnimationFrame(() => {
+            colorSelectRef.current?.focus();
+            document.getElementById("admin-gallery-images")?.scrollIntoView({
+              behavior: "smooth",
+              block: "nearest",
+            });
+          });
+        }}
         onUploadForColor={(color) => {
           setUploadColor(color);
+          setFocusColor(color);
           fileRef.current?.click();
         }}
         onAddErpPlaceholder={(color) => handleUseErpPlaceholder(color)}
@@ -427,9 +442,13 @@ export function AdminProductGallery({
           <label className="flex min-w-0 w-full flex-col gap-1 text-xs sm:min-w-[12rem] sm:w-auto">
             <span className="font-medium text-muted-foreground">Цвет для новых фото</span>
             <select
+              ref={colorSelectRef}
               className={selectClass}
               value={uploadColor}
-              onChange={(event) => setUploadColor(event.target.value)}
+              onChange={(event) => {
+                setUploadColor(event.target.value);
+                setFocusColor(event.target.value || null);
+              }}
               disabled={pending}
             >
               <option value="">Общее фото</option>
@@ -507,8 +526,29 @@ export function AdminProductGallery({
       ) : null}
 
       {sortedImages.length > 0 ? (
-        <ul className="space-y-3">
-          {sortedImages.map((image, index) => (
+        <ul id="admin-gallery-images" className="space-y-3">
+          {focusColor ? (
+            <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
+              <span>
+                Контекст цвета: <span className="font-medium text-foreground">{focusColor}</span>
+              </span>
+              <button
+                type="button"
+                className="font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                onClick={() => setFocusColor(null)}
+              >
+                Сбросить фильтр
+              </button>
+            </li>
+          ) : null}
+          {sortedImages.map((image, index) => {
+            const matchesFocus =
+              !focusColor ||
+              image.option_color === focusColor ||
+              (!image.option_color && focusColor === "");
+            const dimmed = Boolean(focusColor && image.option_color && image.option_color !== focusColor);
+
+            return (
             <li
               key={image.id}
               draggable={!pending}
@@ -534,6 +574,8 @@ export function AdminProductGallery({
                 "flex flex-wrap items-start gap-3 rounded-md border border-border/60 p-3 transition-colors",
                 draggingId === image.id && "opacity-60",
                 dragOverId === image.id && draggingId !== image.id && "border-primary bg-muted/40",
+                matchesFocus && focusColor && image.option_color === focusColor && "border-primary/50 bg-primary/5",
+                dimmed && "opacity-40",
               )}
             >
               <div
@@ -600,7 +642,8 @@ export function AdminProductGallery({
                 Удалить
               </Button>
             </li>
-          ))}
+            );
+          })}
         </ul>
       ) : (
         <p className="text-sm text-muted-foreground">Галерея пуста.</p>

@@ -21,8 +21,10 @@ type AdminGalleryColorMatrixProps = {
   images: GalleryImage[];
   erpImageUrl?: string | null;
   pending?: boolean;
+  activeColor?: string;
   onUploadForColor: (color: string) => void;
   onAddErpPlaceholder: (color: string) => void;
+  onSelectColor?: (color: string) => void;
 };
 
 function ColorSwatch({ label }: { label: string }) {
@@ -42,8 +44,10 @@ export function AdminGalleryColorMatrix({
   images,
   erpImageUrl,
   pending = false,
+  activeColor,
   onUploadForColor,
   onAddErpPlaceholder,
+  onSelectColor,
 }: AdminGalleryColorMatrixProps) {
   const [, startTransition] = useTransition();
 
@@ -59,7 +63,7 @@ export function AdminGalleryColorMatrix({
       <div>
         <p className="text-sm font-semibold text-foreground">Матрица цветов</p>
         <p className="text-xs text-muted-foreground">
-          У каждого цвета должно быть хотя бы одно фото в галерее перед публикацией.
+          У каждого цвета должно быть хотя бы одно фото. Нажмите цвет, чтобы показать его кадры.
         </p>
       </div>
 
@@ -79,13 +83,25 @@ export function AdminGalleryColorMatrix({
               const covered = !missing.includes(color);
               const previewImage = colorImages[0];
 
+              const isActive = activeColor === color;
+
               return (
-                <tr key={color} className="border-b border-border/60 last:border-b-0">
+                <tr
+                  key={color}
+                  className={cn(
+                    "border-b border-border/60 last:border-b-0",
+                    isActive && "bg-primary/5",
+                  )}
+                >
                   <td className="py-2 pr-3">
-                    <span className="inline-flex items-center gap-2 font-medium">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-md font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                      onClick={() => onSelectColor?.(color)}
+                    >
                       <ColorSwatch label={color} />
                       {color}
-                    </span>
+                    </button>
                   </td>
                   <td className="py-2 pr-3">
                     <span
@@ -101,7 +117,12 @@ export function AdminGalleryColorMatrix({
                   </td>
                   <td className="py-2 pr-3">
                     {previewImage ? (
-                      <div className="relative size-10 overflow-hidden rounded-md border bg-muted">
+                      <button
+                        type="button"
+                        className="relative size-10 overflow-hidden rounded-md border bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                        onClick={() => onSelectColor?.(color)}
+                        aria-label={`Показать фото цвета ${color}`}
+                      >
                         <Image
                           {...productImageRenderProps(
                             resolveProductGalleryImageSrc(productSlug, previewImage.url),
@@ -110,7 +131,7 @@ export function AdminGalleryColorMatrix({
                           fill
                           className="object-cover"
                         />
-                      </div>
+                      </button>
                     ) : erpPreview ? (
                       <div className="relative size-10 overflow-hidden rounded-md border bg-muted opacity-70">
                         <Image
@@ -127,9 +148,20 @@ export function AdminGalleryColorMatrix({
                   </td>
                   <td className="py-2">
                     {covered ? (
-                      <span className="text-xs text-muted-foreground">
-                        {colorImages.length} фото
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {colorImages.length} фото
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isActive ? "secondary" : "ghost"}
+                          disabled={pending}
+                          onClick={() => onSelectColor?.(color)}
+                        >
+                          Показать
+                        </Button>
+                      </div>
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         <Button
@@ -137,7 +169,10 @@ export function AdminGalleryColorMatrix({
                           size="sm"
                           variant="outline"
                           disabled={pending}
-                          onClick={() => startTransition(() => onUploadForColor(color))}
+                          onClick={() => {
+                            onSelectColor?.(color);
+                            startTransition(() => onUploadForColor(color));
+                          }}
                         >
                           Загрузить
                         </Button>

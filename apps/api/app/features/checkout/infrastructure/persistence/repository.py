@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.features.catalog.infrastructure.persistence.models import ProductModel, ProductVariantModel
+from app.features.integrations.moysklad.infrastructure.persistence.models import ProductImageModel
 from app.features.checkout.domain.entities import (
     Cart,
     CartLine,
@@ -171,6 +172,15 @@ class CheckoutRepository(ICheckoutRepository):
         result = await self._session.execute(stmt)
         row = result.first()
         return (row[0], row[1]) if row else None
+
+    async def get_first_product_image_url(self, product_id: uuid.UUID) -> str | None:
+        stmt = (
+            select(ProductImageModel.url)
+            .where(ProductImageModel.product_id == product_id)
+            .order_by(ProductImageModel.sort_order.asc(), ProductImageModel.created_at.asc())
+            .limit(1)
+        )
+        return await self._session.scalar(stmt)
 
     async def _load_cart(self, stmt) -> Cart | None:
         stmt = stmt.options(selectinload(CartModel.lines))

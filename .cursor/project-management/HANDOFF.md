@@ -2,65 +2,29 @@
 
 ## Latest Session
 
-Composer 2.5 — CI fix: ruff F811 + E2E locator drift (2026-08-12)
-
-## Completed Work (CI fix)
-
-**Ruff**
-- `router.py` — removed duplicate `Response` import (`fastapi.responses`); kept `from fastapi import Response`
-
-**E2E (16 failures → locator/UI drift after Phase 12)**
-- Strict-mode violations: `exact: true` or scoped locators (sidebar «Импорт», SKU text, «Настройки витрины», customers «Все»)
-- Bulk toolbar labels: «Скрыть»/«Показать» (not «…выбранные»)
-- Import queue: assert `heading` «Импорт товаров»
-- Status quick-edit: scope to desktop `table` (mobile card copy is `md:hidden`)
-- Unsaved guard: `page.once('dialog')` + `click({ noWaitAfter: true })` on cancel link
-- Mobile storefront: open search via «Открыть поиск» toggle before asserting input
-
-**Validation:** `ruff check` clean locally; Playwright not run locally (Postgres unavailable)
-
-## Previous Session
-
-Composer 2.5 — Admin UX v2 Phase 12 (2026-08-11)
+Composer — Prod Visual QA after Corrective UX Phases 0–4 (2026-08-12)
 
 ## Completed Work
 
-### Admin UX v2 Phase 12 — Polish, a11y, E2E expansion (GAP-17)
+**Prod smoke @ https://сухопут-кмв.рф**
+- Homepage: old 3–4 band header (TopBar + TrustBar + Main + category tabs). No Phase 2 compact IA.
+- PDP `krossovki-elkland-178e`: camo suit image vs sneakers title; variant buttons show full ERP names; size 39 selected OOS → CTA disabled while 42–45 exist.
 
-**A11y polish**
-- `admin-data-table.tsx` — column picker `aria-label`, `aria-controls`, Escape/outside dismiss, `aria-sort` on sortable headers, focus rings, `min-h-11` column button
-- `admin-next-item-navigation.tsx` — `min-h-11`, descriptive `aria-label`, focus ring
-- `admin-product-section-nav.tsx` — focus-visible rings, `prefers-reduced-motion` scroll
-- `admin-product-edit-form.tsx` — focus ring on readiness `<summary>`
+**Repo**
+- Corrective UX still **uncommitted** on `master` (ahead of origin only after commit/push — currently dirty working tree vs `origin/master` @ `7b6f34c`).
 
-**Command palette (Phase 12 polish)**
-- `admin-commands.ts` — quick views: Оптовые клиенты, Розничные клиенты
+## Visual QA verdict
 
-**E2E expansion**
-- `admin-wave16-smoke.spec.ts` — column picker, next-product queue, unsaved guard, workflow + wholesale customers via palette
-
-**Validation:** `npx tsc --noEmit` clean
-
-## Admin UX v2 status
-
-Phases 0–12 **COMPLETE** per `docs/ux/admin-ia-v2.md`. Deferred: GAP-18 event timeline, TipTap, persisted saved views DB.
-
-## Files Changed (key)
-
-- `apps/web/src/components/admin/admin-data-table.tsx`
-- `apps/web/src/components/admin/admin-next-item-navigation.tsx`
-- `apps/web/src/components/admin/catalog/admin-product-section-nav.tsx`
-- `apps/web/src/components/admin/catalog/admin-product-edit-form.tsx`
-- `apps/web/src/lib/admin/admin-commands.ts`
-- `apps/web/e2e/admin-wave16-smoke.spec.ts`
+**Blocked / FAIL** — cannot accept Phases 1–4 on prod until deploy.
 
 ## Next Recommended Action
 
-1. **Commit** Phases 3–12 when user approves
-2. **Deploy** + prod smoke on `https://сухопут-кмв.рф/admin`
-3. **YooKassa** prod gate (ADR-004) — parallel track
+1. **User:** ask to commit Corrective UX (web + api + audit/PM) — agent will not commit unprompted
+2. Push → CI/deploy
+3. Re-run Visual QA (header, homepage sections, PDP sizes/default stock, admin Action Center / Save&Next)
+4. Ops: replace sneakers site media
+5. Then YooKassa
 
-## Blockers (unchanged)
+## Do not treat
 
-- YooKassa prod gate (ADR-004)
-- Mobile Wave 5 deploy pending
+Prior UX V2 “done” or local tsc green as production acceptance.

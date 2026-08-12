@@ -143,14 +143,17 @@ export function AdminActionCenter({ items }: AdminActionCenterProps) {
                       {item.description}
                     </p>
                   </div>
-                  {item.count !== undefined ? (
-                    <Badge
-                      variant={item.variant === "destructive" ? "destructive" : "secondary"}
-                      className="shrink-0 tabular-nums"
-                    >
-                      {item.count}
-                    </Badge>
-                  ) : null}
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    {item.count !== undefined ? (
+                      <Badge
+                        variant={item.variant === "destructive" ? "destructive" : "secondary"}
+                        className="tabular-nums"
+                      >
+                        {item.count}
+                      </Badge>
+                    ) : null}
+                    <span className="text-xs font-medium text-primary">Обработать →</span>
+                  </div>
                 </Link>
               </li>
             ))}

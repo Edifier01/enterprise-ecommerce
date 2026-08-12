@@ -3,6 +3,7 @@
 import secrets
 import uuid
 
+from app.features.admin.infrastructure.media.storage import media_public_path_exists
 from app.features.catalog.domain.entities import ProductVariant
 from app.features.catalog.domain.pricing import resolve_variant_price
 from app.features.catalog.presentation.serializers import erp_image_proxy_path
@@ -86,18 +87,29 @@ class CartService:
         )
 
     @staticmethod
-    def _resolve_cart_image_url(product) -> str | None:
-        trimmed = (product.image_url or "").strip()
-        if trimmed:
-            lowered = trimmed.casefold()
-            if "moysklad.ru" in lowered and "/download/" in lowered:
-                return erp_image_proxy_path(product.slug)
-            return trimmed
+    def _normalize_cart_image_url(product, url: str | None) -> str | None:
+        trimmed = (url or "").strip()
+        if not trimmed:
+            return None
+        if trimmed.startswith("/media/") and not media_public_path_exists(trimmed):
+            return None
+        lowered = trimmed.casefold()
+        if "moysklad.ru" in lowered and "/download/" in lowered:
+            return erp_image_proxy_path(product.slug)
+        return trimmed
+
+    @classmethod
+    def _resolve_cart_image_url(cls, product, gallery_image_url: str | None = None) -> str | None:
+        for candidate in (product.image_url, gallery_image_url):
+            resolved = cls._normalize_cart_image_url(product, candidate)
+            if resolved:
+                return resolved
         if product.erp_image_url and product.erp_image_url.strip():
             return erp_image_proxy_path(product.slug)
         return None
 
-    def _build_snapshot(self, variant, product, *, price_tier: str) -> ProductSnapshot:
+    async def _build_snapshot(self, variant, product, *, price_tier: str) -> ProductSnapshot:
+        gallery_image_url = await self._repo.get_first_product_image_url(product.id)
         return ProductSnapshot(
             variant_id=variant.id,
             sku=variant.sku,
@@ -109,7 +121,7 @@ class CartService:
             price_cents=variant.price_cents,
             currency=product.currency,
             price_tier=price_tier,
-            image_url=self._resolve_cart_image_url(product),
+            image_url=self._resolve_cart_image_url(product, gallery_image_url),
         )
 
     def _validate_purchasable(self, variant, product) -> None:
@@ -135,7 +147,7 @@ class CartService:
         self._validate_purchasable(variant, product)
         await self._inventory_service.ensure_available(variant_id, quantity)
         resolved = self._resolve_line_price(variant, product, is_wholesaler=is_wholesaler)
-        snapshot = self._build_snapshot(variant, product, price_tier=resolved.tier.value)
+        snapshot = await self._build_snapshot(variant, product, price_tier=resolved.tier.value)
 
         await self._repo.upsert_cart_line(
             cart_id=cart.id,
@@ -171,7 +183,7 @@ class CartService:
             self._validate_purchasable(variant, product)
             await self._inventory_service.ensure_available(line.variant_id, quantity)
             resolved = self._resolve_line_price(variant, product, is_wholesaler=is_wholesaler)
-            snapshot = self._build_snapshot(variant, product, price_tier=resolved.tier.value)
+            snapshot = await self._build_snapshot(variant, product, price_tier=resolved.tier.value)
             await self._repo.upsert_cart_line(
                 cart_id=cart.id,
                 variant_id=line.variant_id,
@@ -215,7 +227,7 @@ class CartService:
             await self._inventory_service.ensure_available(line.variant_id, line.quantity)
             resolved = self._resolve_line_price(variant, product, is_wholesaler=is_wholesaler)
             if line.unit_price_cents != resolved.unit_price_cents or line.currency != product.currency:
-                snapshot = self._build_snapshot(variant, product, price_tier=resolved.tier.value)
+                snapshot = await self._build_snapshot(variant, product, price_tier=resolved.tier.value)
                 await self._repo.upsert_cart_line(
                     cart_id=cart.id,
                     variant_id=line.variant_id,

@@ -5,10 +5,15 @@ from app.features.catalog.domain.variant_filter import _normalize_color
 
 
 def extract_variant_colors(variants: tuple[ProductVariant, ...] | list[ProductVariant]) -> frozenset[str]:
+    from app.features.catalog.domain.variant_attribute_normalize import (
+        normalize_variant_attributes,
+    )
+
     colors: set[str] = set()
     for variant in variants:
+        attrs = normalize_variant_attributes(variant.attributes, name=variant.name)
         for key in ("color", "camouflage"):
-            raw = (variant.attributes.get(key) or "").strip()
+            raw = (attrs.get(key) or "").strip()
             if not raw:
                 continue
             normalized = _normalize_color(raw) or raw.strip()

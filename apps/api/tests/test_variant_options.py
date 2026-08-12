@@ -81,6 +81,19 @@ def test_pick_default_selection_uses_default_variant() -> None:
     assert resolved.id == _V1
 
 
+def test_pick_default_selection_prefers_in_stock_when_default_oos() -> None:
+    variants = (
+        _variant(vid=_V1, color="Multicam", size="M", is_default=True, in_stock=False, sort_order=0),
+        _variant(vid=_V2, color="Coyote", size="L", in_stock=True, sort_order=1),
+    )
+    groups = build_option_groups(variants)
+    selection = pick_default_selection(variants, groups)
+    assert selection == {"color": "Coyote", "size": "L"}
+    resolved = resolve_variant(variants, selection)
+    assert resolved is not None
+    assert resolved.id == _V2
+
+
 def test_variant_option_values_normalizes_camouflage() -> None:
     variant = ProductVariant(
         id=_V1,
@@ -94,6 +107,36 @@ def test_variant_option_values_normalizes_camouflage() -> None:
         attributes={"camouflage": "woodland"},
     )
     assert variant_option_values(variant) == {"color": "Woodland"}
+
+
+def test_variant_option_values_normalizes_size_alias_and_name() -> None:
+    alias_variant = ProductVariant(
+        id=_V1,
+        product_id=_PRODUCT_ID,
+        sku="SHOE-39",
+        name="Кроссовки Elkland (39)",
+        price_cents=100,
+        in_stock=True,
+        is_default=True,
+        sort_order=0,
+        attributes={"размер обуви": "39"},
+    )
+    name_variant = ProductVariant(
+        id=_V2,
+        product_id=_PRODUCT_ID,
+        sku="SHOE-40",
+        name="Кроссовки Elkland (40)",
+        price_cents=100,
+        in_stock=True,
+        is_default=False,
+        sort_order=1,
+        attributes={},
+    )
+    assert variant_option_values(alias_variant) == {"size": "39"}
+    assert variant_option_values(name_variant) == {"size": "40"}
+    assert [list(group.values) for group in build_option_groups((alias_variant, name_variant))] == [
+        ["39", "40"]
+    ]
 
 
 def test_no_structured_selector_for_single_variant() -> None:

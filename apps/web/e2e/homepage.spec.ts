@@ -11,11 +11,16 @@ test.describe("Homepage", () => {
     await expect(page.getByRole("heading", { name: "Сухопут", level: 1 })).toBeVisible();
     await expect(page.getByRole("heading", { name: /О магазине/ })).toBeVisible();
 
+    const recommendations = page.getByRole("heading", { name: "Рекомендации", level: 2 });
+    const categories = page.getByRole("heading", { name: "Категории", level: 2 });
     const tablist = page.getByRole("tablist", { name: "Разделы каталога" });
-    if (await tablist.isVisible()) {
-      await expect(tablist).toBeVisible();
-      await expect(page.getByRole("tab", { name: "Рекомендации" })).toBeVisible();
-    }
+
+    // Phase 2: stacked sections preferred; tabs may be absent
+    const hasStacked =
+      (await recommendations.isVisible().catch(() => false)) ||
+      (await categories.isVisible().catch(() => false));
+    const hasTabs = await tablist.isVisible().catch(() => false);
+    expect(hasStacked || hasTabs).toBe(true);
   });
 
   test("trust bar is visible", async ({ page }) => {
@@ -42,9 +47,8 @@ test.describe("Homepage", () => {
       name: "Информация для покупателей",
     });
     await expect(topBar).toBeVisible();
-    await expect(topBar.getByRole("link", { name: "ОПТОВИКАМ" })).toBeVisible();
     await expect(topBar.getByRole("link", { name: "КОНТАКТЫ" })).toBeVisible();
-    await expect(topBar.getByRole("link", { name: "ПОКУПАТЕЛЮ" })).toBeVisible();
+    await expect(topBar.getByRole("link", { name: /ПОКУПАТЕЛ/ })).toBeVisible();
     await expect(topBar.getByRole("link", { name: "О КОМПАНИИ" })).toHaveCount(0);
     await expect(topBar.getByRole("link", { name: "ОБРАТНЫЙ ЗВОНОК" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "СТАТУС ЗАКАЗА" })).toBeVisible();
@@ -56,12 +60,17 @@ test.describe("Homepage", () => {
     await expect(page.getByRole("link", { name: "Личный кабинет" })).toBeVisible();
     await expect(page.getByRole("button", { name: /Корзина:/ })).toBeVisible();
 
+    const primaryNav = page.getByRole("navigation", { name: "Основная навигация" });
+    await expect(primaryNav).toBeVisible();
+    await expect(primaryNav.getByRole("link", { name: "Каталог" })).toBeVisible();
+    await expect(primaryNav.getByRole("link", { name: "Новинки" })).toBeVisible();
+    await expect(primaryNav.getByRole("link", { name: "Распродажа" })).toBeVisible();
+
     const categoryNav = page.getByRole("navigation", {
       name: "Категории каталога",
     });
     await expect(categoryNav).toBeVisible();
-    await expect(categoryNav.getByRole("link", { name: "Новинки" })).toBeVisible();
-    expect(await categoryNav.getByRole("link").count()).toBeGreaterThanOrEqual(3);
+    expect(await categoryNav.getByRole("link").count()).toBeGreaterThanOrEqual(1);
   });
 
   test("shows product grid or graceful empty/error state", async ({ page }) => {

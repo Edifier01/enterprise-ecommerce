@@ -248,34 +248,37 @@ export function AdminProductEditForm({
 
 
           {msSynced ? (
-
-            <AdminFormSection
-
-              title="Данные из МойСклад"
-
-              description="Цены и остатки синхронизируются из ERP и не редактируются здесь."
-
-            >
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <AdminSyncedField
-                  label="Розница, ₽"
-                  value={formatPrice(product.price_cents, product.currency)}
-                  synced
-                />
-                <AdminSyncedField
-                  label="Опт, ₽"
-                  value={
-                    defaultVariant?.wholesale_price_cents != null
-                      ? formatPrice(defaultVariant.wholesale_price_cents, product.currency)
-                      : "—"
-                  }
-                  synced
-                />
+            <details className="rounded-xl border border-border bg-muted/15 open:bg-muted/20">
+              <summary className="cursor-pointer list-none px-4 py-3 marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Данные из МойСклад</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Цены и остатки только для справки — правка в ERP.
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">Показать ↓</span>
+                </div>
+              </summary>
+              <div className="space-y-3 border-t border-border/60 px-4 py-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <AdminSyncedField
+                    label="Розница, ₽"
+                    value={formatPrice(product.price_cents, product.currency)}
+                    synced
+                  />
+                  <AdminSyncedField
+                    label="Опт, ₽"
+                    value={
+                      defaultVariant?.wholesale_price_cents != null
+                        ? formatPrice(defaultVariant.wholesale_price_cents, product.currency)
+                        : "—"
+                    }
+                    synced
+                  />
+                </div>
               </div>
-
-            </AdminFormSection>
-
+            </details>
           ) : null}
 
         </div>
@@ -293,6 +296,9 @@ export function AdminProductEditForm({
           <input type="hidden" name="sync_source" value={product.sync_source} />
 
           <input type="hidden" name="return_to" value={returnTo} />
+          {nextProductId ? (
+            <input type="hidden" name="next_product_id" value={nextProductId} />
+          ) : null}
 
 
 
@@ -623,6 +629,20 @@ export function AdminProductEditForm({
 
           </Button>
 
+          {nextProductId ? (
+            <Button
+              type="submit"
+              form="admin-product-form"
+              name="intent"
+              value="next"
+              variant="outline"
+              disabled={pending}
+              className="min-h-11"
+            >
+              {pending ? "Сохранение..." : "Сохранить и далее"}
+            </Button>
+          ) : null}
+
           <Link
             href={returnTo}
             data-unsaved={dirty ? "true" : undefined}
@@ -639,6 +659,8 @@ export function AdminProductEditForm({
         <AdminNextItemNavigation
           nextProductId={nextProductId}
           returnTo={returnTo}
+          dirty={dirty}
+          confirmLeave={confirmLeave}
           className="mt-3 border-t border-border/60 pt-3"
         />
       </div>

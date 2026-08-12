@@ -5,6 +5,7 @@ import type { ProductOptionGroup, ProductVariant } from "@/lib/api";
 import {
   getValueState,
   usesStructuredSelector,
+  variantOptionValues,
   type VariantSelection,
 } from "@/lib/store/variant-options";
 import { getSwatchStyle } from "@/lib/store/color-swatch";
@@ -162,6 +163,15 @@ export function VariantSelector({
   );
 }
 
+function flatVariantLabel(variant: ProductVariant): string {
+  const options = variantOptionValues(variant);
+  const parts = [options.size, options.color, options.waist].filter(Boolean);
+  if (parts.length > 0) {
+    return parts.join(" · ");
+  }
+  return variant.name;
+}
+
 export function FlatVariantSelector({
   variants,
   selectedId,
@@ -172,10 +182,12 @@ export function FlatVariantSelector({
   onSelect: (variantId: string) => void;
 }) {
   const sorted = [...variants].sort((a, b) => a.sort_order - b.sort_order);
+  const allHaveSize = sorted.every((variant) => Boolean(variantOptionValues(variant).size));
+  const legend = allHaveSize ? "Размер" : "Вариант";
 
   return (
     <fieldset className="space-y-2">
-      <legend className="text-sm font-semibold text-foreground">Вариант</legend>
+      <legend className="text-sm font-semibold text-foreground">{legend}</legend>
       <div className="flex flex-wrap gap-2">
         {sorted.map((variant) => {
           const isActive = variant.id === selectedId;
@@ -194,7 +206,7 @@ export function FlatVariantSelector({
                 !variant.in_stock && "cursor-not-allowed opacity-50 line-through",
               )}
             >
-              {variant.name}
+              {flatVariantLabel(variant)}
             </button>
           );
         })}

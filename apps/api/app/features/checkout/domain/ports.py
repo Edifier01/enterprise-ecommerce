@@ -23,6 +23,10 @@ class ICheckoutRepository(ABC):
         """Return (variant_model, product_model) or None."""
 
     @abstractmethod
+    async def get_first_product_image_url(self, product_id: UUID) -> str | None:
+        """Return first gallery image URL for cart snapshots, if present."""
+
+    @abstractmethod
     async def get_active_cart_by_session_token(self, session_token: str) -> Cart | None:
         pass
 

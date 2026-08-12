@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from app.features.catalog.domain.entities import ProductVariant
+from app.features.catalog.domain.variant_attribute_normalize import normalize_variant_attributes
 from app.features.catalog.domain.variant_filter import _normalize_color
 
 _OPTION_AXES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
@@ -20,8 +21,9 @@ class ProductOptionGroup:
 
 
 def _axis_value(variant: ProductVariant, attribute_keys: tuple[str, ...]) -> str | None:
+    attributes = normalize_variant_attributes(variant.attributes, name=variant.name)
     for key in attribute_keys:
-        raw = (variant.attributes.get(key) or "").strip()
+        raw = (attributes.get(key) or "").strip()
         if not raw:
             continue
         if key in {"color", "camouflage"}:
@@ -92,16 +94,27 @@ def pick_default_selection(
     if not variants or not option_groups:
         return {}
 
-    default = next((variant for variant in variants if variant.is_default), variants[0])
+    sorted_variants = tuple(sorted(variants, key=lambda item: item.sort_order))
+    default = next((variant for variant in sorted_variants if variant.is_default), sorted_variants[0])
+    if not default.in_stock:
+        default = next((variant for variant in sorted_variants if variant.in_stock), default)
     default_options = variant_option_values(default)
     selection = {group.key: default_options[group.key] for group in option_groups if group.key in default_options}
 
     for group in option_groups:
         if group.key in selection:
             continue
+        fallback: str | None = None
         for value in group.values:
             trial = {**selection, group.key: value}
-            if resolve_variant(variants, trial) is not None:
+            match = resolve_variant(variants, trial)
+            if match is None:
+                continue
+            if match.in_stock:
                 selection[group.key] = value
                 break
+            if fallback is None:
+                fallback = value
+        if group.key not in selection and fallback is not None:
+            selection[group.key] = fallback
     return selection

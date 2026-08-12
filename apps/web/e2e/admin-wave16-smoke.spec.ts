@@ -48,13 +48,53 @@ test.describe("Admin UX Wave 16 smoke — Phase 12 polish, a11y, E2E expansion",
     const nextLink = page.getByRole("link", {
       name: "Следующий товар в очереди оформления",
     });
+    const saveAndNext = page.getByRole("button", { name: "Сохранить и далее" });
     const lastInQueue = page.getByText("Это последний товар в текущей очереди.");
     if ((await nextLink.count()) > 0) {
       await expect(nextLink).toBeVisible();
+      await expect(saveAndNext).toBeVisible();
       return;
     }
 
     await expect(lastInQueue).toBeVisible();
+    await expect(saveAndNext).toHaveCount(0);
+  });
+
+  test("product edit unsaved guard confirms on next-item link", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/admin/catalog?all=1&needs_styling=1");
+
+    const editLink = page.getByRole("link", { name: "Изменить" }).first();
+    if ((await editLink.count()) === 0) {
+      test.skip(true, "No products needing styling in E2E seed");
+      return;
+    }
+
+    await editLink.click();
+
+    const nextLink = page.getByRole("link", {
+      name: "Следующий товар в очереди оформления",
+    });
+    if ((await nextLink.count()) === 0) {
+      test.skip(true, "Only one product in styling queue");
+      return;
+    }
+
+    const nameInput = page.getByLabel("Название (витрина)");
+    await nameInput.fill(`${await nameInput.inputValue()} (тест)`);
+    await expect(nextLink).toHaveAttribute("data-unsaved", "true");
+
+    const dialogPromise = new Promise<{ type: string; message: string }>((resolve) => {
+      page.once("dialog", (dialog) => {
+        const info = { type: dialog.type(), message: dialog.message() };
+        void dialog.dismiss().then(() => resolve(info));
+      });
+    });
+    await nextLink.click({ noWaitAfter: true });
+    const dialog = await dialogPromise;
+    expect(dialog.type).toBe("confirm");
+    expect(dialog.message).toContain("несохран");
+    await expect(page).toHaveURL(/\/admin\/catalog\/.+\/edit/);
   });
 
   test("product edit unsaved guard confirms on cancel", async ({ page }) => {

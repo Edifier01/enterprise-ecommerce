@@ -6,6 +6,7 @@ from typing import Any
 
 import httpx
 
+from app.features.catalog.domain.variant_attribute_normalize import normalize_variant_attributes
 from app.core.config import settings
 from app.features.integrations.moysklad.domain.ports import (
     IMoySkladClient,
@@ -324,6 +325,8 @@ class MoySkladApiClient(IMoySkladClient):
                     key = "color"
                 attributes[key] = str(value)
 
+        name = row.get("name", "")
+        attributes = normalize_variant_attributes(attributes, name=name)
         retail_cents, wholesale_cents = self._resolve_prices(row.get("salePrices") or [])
 
         weight = row.get("weight")
@@ -332,8 +335,8 @@ class MoySkladApiClient(IMoySkladClient):
         return MoySkladVariant(
             external_id=_extract_id((row.get("meta") or {}).get("href", "")) or row.get("id", ""),
             product_external_id=_extract_id(product_meta.get("href", "")) or "",
-            name=row.get("name", ""),
-            sku=row.get("code") or row.get("name", ""),
+            name=name,
+            sku=row.get("code") or name,
             archived=bool(row.get("archived")),
             attributes=attributes,
             retail_price_cents=retail_cents,

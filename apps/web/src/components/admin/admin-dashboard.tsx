@@ -110,6 +110,8 @@ export function AdminDashboard({
         }
       />
 
+      <AdminActionCenter items={actionItems} />
+
       <section aria-labelledby="dashboard-operations-heading" className="space-y-3">
         <h2
           id="dashboard-operations-heading"
@@ -184,8 +186,6 @@ export function AdminDashboard({
           />
         </div>
       </section>
-
-      <AdminActionCenter items={actionItems} />
 
       <Card>
         <CardHeader>

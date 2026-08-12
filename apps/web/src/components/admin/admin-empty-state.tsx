@@ -29,7 +29,7 @@ export function AdminEmptyState({
       {action ? (
         <Link
           href={action.href}
-          className="mt-4 inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80"
+          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/80 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           {action.label}
         </Link>

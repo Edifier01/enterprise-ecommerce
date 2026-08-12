@@ -3,16 +3,10 @@
 import { useEffect, useState } from "react";
 
 import { AddToCartButton } from "@/components/store/catalog/add-to-cart-button";
-import type { Product, ProductVariant } from "@/lib/api";
+import type { Product } from "@/lib/api";
 import { formatPrice } from "@/lib/store/format";
+import { pickDefaultVariant } from "@/lib/store/variant-options";
 import { cn } from "@/lib/utils";
-
-function pickDefaultVariant(variants: ProductVariant[]): ProductVariant | null {
-  if (variants.length === 0) {
-    return null;
-  }
-  return variants.find((variant) => variant.is_default) ?? variants[0];
-}
 
 export function ProductStickyBar({
   product,

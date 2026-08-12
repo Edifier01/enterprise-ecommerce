@@ -4,6 +4,10 @@ from collections import Counter
 
 from app.features.catalog.domain.entities import Product, ProductVariant
 from app.features.catalog.domain.product_list_filters import ProductListFacets
+from app.features.catalog.domain.variant_attribute_normalize import (
+    extract_size_from_name,
+    normalize_variant_attributes,
+)
 
 _COLOR_KEYWORDS: dict[str, str] = {
     "multicam": "Multicam",
@@ -40,14 +44,17 @@ def _extract_colors(product: Product) -> set[str]:
 
 def _extract_sizes(variant: ProductVariant) -> set[str]:
     sizes: set[str] = set()
-    size = (variant.attributes.get("size") or "").strip()
+    attributes = normalize_variant_attributes(variant.attributes, name=variant.name)
+    size = (attributes.get("size") or "").strip()
     if size:
         sizes.add(size)
-    waist = (variant.attributes.get("waist") or "").strip()
+    else:
+        from_name = extract_size_from_name(variant.name)
+        if from_name:
+            sizes.add(from_name)
+    waist = (attributes.get("waist") or "").strip()
     if waist:
         sizes.add(f"W{waist}")
-    if variant.name and variant.name != "Default":
-        sizes.add(variant.name)
     return sizes
 
 

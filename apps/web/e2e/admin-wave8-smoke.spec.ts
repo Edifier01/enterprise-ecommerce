@@ -9,9 +9,16 @@ test.describe("Admin UX Wave 8 smoke — dashboard Action Center", () => {
 
     await expect(page.getByRole("heading", { name: "Сводка" })).toBeVisible();
     await expect(page.getByText(/Добрый день,/)).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Требует внимания" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Операции" })).toBeVisible();
+    const actionCenter = page.getByRole("heading", { name: "Требует внимания" });
+    const operations = page.getByRole("heading", { name: "Операции" });
+    await expect(actionCenter).toBeVisible();
+    await expect(operations).toBeVisible();
     await expect(page.getByRole("heading", { name: "Продажи" })).toBeVisible();
+    // Action Center is primary: must appear above Operations KPI grid.
+    await expect(actionCenter).toBeVisible();
+    const actionBox = await actionCenter.boundingBox();
+    const opsBox = await operations.boundingBox();
+    expect(actionBox && opsBox && actionBox.y < opsBox.y).toBeTruthy();
   });
 
   test("sales KPI cards link to orders list", async ({ page }) => {

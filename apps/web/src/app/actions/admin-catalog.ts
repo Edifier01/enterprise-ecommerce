@@ -183,6 +183,16 @@ export async function updateProductAction(
   if (intent === "close") {
     redirect(catalogListRedirectPath(formData));
   }
+  if (intent === "next") {
+    const nextId = formData.get("next_product_id");
+    const returnTo = catalogListRedirectPath(formData);
+    if (typeof nextId === "string" && nextId.trim()) {
+      redirect(
+        `/admin/catalog/${nextId.trim()}/edit?from=${encodeURIComponent(returnTo)}`,
+      );
+    }
+    redirect(returnTo);
+  }
 
   return { success: true };
 }

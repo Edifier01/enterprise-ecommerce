@@ -71,9 +71,24 @@ Sources reviewed: agentic-awesome-skills, ECC, agency-agents. No wholesale insta
 
 **Status:** IN_PROGRESS
 
+### Feature: CORRECTIVE UX AUDIT & REDESIGN (supersedes UX V2 “done” for IA gaps)
+
+**Status:** COMPLETE (functional Phases 0–4) — 2026-08-12
+
+**Audit:** `docs/ux/CORRECTIVE_UX_AUDIT.md`  
+**Note:** Prior ECOMMERCE UX V2 / Admin UX v2 phases delivered foundations but **did not close structural TZ gaps**. Do not treat cosmetics as completion.
+
+- [x] UX-AUDIT-001 — Corrective repository audit + gap analysis (`docs/ux/CORRECTIVE_UX_AUDIT.md`)
+- [x] Phase 1 — Data integrity (normalize attributes, in-stock default, cart gallery; image ops pending) — 2026-08-12
+- [x] Phase 2 — Storefront IA (compact header, homepage categories/stacked sections, flat variant labels) — 2026-08-12
+- [x] Phase 3 — Admin operator workspace (dashboard primacy, Save&Next, compact variants, ERP collapse, readiness CTAs) — 2026-08-12
+- [x] Phase 4 — Polish (loading/error, focus, gallery color context, import copy) — 2026-08-12
+- [ ] Deploy + Visual QA on prod (ops gate) — **BLOCKED 2026-08-12:** code uncommitted; prod still old IA/PDP
+- [ ] Ops: replace wrong sneakers `/media/` image — still wrong on prod PDP
+
 ### Feature: ECOMMERCE UX V2 — Storefront + Admin Merchandising
 
-**Status:** IN_PROGRESS (Phase 8 COMPLETE 2026-08-11)
+**Status:** SUPERSEDED for IA by Corrective UX (Phase 8 code remains; gaps reopened in CORRECTIVE_UX_AUDIT)
 
 **Plan:** `.cursor/plans/ecommerce_ux_v2_bdc2c25c.plan.md`  
 **Audit:** `docs/ux/ecommerce-ux-audit.md`  
@@ -97,7 +112,7 @@ Sources reviewed: agentic-awesome-skills, ECC, agency-agents. No wholesale insta
 
 ### Feature: Admin UX v2 — Operational Control Center
 
-**Status:** COMPLETED (Phase 12 COMPLETE 2026-08-11 — Phases 0–12 done)
+**Status:** FOUNDATIONS COMPLETE — remaining IA gaps tracked under Corrective UX (Phase 12 code remains)
 
 **Plan:** `.cursor/plans/admin_ux_orchestration_5a14290e.plan.md`  
 **Audit:** `docs/ux/admin-ux-audit.md`  
