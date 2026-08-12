@@ -24,7 +24,11 @@ test.describe("Customer auth smoke", () => {
     await page.getByLabel("Пароль", { exact: true }).fill("secret12345");
     await page.getByLabel("Повторите пароль").fill("secret12345");
     await page.getByRole("button", { name: "Зарегистрироваться" }).click();
-    await expect(page).toHaveURL(new RegExp(`/register/check-email\\?email=${encodeURIComponent(email)}`));
+    // Server action + redirect can take several seconds on a cold CI dev server.
+    await expect(page).toHaveURL(
+      new RegExp(`/register/check-email\\?email=${encodeURIComponent(email)}`),
+      { timeout: 30_000 },
+    );
     await expect(page.getByRole("heading", { name: "Проверьте почту" })).toBeVisible();
   });
 

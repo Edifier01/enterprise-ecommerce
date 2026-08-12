@@ -85,14 +85,16 @@ export async function registerAction(
     return { error: "Пароли не совпадают." };
   }
 
-  const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email,
-      password,
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/v1/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    return { error: "Не удалось зарегистрироваться. Попробуйте снова." };
+  }
 
   if (res.status === 409) {
     return { error: "Этот email уже зарегистрирован." };
