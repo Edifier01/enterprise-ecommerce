@@ -76,13 +76,17 @@ test.describe("Admin UX Wave 16 smoke — Phase 12 polish, a11y, E2E expansion",
     // Wait for React to commit dirty=true before clicking (avoids no-dialog hang).
     await expect(cancelLink).toHaveAttribute("data-unsaved", "true");
 
-    const [dialog] = await Promise.all([
-      page.waitForEvent("dialog"),
-      cancelLink.click({ noWaitAfter: true }),
-    ]);
-    expect(dialog.type()).toBe("confirm");
-    expect(dialog.message()).toContain("несохран");
-    await dialog.dismiss();
+    // Dismiss inside the dialog handler — otherwise click waits for dismiss and deadlocks.
+    const dialogPromise = new Promise<{ type: string; message: string }>((resolve) => {
+      page.once("dialog", (dialog) => {
+        const info = { type: dialog.type(), message: dialog.message() };
+        void dialog.dismiss().then(() => resolve(info));
+      });
+    });
+    await cancelLink.click({ noWaitAfter: true });
+    const dialog = await dialogPromise;
+    expect(dialog.type).toBe("confirm");
+    expect(dialog.message).toContain("несохран");
     await expect(page).toHaveURL(/\/admin\/catalog\/.+\/edit/);
   });
 
