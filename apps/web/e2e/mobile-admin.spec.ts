@@ -20,9 +20,10 @@ test.describe("Mobile admin panel", () => {
 
     await expect(page.getByRole("button", { name: "Меню админ-панели" })).toBeVisible();
     await page.getByRole("button", { name: "Меню админ-панели" }).click();
-    await expect(page.getByRole("dialog", { name: "Навигация админ-панели" })).toBeVisible();
+    const mobileNav = page.getByRole("dialog", { name: "Навигация админ-панели" });
+    await expect(mobileNav).toBeVisible();
 
-    await page.getByRole("link", { name: "Товары" }).click();
+    await mobileNav.getByRole("link", { name: "Товары" }).click();
     await expect(page).toHaveURL(/\/admin\/catalog/, { timeout: 15_000 });
     await expect(page.getByRole("dialog", { name: "Навигация админ-панели" })).toHaveCount(0);
   });
@@ -30,7 +31,8 @@ test.describe("Mobile admin panel", () => {
   test("customers page uses card layout without horizontal table scroll", async ({ page }) => {
     await loginAsAdmin(page);
     await page.getByRole("button", { name: "Меню админ-панели" }).click();
-    await page.getByRole("link", { name: "Клиенты" }).click();
+    const mobileNav = page.getByRole("dialog", { name: "Навигация админ-панели" });
+    await mobileNav.getByRole("link", { name: "Клиенты" }).click();
     await expect(page).toHaveURL(/\/admin\/customers/, { timeout: 15_000 });
 
     await expect(page.locator("main table")).toBeHidden();

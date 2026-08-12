@@ -17,7 +17,8 @@ test.describe("Mobile storefront", () => {
     await expect(page.getByRole("button", { name: "Каталог" }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Открыть поиск" })).toBeVisible();
     await page.getByRole("button", { name: "Открыть поиск" }).click();
-    await expect(page.getByLabel("Поиск по каталогу")).toBeVisible();
+    // Desktop header search stays in DOM (md:block); assert the visible mobile panel input.
+    await expect(page.locator('[aria-label="Поиск по каталогу"]:visible')).toBeVisible();
   });
 
   test("bottom navigation is visible on homepage", async ({ page }) => {

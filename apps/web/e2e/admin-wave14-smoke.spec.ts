@@ -23,11 +23,14 @@ test.describe("Admin UX Wave 14 smoke — customers filters and status badges", 
 
     await expect(typeBadges.first()).toBeVisible();
 
-    await page.getByRole("link", { name: "Опт", exact: true }).click();
-    await expect(page).toHaveURL(/wholesaler=true/);
+    await typeFilters.getByRole("link", { name: "Опт", exact: true }).click();
+    await expect(page).toHaveURL(/wholesaler=1/);
 
-    await page.getByRole("link", { name: "Розница", exact: true }).click();
-    await expect(page).toHaveURL(/wholesaler=false/);
+    await page
+      .getByRole("navigation", { name: "Сохранённые представления" })
+      .getByRole("link", { name: "Розница", exact: true })
+      .click();
+    await expect(page).toHaveURL(/wholesaler=0/);
   });
 
   test("orders list uses unified status badges", async ({ page }) => {
