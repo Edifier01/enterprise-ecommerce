@@ -10,7 +10,12 @@ def _product(*, image_url: str | None, erp_image_url: str | None = None):
     return SimpleNamespace(slug="test-product", image_url=image_url, erp_image_url=erp_image_url)
 
 
-def test_cart_image_falls_back_to_gallery_when_product_image_missing() -> None:
+def test_cart_image_falls_back_to_gallery_when_product_image_missing(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(settings, "media_upload_dir", str(tmp_path))
+    (tmp_path / "gallery.jpg").write_bytes(b"fake-image")
+
     assert (
         CartService._resolve_cart_image_url(_product(image_url=None), "/media/gallery.jpg")
         == "/media/gallery.jpg"
