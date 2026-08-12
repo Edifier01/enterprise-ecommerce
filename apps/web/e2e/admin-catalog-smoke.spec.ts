@@ -36,7 +36,7 @@ test.describe("Admin catalog smoke", () => {
 
     await page.goto("/admin/catalog?view=categories");
     await openAdminNavIfMobile(page);
-    await expect(page.getByRole("link", { name: "Импорт" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Импорт", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Новый товар" })).toHaveCount(0);
   });
 

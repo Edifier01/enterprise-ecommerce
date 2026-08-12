@@ -26,7 +26,7 @@ test.describe("Admin UX Wave 9 smoke — catalog bulk + quick edit", () => {
     await loginAsAdmin(page);
     await page.goto("/admin/catalog?all=1");
 
-    const statusSelect = page.getByLabel("Статус товара").first();
+    const statusSelect = page.getByRole("table").getByLabel("Статус товара").first();
     const hasSelect = await statusSelect.count();
     if (hasSelect === 0) {
       test.skip();

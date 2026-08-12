@@ -49,8 +49,8 @@ test.describe("Admin catalog visibility smoke", () => {
     const rowCheckbox = productScope.getByRole("checkbox", { name: /Выбрать/ });
     await rowCheckbox.check();
 
-    await expect(page.getByRole("button", { name: "Скрыть выбранные" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Показать выбранные" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Скрыть", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Показать", exact: true })).toBeVisible();
     await expect(page.getByText(/^Выбрано: 1$/)).toBeVisible();
 
     await rowCheckbox.uncheck();

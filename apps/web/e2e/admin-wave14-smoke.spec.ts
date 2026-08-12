@@ -8,9 +8,10 @@ test.describe("Admin UX Wave 14 smoke — customers filters and status badges", 
     await page.goto("/admin/customers");
 
     await expect(page.getByRole("heading", { name: "Клиенты" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Все", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Опт", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Розница", exact: true })).toBeVisible();
+    const typeFilters = page.getByRole("navigation", { name: "Сохранённые представления" });
+    await expect(typeFilters.getByRole("link", { name: "Все", exact: true })).toBeVisible();
+    await expect(typeFilters.getByRole("link", { name: "Опт", exact: true })).toBeVisible();
+    await expect(typeFilters.getByRole("link", { name: "Розница", exact: true })).toBeVisible();
 
     const typeBadges = page.getByText("Опт", { exact: true }).or(
       page.getByText("Розница", { exact: true }),

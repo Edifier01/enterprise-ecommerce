@@ -31,7 +31,7 @@ test.describe("Admin MoySklad smoke", () => {
     await expect(msDataSection.getByText("Опт, ₽", { exact: true })).toBeVisible();
 
     await expect(page.locator('input[name="sku"]')).toHaveCount(0);
-    await expect(page.getByText("E2E-MS-SKU-001")).toBeVisible();
+    await expect(page.getByText("E2E-MS-SKU-001", { exact: true })).toBeVisible();
 
     await expect(page.getByLabel("Название (витрина)")).toBeEditable();
     await expect(page.getByLabel("Slug")).toBeEditable();

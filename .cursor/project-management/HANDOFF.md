@@ -2,6 +2,25 @@
 
 ## Latest Session
 
+Composer 2.5 — CI fix: ruff F811 + E2E locator drift (2026-08-12)
+
+## Completed Work (CI fix)
+
+**Ruff**
+- `router.py` — removed duplicate `Response` import (`fastapi.responses`); kept `from fastapi import Response`
+
+**E2E (16 failures → locator/UI drift after Phase 12)**
+- Strict-mode violations: `exact: true` or scoped locators (sidebar «Импорт», SKU text, «Настройки витрины», customers «Все»)
+- Bulk toolbar labels: «Скрыть»/«Показать» (not «…выбранные»)
+- Import queue: assert `heading` «Импорт товаров»
+- Status quick-edit: scope to desktop `table` (mobile card copy is `md:hidden`)
+- Unsaved guard: `page.once('dialog')` + `click({ noWaitAfter: true })` on cancel link
+- Mobile storefront: open search via «Открыть поиск» toggle before asserting input
+
+**Validation:** `ruff check` clean locally; Playwright not run locally (Postgres unavailable)
+
+## Previous Session
+
 Composer 2.5 — Admin UX v2 Phase 12 (2026-08-11)
 
 ## Completed Work

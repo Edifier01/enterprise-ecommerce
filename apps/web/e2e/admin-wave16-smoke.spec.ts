@@ -72,12 +72,12 @@ test.describe("Admin UX Wave 16 smoke — Phase 12 polish, a11y, E2E expansion",
     const nameInput = page.getByLabel("Название (витрина)");
     await nameInput.fill(`${await nameInput.inputValue()} (тест)`);
 
-    const dialogPromise = page.waitForEvent("dialog");
-    await page.getByRole("link", { name: "Отмена" }).click();
-    const dialog = await dialogPromise;
-    expect(dialog.type()).toBe("confirm");
-    expect(dialog.message()).toContain("несохран");
-    await dialog.dismiss();
+    page.once("dialog", (dialog) => {
+      expect(dialog.type()).toBe("confirm");
+      expect(dialog.message()).toContain("несохран");
+      void dialog.dismiss();
+    });
+    await page.getByRole("link", { name: "Отмена" }).click({ noWaitAfter: true });
     await expect(page).toHaveURL(/\/admin\/catalog\/.+\/edit/);
   });
 

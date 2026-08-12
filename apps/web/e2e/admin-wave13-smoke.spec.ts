@@ -28,7 +28,7 @@ test.describe("Admin UX Wave 13 smoke — MS variant synced fields", () => {
 
     await expect(msBlock).toBeVisible();
     await expect(variantsSection.getByLabel("Управляется МойСклад").first()).toBeVisible();
-    await expect(variantsSection.getByText("Настройки витрины")).toBeVisible();
+    await expect(variantsSection.getByText("Настройки витрины", { exact: true })).toBeVisible();
     await expect(
       variantsSection.getByRole("button", { name: "Сохранить настройки витрины" }).first(),
     ).toBeVisible();

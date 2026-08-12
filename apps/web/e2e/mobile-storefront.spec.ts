@@ -15,6 +15,8 @@ test.describe("Mobile storefront", () => {
     ).toBeHidden();
     await expect(page.getByLabel("Преимущества магазина")).toBeHidden();
     await expect(page.getByRole("button", { name: "Каталог" }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Открыть поиск" })).toBeVisible();
+    await page.getByRole("button", { name: "Открыть поиск" }).click();
     await expect(page.getByLabel("Поиск по каталогу")).toBeVisible();
   });
 

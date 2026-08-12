@@ -13,10 +13,9 @@ Admin UX v2 plan complete (Phases 0–12). Parallel release: YooKassa prod gate 
 
 ## Current Feature
 
-**Admin UX v2 — Phase 12 COMPLETE (plan done)**  
-Polish, a11y, E2E expansion (GAP-17)
+**CI green-fix** — ruff F811 + 16 Playwright locator drifts (uncommitted, ready to push)
 
-**Next:** Release gate work (YooKassa ADR-004, deploy Phases 3–12)
+**Next:** Commit CI fixes → verify GitHub Actions → release gate (YooKassa ADR-004, deploy)
 
 ---
 
@@ -49,4 +48,4 @@ Composer 2.5 (UX V2 Phase 12)
 
 ## Last Updated
 
-2026-08-11 (Admin UX v2 Phase 12 — a11y polish + E2E expansion)
+2026-08-12 (CI fix — ruff + E2E locators)
