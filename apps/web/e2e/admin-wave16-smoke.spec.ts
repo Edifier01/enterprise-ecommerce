@@ -71,12 +71,14 @@ test.describe("Admin UX Wave 16 smoke — Phase 12 polish, a11y, E2E expansion",
 
     const nameInput = page.getByLabel("Название (витрина)");
     await nameInput.fill(`${await nameInput.inputValue()} (тест)`);
-    // Ensure form-level onInput dirty flag is set (Playwright fill can race with React).
-    await nameInput.dispatchEvent("input");
+
+    const cancelLink = page.getByRole("link", { name: "Отмена" });
+    // Wait for React to commit dirty=true before clicking (avoids no-dialog hang).
+    await expect(cancelLink).toHaveAttribute("data-unsaved", "true");
 
     const [dialog] = await Promise.all([
       page.waitForEvent("dialog"),
-      page.getByRole("link", { name: "Отмена" }).click({ noWaitAfter: true }),
+      cancelLink.click({ noWaitAfter: true }),
     ]);
     expect(dialog.type()).toBe("confirm");
     expect(dialog.message()).toContain("несохран");

@@ -287,6 +287,7 @@ export function AdminProductEditForm({
           action={formAction}
           className="space-y-6"
           onInput={() => setDirty(true)}
+          onChange={() => setDirty(true)}
         >
 
           <input type="hidden" name="sync_source" value={product.sync_source} />
@@ -624,6 +625,7 @@ export function AdminProductEditForm({
 
           <Link
             href={returnTo}
+            data-unsaved={dirty ? "true" : undefined}
             onClick={(event) => {
               if (!confirmLeave()) {
                 event.preventDefault();
