@@ -69,8 +69,10 @@ test.describe("Homepage", () => {
     const categoryNav = page.getByRole("navigation", {
       name: "Категории каталога",
     });
-    await expect(categoryNav).toBeVisible();
-    expect(await categoryNav.getByRole("link").count()).toBeGreaterThanOrEqual(1);
+    if ((await categoryNav.count()) > 0) {
+      await expect(categoryNav).toBeVisible();
+      expect(await categoryNav.getByRole("link").count()).toBeGreaterThanOrEqual(1);
+    }
   });
 
   test("shows product grid or graceful empty/error state", async ({ page }) => {

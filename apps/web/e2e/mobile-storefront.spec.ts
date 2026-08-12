@@ -13,7 +13,7 @@ test.describe("Mobile storefront", () => {
     await expect(
       page.getByRole("navigation", { name: "Информация для покупателей" }),
     ).toBeHidden();
-    await expect(page.getByLabel("Преимущества магазина")).toBeHidden();
+    // Trust/USP strip lives on homepage content now (not a header band).
     await expect(page.getByRole("button", { name: "Каталог" }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Открыть поиск" })).toBeVisible();
     await page.getByRole("button", { name: "Открыть поиск" }).click();

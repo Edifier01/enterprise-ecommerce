@@ -84,6 +84,7 @@ export async function MainHeader({
                 {showAccountLink ? (
                   <Link
                     href={accountHref}
+                    aria-label="Личный кабинет"
                     className="inline-flex min-h-11 items-center gap-2 text-xs font-medium uppercase tracking-wide text-foreground transition-colors hover:text-primary sm:text-sm"
                   >
                     <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground sm:size-9">
